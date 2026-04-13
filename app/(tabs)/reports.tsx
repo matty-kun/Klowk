@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import React from 'react';
 import { ScrollView, Pressable, Dimensions } from 'react-native';
 import { View, Text } from '@/components/Themed';
@@ -135,14 +136,17 @@ export default function ReportsScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         
-        {/* Seamless Header Section (Like the photo) */}
-        <View className="bg-klowk-orange/10 pt-8 pb-12 px-6">
-          <Text className="text-4xl font-extrabold text-klowk-black mb-8">Data</Text>
+        {/* Seamless Header Section */}
+        <View className="bg-white pt-8 pb-12 px-6">
+          <Text className="text-4xl font-extrabold text-klowk-black mb-8 italic">Data</Text>
           <View className="flex-row items-end justify-between">
-            {/* Mascot on the Left */}
-            <View className="w-24 h-24 bg-klowk-black rounded-3xl items-center justify-center shadow-2xl relative overflow-hidden">
-              <View className="absolute top-0 bottom-0 left-0 right-0 bg-klowk-orange/5" />
-              <Zap color="#FF5A00" size={48} />
+            {/* Mascot on the Left - LARGE */}
+            <View className="w-32 h-32 items-center justify-center bg-transparent">
+              <Image 
+                source={require('../../assets/images/time-mascot.svg')} 
+                style={{ width: 120, height: 120 }}
+                contentFit="contain"
+              />
             </View>
 
             {/* Main Balance Card on the Right */}

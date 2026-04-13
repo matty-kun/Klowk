@@ -1,3 +1,4 @@
+import React from 'react';
 import { ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
@@ -21,59 +22,65 @@ export default function LogsScreen() {
 
   // Group by date
   const grouped = activities.reduce((acc, curr) => {
-    const date = new Date(curr.created_at).toLocaleDateString();
+    const date = new Date(curr.created_at).toLocaleDateString(undefined, {
+       weekday: 'short', month: 'short', day: 'numeric' 
+    });
     if (!acc[date]) acc[date] = [];
     acc[date].push(curr);
     return acc;
   }, {} as Record<string, typeof activities>);
 
   return (
-    <SafeAreaView className="flex-1 bg-klowk-white">
+    <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="px-6 pt-4" showsVerticalScrollIndicator={false}>
         <Text className="text-4xl font-extrabold text-klowk-black mb-8">History</Text>
 
       {/* Bento Box Dashboard */}
       <View className="flex-row flex-wrap justify-between mb-8">
-        <View className="w-[48%] bg-klowk-black p-5 rounded-3xl mb-4 h-40 justify-between">
-          <Text className="text-klowk-white/60 text-xs font-bold uppercase">Focus Today</Text>
+        <View className="w-[48%] bg-klowk-black p-5 rounded-[32px] mb-4 h-44 justify-between relative overflow-hidden shadow-xl">
+           {/* Glass Shine */}
+           <View 
+            className="absolute -top-10 -right-10 w-32 h-32 bg-white/5" 
+            style={{ transform: [{ rotate: '45deg' }] }}
+           />
+          <Text className="text-white/40 text-[10px] font-black uppercase tracking-widest">Focus Today</Text>
           <View>
-            <Text className="text-klowk-white text-4xl font-black">{totalHours}</Text>
-            <Text className="text-klowk-orange text-lg font-bold">Hours</Text>
+            <Text className="text-white text-5xl font-black italic pr-1">{totalHours}</Text>
+            <Text className="text-klowk-orange text-xs font-black uppercase tracking-widest mt-1">Hours</Text>
           </View>
         </View>
 
-        <View className="w-[48%] bg-klowk-orange p-5 rounded-3xl mb-4 h-40 justify-between">
-          <Text className="text-klowk-white/60 text-xs font-bold uppercase">Total Sessions</Text>
+        <View className="w-[48%] bg-klowk-orange p-5 rounded-[32px] mb-4 h-44 justify-between relative overflow-hidden shadow-xl shadow-klowk-orange/20">
+          <Text className="text-white/60 text-[10px] font-black uppercase tracking-widest">Total Sessions</Text>
           <View>
-            <Text className="text-klowk-white text-4xl font-black">{activities.length}</Text>
-            <Text className="text-klowk-white/80 text-lg font-bold">Logs</Text>
+            <Text className="text-white text-5xl font-black italic pr-1">{activities.length}</Text>
+            <Text className="text-white/80 text-xs font-black uppercase tracking-widest mt-1">Logs</Text>
           </View>
         </View>
 
-        <View className="w-full bg-klowk-gray p-6 rounded-3xl h-32 flex-row items-center justify-between border border-gray-100">
+        <View className="w-full bg-white p-6 rounded-[32px] h-32 flex-row items-center justify-between border border-gray-50 shadow-sm">
           <View>
-            <Text className="text-gray-400 text-xs font-bold uppercase mb-1">Weekly Streak</Text>
-            <Text className="text-klowk-black text-2xl font-black">4 Days</Text>
+            <Text className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Weekly Momentum</Text>
+            <Text className="text-klowk-black text-2xl font-black italic pr-2">4 Day Streak</Text>
           </View>
           <View className="flex-row">
             {[1, 2, 3, 4, 5, 6, 7].map((d) => (
               <View 
                 key={d} 
-                className={`w-6 h-6 rounded-md mr-1 ${d <= 4 ? 'bg-klowk-orange' : 'bg-gray-200'}`} 
+                className={`w-6 h-8 rounded-lg mr-1.5 ${d <= 4 ? 'bg-klowk-orange' : 'bg-gray-100'}`} 
               />
             ))}
           </View>
         </View>
       </View>
 
-      <Text className="text-xl font-extrabold text-klowk-black mb-4">Detailed Logs</Text>
+      <Text className="text-sm font-black text-klowk-orange uppercase tracking-widest mb-6">Detailed Logs</Text>
       
       {Object.entries(grouped).map(([date, logs]) => (
         <View key={date} className="mb-8">
-          <View className="flex-row items-center mb-4">
-             <View className="h-[1px] flex-1 bg-gray-100" />
-             <Text className="mx-4 text-gray-400 font-bold text-[10px] uppercase tracking-widest">{date}</Text>
-             <View className="h-[1px] flex-1 bg-gray-100" />
+          <View className="flex-row items-center mb-6">
+             <Text className="text-gray-400 font-extrabold text-[11px] uppercase tracking-[3px]">{date}</Text>
+             <View className="h-[2px] flex-1 bg-gray-50 ml-4 rounded-full" />
           </View>
 
           {logs.map((log) => {
@@ -88,40 +95,34 @@ export default function LogsScreen() {
             }[category?.iconName as string] || Tag;
 
             return (
-              <View key={log.id} className="mb-4 bg-white p-4 rounded-3xl shadow-sm border border-gray-50">
-                <View className="flex-row justify-between items-start mb-2">
-                  <View className="flex-row items-center flex-1">
-                    <View 
-                      style={{ backgroundColor: `${catColor}15` }} 
-                      className="w-10 h-10 rounded-2xl items-center justify-center mr-3"
-                    >
-                      <Icon size={18} color={catColor} />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-klowk-black font-bold text-base leading-5" numberOfLines={1}>{log.title}</Text>
-                      <View className="flex-row items-center">
-                        <Text style={{ color: catColor }} className="text-[10px] font-black uppercase tracking-tighter mr-2">
-                          {category?.label || 'Uncategorized'}
-                        </Text>
-                        <Text className="text-[10px] text-gray-400 font-bold uppercase">{formatTimestamp(log.start_time)}</Text>
-                      </View>
+              <View key={log.id} className="mb-4 bg-white p-5 rounded-[28px] shadow-sm border border-gray-50 flex-row items-center">
+                  <View 
+                    style={{ backgroundColor: `${catColor}10` }} 
+                    className="w-12 h-12 rounded-2xl items-center justify-center mr-4"
+                  >
+                    <Icon size={20} color={catColor} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-klowk-black font-bold text-base mb-0.5" numberOfLines={1}>{log.title}</Text>
+                    <View className="flex-row items-center">
+                      <Text style={{ color: catColor }} className="text-[10px] font-black uppercase tracking-tighter mr-2">
+                        {category?.label || 'Uncategorized'}
+                      </Text>
+                      <View className="w-1 h-1 rounded-full bg-gray-200 mr-2" />
+                      <Text className="text-[10px] text-gray-400 font-bold uppercase">{formatTimestamp(log.start_time)}</Text>
                     </View>
                   </View>
-                  <View className="items-end">
-                    <Text className="text-klowk-black font-black text-lg">{formatDuration(log.duration || 0)}</Text>
+                  <View className="items-end ml-2">
+                    <Text className="text-klowk-black font-black text-lg italic pr-1">{formatDuration(log.duration || 0)}</Text>
                   </View>
-                </View>
-                
-                {log.description && (
-                  <View className="mt-2 pt-2 border-t border-gray-50">
-                    <Text className="text-gray-500 text-xs italic leading-4">{log.description}</Text>
-                  </View>
-                )}
               </View>
             );
           })}
         </View>
       ))}
+
+      {/* Bottom Spacer for Floating Navbar */}
+      <View className="h-40 bg-transparent" />
       </ScrollView>
     </SafeAreaView>
   );

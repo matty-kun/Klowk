@@ -21,31 +21,36 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: '#FF5A00',
-          tabBarInactiveTintColor: '#9ca3af',
-          headerShown: false,
-          tabBarStyle: {
-            position: 'absolute',
-            bottom: 10,
-            left: 20,
-            right: 105,
-            backgroundColor: '#ffffff',
-            borderRadius: 20,
-            height: 60,
-            borderTopWidth: 0,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 10,
-            elevation: 5,
-          },
-          tabBarLabelStyle: {
-            fontWeight: 'bold',
-            fontSize: 10,
-          }
-        }}>
+        <Tabs
+          screenOptions={{
+            tabBarActiveTintColor: '#FF5A00',
+            tabBarInactiveTintColor: '#121212',
+            headerShown: false,
+            tabBarStyle: {
+              position: 'absolute',
+              bottom: 15,
+              left: 20,
+              right: 115,
+              backgroundColor: 'rgba(255, 255, 255, 0.92)', // Much cleaner white glass
+              borderRadius: 32,
+              height: 64,
+              borderTopWidth: 0,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.8)',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.1,
+              shadowRadius: 15,
+              elevation: 8,
+            },
+            tabBarShowLabel: true,
+            tabBarLabelStyle: {
+              fontWeight: '900',
+              fontSize: 11,
+              marginBottom: 10,
+              textTransform: 'uppercase',
+            },
+          }}>
         <Tabs.Screen
           name="index"
           options={{
@@ -72,6 +77,7 @@ export default function TabLayout() {
           options={{
             title: 'Settings',
             tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
+            href: null,
           }}
         />
       </Tabs>
@@ -82,23 +88,25 @@ export default function TabLayout() {
           onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
           style={{
             position: 'absolute',
-            bottom: 85,
+            bottom: 100, // Moved higher for better breathing room
             right: 20,
-            width: 64,
-            height: 64,
-            backgroundColor: '#FF5A00',
-            borderRadius: 22,
+            width: 68,
+            height: 68,
+            backgroundColor: 'rgba(255, 90, 0, 0.9)',
+            borderRadius: 34,
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 100,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            shadowColor: '#FF5A00',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.3,
+            shadowRadius: 20,
             elevation: 10,
           }}
         >
-          <Plus size={28} color="#ffffff" strokeWidth={3} />
+          <Plus size={32} color="#ffffff" strokeWidth={3} />
         </Pressable>
       </Link>
     </View>

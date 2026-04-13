@@ -3,10 +3,17 @@ import OpenAI from 'openai';
 // Securely load the OpenAI API Key from environment variables
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Required for React Native usage
-});
+let openaiInstance: OpenAI | null = null;
+
+function getOpenAIClient() {
+  if (!openaiInstance && OPENAI_API_KEY) {
+    openaiInstance = new OpenAI({
+      apiKey: OPENAI_API_KEY,
+      dangerouslyAllowBrowser: true // Required for React Native usage
+    });
+  }
+  return openaiInstance;
+}
 
 export type NLPResult =
   | { type: 'start', title: string }
@@ -14,12 +21,13 @@ export type NLPResult =
   | { type: 'error', message: string };
 
 export async function parseNaturalLanguage(input: string): Promise<NLPResult> {
-  if (!OPENAI_API_KEY) {
+  const client = getOpenAIClient();
+  if (!client) {
     return { type: 'error', message: 'API Key not configured' };
   }
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { Text, View } from '@/components/Themed';
 import { CATEGORIES } from '@/constants/Categories';
 import { useTracking } from '@/context/TrackingContext';
@@ -12,9 +13,11 @@ import {
   MoreHorizontal,
   Tag,
   Trophy,
-  Zap
+  Zap,
+  Settings2
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { Link } from 'expo-router';
 import { Dimensions, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -53,11 +56,12 @@ export default function TabOneScreen() {
     const d = new Date();
     d.setDate(now.getDate() - (6 - i));
     const dayStr = d.toDateString();
+    const isToday = d.toDateString() === now.toDateString();
     const label = d.toLocaleDateString('en-US', { weekday: 'narrow' });
     const mins = activities
       .filter(a => new Date(a.start_time).toDateString() === dayStr)
       .reduce((sum, a) => sum + (a.duration || 0), 0);
-    return { mins, label };
+    return { mins, label, isToday };
   });
   
   const maxWeeklyMins = Math.max(...dailyChartData.map(d => d.mins), 1);
@@ -89,53 +93,44 @@ export default function TabOneScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         
-        {/* Top Header Utilities */}
-        <View className="px-6 py-4 flex-row justify-between items-center bg-transparent">
-          <View className="flex-row">
-            <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-2 shadow-sm border border-gray-100">
-              <History size={18} color="#121212" />
-            </View>
-            <View className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-sm border border-gray-100">
-              <Zap size={18} color="#121212" />
-            </View>
-          </View>
-          <Pressable className="bg-white px-4 py-2 rounded-full flex-row items-center border border-gray-100 shadow-sm active:opacity-70">
-            <Trophy size={16} color="#FF5A00" />
-            <Text className="ml-2 font-bold text-klowk-black">Goal</Text>
-          </Pressable>
+        <View className="px-6 py-4 flex-row justify-end items-center bg-transparent">
+          <Link href="/(tabs)/settings" asChild>
+            <Pressable className="bg-white px-4 py-2 rounded-full flex-row items-center border border-gray-100 shadow-sm active:opacity-70">
+              <Settings2 size={16} color="#FF5A00" />
+              <Text className="ml-2 font-bold text-klowk-black">Settings</Text>
+            </Pressable>
+          </Link>
         </View>
 
         {/* Greeting Section */}
-        <View className="px-6 mb-6">
-          <Text className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">
+        <View className="px-6 mb-10 mt-6 bg-white">
+          <Text className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1">
             {dayOfWeek}, {dayOfMonth}
           </Text>
-          <Text className="text-3xl font-black text-klowk-black">
+          <Text className="text-3xl font-black text-klowk-black mb-8 italic" numberOfLines={1}>
             Good afternoon, <Text className="text-klowk-orange">User!</Text>
           </Text>
-        </View>
 
-        {/* Mascot Section with Brand Band */}
-        <View className="mb-10 relative">
-          {/* Background Brand Band - Cut in half */}
-          <View className="absolute top-0 left-0 right-0 h-1/2 bg-klowk-orange/10" />
-          
-          <View className="px-6 py-6 flex-row items-center">
-            {/* Mascot Icon Container */}
-            <View className="w-16 h-16 bg-klowk-black rounded-2xl items-center justify-center mr-4 shadow-lg">
-              <Zap color="#FF5A00" size={32} />
+          {/* Mascot + Bubble Inline Row */}
+          <View className="flex-row items-center bg-white">
+            {/* Mascot on the Left - LARGE */}
+            <View style={{ width: 130, height: 130, marginRight: 8, alignItems: 'center', justifyContent: 'center' }}>
+              <Image 
+                source={require('../../assets/images/idle-mascot.svg')} 
+                style={{ width: 120, height: 120 }}
+                contentFit="contain"
+                transition={200}
+              />
             </View>
 
-            {/* Speech Bubble */}
-            <View className="flex-1 bg-white p-4 rounded-2xl border border-gray-50 shadow-sm relative">
-              <Text className="font-extrabold text-klowk-orange text-[10px] mb-1 uppercase tracking-widest leading-3">Klowk Bird</Text>
-              <Text className="text-[11px] text-klowk-black font-semibold leading-4">
+            {/* Inline Bubble on the Right */}
+            <View className="flex-1 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative">
+               <Text className="text-[12px] text-klowk-black font-semibold leading-5">
                 {todayMinsTotal > 0 
-                  ? `Great progress! You've logged ${formatDuration(todayMinsTotal)} of focus today. Keep that momentum!`
-                  : "You haven't logged any focus time today. Want to start a session now?"}
+                  ? `You've focused for ${formatDuration(todayMinsTotal)} today. Stellar work!`
+                  : "Ready for a deep focus session? I'm here to help you track your wins."}
               </Text>
-              {/* Little speech bubble tail */}
-              <View className="absolute left-[-6] top-6 w-3 h-3 bg-white rotate-45 border-l border-b border-gray-50" />
+              <View className="absolute left-[-6] top-10 w-4 h-4 bg-white rotate-45 border-l border-b border-gray-100" />
             </View>
           </View>
         </View>
@@ -148,18 +143,22 @@ export default function TabOneScreen() {
             <View className="flex-row items-end justify-between h-20">
               {dailyChartData.map((item, i) => {
                 const intensity = (item.mins / maxWeeklyMins) || 0;
-                const height = Math.max(12, intensity * 60);
+                const height = Math.max(12, intensity * 80);
 
                 return (
                   <View key={i} className="items-center flex-1">
                     <View 
                       style={{ 
                         height: height,
-                        backgroundColor: intensity > 0.05 ? `rgba(255, 90, 0, ${0.15 + intensity * 0.85})` : '#f3f4f6'
+                        backgroundColor: item.isToday 
+                          ? '#FF5A00' 
+                          : (intensity > 0.05 ? `rgba(255, 90, 0, ${0.15 + intensity * 0.7})` : '#f3f4f6')
                       }} 
-                      className={`w-2.5 rounded-full`} 
+                      className={`w-2.5 rounded-full ${item.isToday ? 'shadow-lg' : ''}`} 
                     />
-                    <Text className="text-[8px] mt-2 text-gray-300 font-bold">{item.label}</Text>
+                    <Text className={`text-[8px] mt-2 font-bold ${item.isToday ? 'text-klowk-orange' : 'text-gray-300'}`}>
+                      {item.label}
+                    </Text>
                   </View>
                 );
               })}

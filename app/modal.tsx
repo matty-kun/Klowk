@@ -47,9 +47,8 @@ export default function EntryModal() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState('work');
   const [description, setDescription] = useState('');
-  const [isLive, setIsLive] = useState(false);
   
-  // Custom Calendar Logic
+  // Custom Calendar Logic (Restored)
   const [viewedMonth, setViewedMonth] = useState(new Date());
   
   const getDaysInMonth = (date: Date) => {
@@ -59,14 +58,8 @@ export default function EntryModal() {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
     const days = [];
-    // Padding for first week
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
-    }
-    // Days of current month
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i));
-    }
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
     return days;
   };
 
@@ -79,48 +72,16 @@ export default function EntryModal() {
     setViewedMonth(new Date(newMonth));
   };
   
-  // AI State
-  const [aiInput, setAiInput] = useState('');
-  const [isParsing, setIsParsing] = useState(false);
-
-  const handleAiParse = async () => {
-    if (!title.trim()) return;
-    setIsParsing(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    const result = await parseNaturalLanguage(title);
-    
-    if (result.type === 'manual') {
-      setTitle(result.title);
-      const h = Math.floor(result.durationMinutes / 60);
-      const m = result.durationMinutes % 60;
-      setHours(h > 0 ? h.toString() : '');
-      setMinutes(m > 0 ? m.toString() : '');
-      setIsLive(false);
-    } else if (result.type === 'start') {
-      setTitle(result.title);
-      setIsLive(true);
-    }
-    
-    setIsParsing(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
   const handleSave = async () => {
     if (!title) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
-    if (isLive) {
-      await startTracker(title, category, description);
+    const totalMins = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
+    
+    if (totalMins > 0) {
+      await addManualActivity(title, category, totalMins, description, date);
     } else {
-      const totalMins = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
-      await addManualActivity(
-        title, 
-        category, 
-        totalMins, 
-        description,
-        date
-      );
+      await startTracker(title, category, description);
     }
     
     router.back();
@@ -144,7 +105,6 @@ export default function EntryModal() {
 
             <View className="flex-1">
               <Text className="text-3xl font-black text-klowk-black italic">New Log</Text>
-              <Text className="text-gray-400 font-bold text-[10px] uppercase tracking-widest leading-3">Allocation Manager</Text>
             </View>
           </View>
           
@@ -158,24 +118,13 @@ export default function EntryModal() {
                 <Zap size={14} color="#9ca3af" />
                 <Text className="ml-2 text-xs font-bold text-gray-500">What did you do?</Text>
               </View>
-              <View className="bg-gray-50 rounded-2xl border border-gray-100 flex-row items-center pr-2">
+              <View className="bg-gray-50 rounded-2xl border border-gray-100 flex-row items-center">
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="Project Apollo, Gym for 1hr..."
+                  placeholder="What are you focusing on?"
                   className="flex-1 p-4 font-bold text-klowk-black"
                 />
-                <Pressable 
-                  onPress={handleAiParse}
-                  disabled={isParsing || !title}
-                  className={`w-10 h-10 rounded-xl items-center justify-center ${isParsing ? 'bg-gray-100' : 'bg-klowk-orange'}`}
-                >
-                  {isParsing ? (
-                    <ActivityIndicator size="small" color="#FF5A00" />
-                  ) : (
-                    <Wand2 size={18} color="white" />
-                  )}
-                </Pressable>
               </View>
             </View>
 
@@ -349,26 +298,7 @@ export default function EntryModal() {
               </View>
             </View>
 
-            {/* Live Toggle */}
-            <Pressable 
-              onPress={() => setIsLive(!isLive)}
-              className={`flex-row items-center p-4 rounded-3xl mb-12 border ${isLive ? 'bg-klowk-orange/10 border-klowk-orange' : 'bg-white border-gray-100'}`}
-            >
-              <View className={`w-10 h-10 rounded-2xl items-center justify-center mr-4 ${isLive ? 'bg-klowk-orange' : 'bg-gray-50'}`}>
-                <Clock size={20} color={isLive ? 'white' : '#9ca3af'} />
-              </View>
-              <View className="flex-1">
-                <Text className={`font-black uppercase text-[10px] ${isLive ? 'text-klowk-orange' : 'text-gray-400'}`}>
-                  {isLive ? 'Start Live Focus' : 'Recorded Past Entry'}
-                </Text>
-                <Text className="text-xs font-bold text-klowk-black">
-                  {isLive ? 'Start a timer for this activity now' : 'This will log the time immediately'}
-                </Text>
-              </View>
-              <View className={`w-10 h-6 rounded-full px-1 justify-center ${isLive ? 'bg-klowk-orange' : 'bg-gray-200'}`}>
-                <View className={`w-4 h-4 bg-white rounded-full ${isLive ? 'self-end' : 'self-start'}`} />
-              </View>
-            </Pressable>
+            {/* Removed Live/Past Toggle */}
 
           </View>
         </ScrollView>
@@ -382,7 +312,7 @@ export default function EntryModal() {
           >
             <Check size={20} color={!title ? '#9ca3af' : 'white'} strokeWidth={3} style={{ marginRight: 8 }} />
             <Text className={`font-black uppercase tracking-tighter ${!title ? 'text-gray-400' : 'text-white'}`}>
-              {isLive ? 'Launch Focus Session' : 'Save Time Entry'}
+              {(parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) > 0 ? 'Save Time Entry' : 'Launch Focus Session'}
             </Text>
           </Pressable>
         </View>

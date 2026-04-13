@@ -1,19 +1,19 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+const tintColorLight = '#FF5A00'; // Klowk Orange
+const tintColorDark = '#FFC800';  // Klowk Yellow
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
+    text: '#121212', // Klowk Black
+    background: '#ffffff', // Klowk White
     tint: tintColorLight,
-    tabIconDefault: '#ccc',
+    tabIconDefault: '#9ca3af',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
+    text: '#ffffff',
+    background: '#121212',
     tint: tintColorDark,
-    tabIconDefault: '#ccc',
+    tabIconDefault: '#9ca3af',
     tabIconSelected: tintColorDark,
   },
 };

@@ -5,6 +5,7 @@ export type Activity = {
   id: number;
   title: string;
   category: string | null;
+  description: string | null;
   start_time: number;
   end_time: number | null;
   duration: number | null;
@@ -14,10 +15,12 @@ export type Activity = {
 type TrackingContextType = {
   activities: Activity[];
   currentActivity: Activity | null;
-  startTracker: (title: string, category: string) => Promise<void>;
+  startTracker: (title: string, category: string, description?: string) => Promise<void>;
   stopTracker: () => Promise<void>;
   deleteActivity: (id: number) => Promise<void>;
+  addManualActivity: (title: string, category: string, durationMins: number, description?: string, customDate?: Date) => Promise<void>;
   refreshActivities: () => Promise<void>;
+  getTotalFocusTimeToday: () => number;
 };
 
 const TrackingContext = createContext<TrackingContextType | null>(null);
@@ -40,12 +43,12 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     refreshActivities();
   }, []);
 
-  const startTracker = async (title: string, category: string) => {
+  const startTracker = async (title: string, category: string, description?: string) => {
     if (currentActivity) return;
     const now = Date.now();
     await db.runAsync(
-      'INSERT INTO activities (title, category, start_time, created_at) VALUES (?, ?, ?, ?)',
-      [title, category, now, now]
+      'INSERT INTO activities (title, category, description, start_time, created_at) VALUES (?, ?, ?, ?, ?)',
+      [title, category, description || null, now, now]
     );
     await refreshActivities();
   };
@@ -67,8 +70,34 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     await refreshActivities();
   };
 
+  const addManualActivity = async (title: string, category: string, durationMins: number, description?: string, customDate?: Date) => {
+    const timestamp = customDate ? customDate.getTime() : Date.now();
+    const startTime = timestamp - (durationMins * 60000);
+    await db.runAsync(
+      'INSERT INTO activities (title, category, description, start_time, end_time, duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [title, category, description || null, startTime, timestamp, durationMins, timestamp]
+    );
+    await refreshActivities();
+  };
+
+  const getTotalFocusTimeToday = () => {
+    const startOfToday = new Date().setHours(0, 0, 0, 0);
+    return activities
+      .filter(a => a.created_at >= startOfToday && a.duration)
+      .reduce((acc, curr) => acc + (curr.duration || 0), 0);
+  };
+
   return (
-    <TrackingContext.Provider value={{ activities, currentActivity, startTracker, stopTracker, deleteActivity, refreshActivities }}>
+    <TrackingContext.Provider value={{ 
+      activities, 
+      currentActivity, 
+      startTracker, 
+      stopTracker, 
+      deleteActivity, 
+      addManualActivity,
+      refreshActivities,
+      getTotalFocusTimeToday
+    }}>
       {children}
     </TrackingContext.Provider>
   );

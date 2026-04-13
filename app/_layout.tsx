@@ -1,4 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import "../global.css";
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -14,12 +15,21 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       category TEXT,
+      description TEXT,
       start_time INTEGER NOT NULL,
       end_time INTEGER,
       duration INTEGER,
       created_at INTEGER NOT NULL
     );
   `);
+
+  // Migration: Add description column if it doesn't exist (for existing users)
+  try {
+    await db.execAsync('ALTER TABLE activities ADD COLUMN description TEXT;');
+    console.log('Migration: Added description column');
+  } catch (error) {
+    // Column probably already exists, which is fine
+  }
 }
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -69,13 +79,11 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

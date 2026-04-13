@@ -1,114 +1,122 @@
 import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { View, Pressable, Text, Dimensions } from 'react-native';
+import { Link, withLayoutContext } from 'expo-router';
+import { createMaterialTopTabNavigator, MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { Plus, Home, History, BarChart3, Settings } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+const { width } = Dimensions.get('window');
 
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={22} style={{ marginBottom: -3 }} {...props} />;
+// 1. Create a Custom Swappable Navigator for Expo Router
+const { Navigator } = createMaterialTopTabNavigator();
+const MaterialTopTabs = withLayoutContext(Navigator);
+
+// 2. Custom Tab Bar to recreate our "Icon Island"
+function CustomTabBar({ state, descriptors, navigation }: MaterialTopTabBarProps) {
+  return (
+    <View 
+      style={{
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
+      }}
+    >
+        {/* Main Navigation Island */}
+        <View 
+            style={{
+                flex: 1,
+                height: 68,
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 34,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-around',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 15,
+                elevation: 8,
+                marginRight: 12,
+            }}
+        >
+        {state.routes.map((route, index) => {
+            if (route.name === 'settings') return null;
+            const isFocused = state.index === index;
+
+            const onPress = () => {
+                const event = navigation.emit({
+                    type: 'tabPress',
+                    target: route.key,
+                    canPreventDefault: true,
+                });
+                if (!isFocused && !event.defaultPrevented) {
+                    navigation.navigate(route.name);
+                }
+            };
+
+            const Icon = { index: Home, history: History, reports: BarChart3 }[route.name] || Home;
+            const color = isFocused ? '#FF5A00' : '#121212';
+            const label = { index: 'Home', history: 'History', reports: 'Data' }[route.name];
+
+            return (
+            <Pressable key={route.key} onPress={onPress} className="items-center justify-center flex-1 h-full">
+                <Icon size={22} color={color} />
+                <Text style={{ color, fontSize: 8, fontWeight: isFocused ? '900' : '600', marginTop: 2, textTransform: 'uppercase' }}>
+                    {label}
+                </Text>
+            </Pressable>
+            );
+        })}
+        </View>
+
+        {/* Integrated Plus Button */}
+        <Link href="/modal" asChild>
+            <Pressable 
+                onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
+                style={{
+                    width: 68,
+                    height: 68,
+                    backgroundColor: '#FF5A00',
+                    borderRadius: 34,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#FF5A00',
+                    shadowOffset: { width: 0, height: 10 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 15,
+                    elevation: 10,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                }}
+            >
+                <Plus size={32} color="#ffffff" strokeWidth={3} />
+            </Pressable>
+        </Link>
+    </View>
+  );
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <View style={{ flex: 1 }}>
-        <Tabs
-          screenOptions={{
-            tabBarActiveTintColor: '#FF5A00',
-            tabBarInactiveTintColor: '#121212',
-            headerShown: false,
-            tabBarStyle: {
-              position: 'absolute',
-              bottom: 15,
-              left: 20,
-              right: 115,
-              backgroundColor: 'rgba(255, 255, 255, 0.92)', // Much cleaner white glass
-              borderRadius: 32,
-              height: 64,
-              borderTopWidth: 0,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.8)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 10 },
-              shadowOpacity: 0.1,
-              shadowRadius: 15,
-              elevation: 8,
-            },
-            tabBarShowLabel: true,
-            tabBarLabelStyle: {
-              fontWeight: '900',
-              fontSize: 11,
-              marginBottom: 10,
-              textTransform: 'uppercase',
-            },
-          }}>
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ color }) => <Home size={24} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="history"
-          options={{
-            title: 'History',
-            tabBarIcon: ({ color }) => <History size={24} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="reports"
-          options={{
-            title: 'Data',
-            tabBarIcon: ({ color }) => <BarChart3 size={24} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
-            href: null,
-          }}
-        />
-      </Tabs>
-
-      {/* Global Inline Plus Button - Floating above Navbar (Right) */}
-      <Link href="/modal" asChild>
-        <Pressable 
-          onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
-          style={{
-            position: 'absolute',
-            bottom: 100, // Moved higher for better breathing room
-            right: 20,
-            width: 68,
-            height: 68,
-            backgroundColor: 'rgba(255, 90, 0, 0.9)',
-            borderRadius: 34,
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.3)',
-            shadowColor: '#FF5A00',
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.3,
-            shadowRadius: 20,
-            elevation: 10,
-          }}
-        >
-          <Plus size={32} color="#ffffff" strokeWidth={3} />
-        </Pressable>
-      </Link>
+      <MaterialTopTabs
+        tabBar={(props) => <CustomTabBar {...props} />}
+        tabBarPosition="bottom"
+        screenOptions={{
+           swipeEnabled: true,
+        }}
+      >
+        <MaterialTopTabs.Screen name="index" options={{ title: 'Home' }} />
+        <MaterialTopTabs.Screen name="history" options={{ title: 'History' }} />
+        <MaterialTopTabs.Screen name="reports" options={{ title: 'Data' }} />
+        {/* Settings is NOT in the MaterialTopTabs so it won't be swappable */}
+      </MaterialTopTabs>
     </View>
   );
 }

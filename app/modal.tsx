@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Modal
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { 
@@ -37,7 +37,8 @@ import { CATEGORIES } from '@/constants/Categories';
 
 export default function EntryModal() {
   const router = useRouter();
-  const { addManualActivity, startTracker } = useTracking();
+  const { editId } = useLocalSearchParams();
+  const { addManualActivity, startTracker, editActivity, activities } = useTracking();
   
   // Form State
   const [title, setTitle] = useState('');
@@ -47,6 +48,23 @@ export default function EntryModal() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState('work');
   const [description, setDescription] = useState('');
+
+  // Initial Data Population for Edit Mode
+  useEffect(() => {
+    if (editId) {
+      const activityToEdit = activities.find(a => a.id === Number(editId));
+      if (activityToEdit) {
+        setTitle(activityToEdit.title);
+        setCategory(activityToEdit.category || 'work');
+        setDescription(activityToEdit.description || '');
+        setDate(new Date(activityToEdit.start_time));
+        if (activityToEdit.duration) {
+          setHours(Math.floor(activityToEdit.duration / 60).toString());
+          setMinutes((activityToEdit.duration % 60).toString());
+        }
+      }
+    }
+  }, [editId]);
   
   // Custom Calendar Logic (Restored)
   const [viewedMonth, setViewedMonth] = useState(new Date());
@@ -78,7 +96,9 @@ export default function EntryModal() {
     
     const totalMins = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     
-    if (totalMins > 0) {
+    if (editId && typeof editId === 'string') {
+      await editActivity(Number(editId), title, category, totalMins, description, date);
+    } else if (totalMins > 0) {
       await addManualActivity(title, category, totalMins, description, date);
     } else {
       await startTracker(title, category, description);
@@ -104,13 +124,13 @@ export default function EntryModal() {
             </Pressable>
 
             <View className="flex-1">
-              <Text className="text-3xl font-black text-klowk-black italic">New Log</Text>
+              <Text className="text-3xl font-black text-klowk-black italic">{editId ? 'Edit Log' : 'New Log'}</Text>
             </View>
           </View>
           
           {/* Form Fields */}
           <View className="mb-8">
-            <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Manual Details</Text>
+            <Text className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4">Manual Details</Text>
             
             {/* Title with Integrated AI */}
             <View className="mb-5">
@@ -129,46 +149,46 @@ export default function EntryModal() {
             </View>
 
             {/* Duration & Date Row */}
-            <View className="flex-row justify-between mb-5">
-              <View className="w-[30%]">
+            <View className="flex-row mb-5" style={{ gap: 10 }}>
+              <View className="flex-1">
                 <View className="flex-row items-center mb-2 ml-1">
                   <Clock size={14} color="#9ca3af" />
-                  <Text className="ml-2 text-xs font-bold text-gray-500">Hours</Text>
+                  <Text className="ml-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Hours</Text>
                 </View>
                 <TextInput
                   value={hours}
                   onChangeText={setHours}
                   keyboardType="numeric"
                   placeholder="0"
-                  className="bg-gray-50 p-4 rounded-2xl font-bold text-klowk-black border border-gray-100 h-[58px] text-sm"
+                  className="bg-gray-50 px-3 py-4 rounded-2xl font-bold text-klowk-black border border-gray-100 h-[58px] text-sm"
                 />
               </View>
-              <View className="w-[30%]">
+              <View className="flex-1">
                 <View className="flex-row items-center mb-2 ml-1">
                   <Clock size={14} color="#9ca3af" />
-                  <Text className="ml-2 text-xs font-bold text-gray-500">Mins</Text>
+                  <Text className="ml-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Minutes</Text>
                 </View>
                 <TextInput
                   value={minutes}
                   onChangeText={setMinutes}
                   keyboardType="numeric"
                   placeholder="30"
-                  className="bg-gray-50 p-4 rounded-2xl font-bold text-klowk-black border border-gray-100 h-[58px] text-sm"
+                  className="bg-gray-50 px-3 py-4 rounded-2xl font-bold text-klowk-black border border-gray-100 h-[58px] text-sm"
                 />
               </View>
-              <View className="w-[34%]">
+              <View className="flex-[1.2]">
                 <View className="flex-row items-center mb-2 ml-1">
                   <CalendarIcon size={14} color="#9ca3af" />
-                  <Text className="ml-2 text-xs font-bold text-gray-500">Date</Text>
+                  <Text className="ml-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</Text>
                 </View>
                 <Pressable 
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowDatePicker(!showDatePicker);
                   }}
-                  className={`bg-gray-50 p-4 rounded-2xl border items-center justify-center flex-1 h-[58px] ${showDatePicker ? 'border-klowk-orange' : 'border-gray-100'}`}
+                  className={`bg-gray-50 px-3 py-4 rounded-2xl border items-center justify-center flex-1 h-[58px] ${showDatePicker ? 'border-klowk-orange' : 'border-gray-100'}`}
                 >
-                  <Text className="font-bold text-klowk-black text-sm">
+                  <Text className="font-bold text-klowk-black text-sm" numberOfLines={1}>
                     {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </Text>
                 </Pressable>
@@ -312,7 +332,7 @@ export default function EntryModal() {
           >
             <Check size={20} color={!title ? '#9ca3af' : 'white'} strokeWidth={3} style={{ marginRight: 8 }} />
             <Text className={`font-black uppercase tracking-tighter ${!title ? 'text-gray-400' : 'text-white'}`}>
-              {(parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) > 0 ? 'Save Time Entry' : 'Launch Focus Session'}
+              {editId ? 'Save Changes' : ((parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) > 0 ? 'Save Time Entry' : 'Launch Focus Session')}
             </Text>
           </Pressable>
         </View>

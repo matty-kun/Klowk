@@ -1,21 +1,15 @@
 import { Image } from 'expo-image';
-import React from 'react';
-import { ScrollView, Pressable, Dimensions } from 'react-native';
-import { View, Text } from '@/components/Themed';
+import React, { useRef } from 'react';
+import { Animated, Pressable, Dimensions, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Text } from '@/components/Themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, G, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Rect, Path, Polyline, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useTracking } from '@/context/TrackingContext';
 import { CATEGORIES } from '@/constants/Categories';
 import { formatDuration } from '@/utils/time';
 import { 
-  BarChart3, 
-  PieChart, 
-  TrendingUp, 
-  Clock, 
   Tag, 
-  ChevronRight,
-  Target,
-  Zap,
   TrendingUp as TrendIcon
 } from 'lucide-react-native';
 
@@ -77,43 +71,86 @@ const DonutChart = ({ data, total }: { data: any[], total: number }) => {
   );
 };
 
-const WeeklyBarChart = ({ activities }: { activities: any[] }) => {
+const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
   const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const now = new Date();
   
-  // Calculate mins per day for last 7 days
+  const now = new Date();
+  const currentDay = now.getDay();
   const dailyData = days.map((_, i) => {
-    const d = new Date();
-    d.setDate(now.getDate() - (6 - i));
+    const d = new Date(now);
+    d.setDate(now.getDate() - currentDay + i);
     const dayStart = new Date(d.setHours(0,0,0,0)).getTime();
     const dayEnd = new Date(d.setHours(23,59,59,999)).getTime();
-    
     const ms = activities.filter(a => a.start_time >= dayStart && a.start_time <= dayEnd)
                         .reduce((sum, a) => sum + (a.duration || 0), 0);
     return ms;
   });
 
-  const max = Math.max(...dailyData, 60); // min max of 1hr for scale
+  const max = Math.max(...dailyData, 60);
+  const chartHeight = 100;
+  const chartWidth = width - 80;
+  
+  // Calculate points for the line
+  const points = dailyData.map((val, i) => {
+    const x = (i / (days.length - 1)) * chartWidth;
+    const y = chartHeight - (val / max) * chartHeight;
+    return `${x},${y}`;
+  }).join(' ');
 
   return (
-    <View className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-50 mb-8">
+    <View className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-50 mb-8 overflow-hidden">
       <View className="flex-row justify-between items-center mb-6 bg-transparent">
         <Text className="font-black text-lg text-klowk-black italic">Weekly Trend</Text>
-        <TrendIcon size={16} color="#10b981" />
+        <TrendIcon size={16} color="#FF5A00" />
       </View>
-      <View className="flex-row justify-between items-end h-32 bg-transparent">
-        {dailyData.map((val, i) => {
-          const height = (val / max) * 100;
-          return (
-            <View key={i} className="items-center bg-transparent w-[10%]">
-              <View 
-                style={{ height: `${height}%` }} 
-                className={`w-full rounded-full ${i === 6 ? 'bg-klowk-orange' : 'bg-gray-100'}`} 
-              />
-              <Text className="text-[10px] font-bold text-gray-400 mt-2">{days[i]}</Text>
-            </View>
-          );
-        })}
+      
+      <View className="h-32 bg-transparent relative">
+        <View className="absolute top-0 left-0 right-0 h-full justify-between bg-transparent">
+            {[...Array(4)].map((_, i) => (
+                <View key={i} className="w-full h-[1px] bg-gray-50" />
+            ))}
+        </View>
+
+        <View className="flex-1 bg-transparent mt-2">
+            <Svg height={chartHeight} width={chartWidth}>
+                <Defs>
+                    <SvgGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                        <Stop offset="0" stopColor="#FF5A00" stopOpacity="0.2" />
+                        <Stop offset="1" stopColor="#FF5A00" stopOpacity="0" />
+                    </SvgGradient>
+                </Defs>
+                {/* Area under the line */}
+                <Path
+                    d={`M 0,${chartHeight} ${points.split(' ').map((p, i) => (i === 0 ? `L ${p}` : p)).join(' ')} L ${chartWidth},${chartHeight} Z`}
+                    fill="url(#grad)"
+                />
+                {/* The line itself */}
+                <Polyline
+                    points={points}
+                    fill="none"
+                    stroke="#FF5A00"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+                {/* Dots for each day */}
+                {dailyData.map((val, i) => {
+                    const x = (i / (days.length - 1)) * chartWidth;
+                    const y = chartHeight - (val / max) * chartHeight;
+                    return (
+                        <Circle key={i} cx={x} cy={y} r="4" fill={i === currentDay ? '#FF5A00' : 'white'} stroke="#FF5A00" strokeWidth="2" />
+                    );
+                })}
+            </Svg>
+        </View>
+
+        <View className="flex-row justify-between items-center bg-transparent mt-4 px-1">
+            {days.map((day, i) => (
+                <Text key={i} className={`text-[10px] font-bold ${i === currentDay ? 'text-klowk-orange' : 'text-gray-400'}`}>
+                    {day}
+                </Text>
+            ))}
+        </View>
       </View>
     </View>
   );
@@ -121,54 +158,69 @@ const WeeklyBarChart = ({ activities }: { activities: any[] }) => {
 
 export default function ReportsScreen() {
   const { activities } = useTracking();
+  const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // Simple analytics logic
-  const categoryStats = CATEGORIES.map(cat => {
-    const logs = activities.filter(a => a.category === cat.id);
-    const totalMins = logs.reduce((sum, a) => sum + (a.duration || 0), 0);
+  const categoryStats = CATEGORIES.map((cat: any) => {
+    const logs = activities.filter((a: any) => a.category === cat.id);
+    const totalMins = logs.reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
     const sessionCount = logs.length;
     return { ...cat, totalMins, sessionCount };
-  }).sort((a, b) => b.totalMins - a.totalMins);
+  }).sort((a: any, b: any) => b.totalMins - a.totalMins);
 
-  const totalTimeRecorded = categoryStats.reduce((sum, c) => sum + c.totalMins, 0);
+  const totalTimeRecorded = categoryStats.reduce((sum: number, c: any) => sum + c.totalMins, 0);
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
         
-        {/* Seamless Header Section */}
+        {/* Fixed Header Section (Mist logic) with Brand Band */}
         <View className="bg-white pt-8 pb-12 px-6">
-          <Text className="text-4xl font-extrabold text-klowk-black mb-8 italic">Data</Text>
-          <View className="flex-row items-end justify-between">
-            {/* Mascot on the Left - LARGE */}
-            <View className="w-32 h-32 items-center justify-center bg-transparent">
-              <Image 
-                source={require('../../assets/images/time-mascot.svg')} 
-                style={{ width: 120, height: 120 }}
-                contentFit="contain"
-              />
-            </View>
+          <Text className="text-4xl font-extrabold text-klowk-black mb-10">Data</Text>
+          
+          <View className="relative items-center justify-center">
+             {/* The Orange Band - Lowered */}
+             <View 
+                style={{ backgroundColor: '#FF5A00', height: 60, top: '45%' }} 
+                className="absolute left-[-24] right-[-24]" 
+             />
 
-            {/* Main Balance Card on the Right */}
-            <View className="bg-white p-6 rounded-[32px] shadow-sm w-[60%]">
-              <View className="flex-row items-center mb-1 bg-transparent">
-                <Text className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">Total Focused</Text>
-                <View className="ml-2 w-2 h-2 bg-green-500 rounded-full" />
-              </View>
-              <Text className="text-3xl font-black text-klowk-black italic leading-8 pr-2">
-                {formatDuration(totalTimeRecorded)}
-              </Text>
-              <Text className="text-[9px] text-gray-400 font-bold mt-1">Focus efficiency is up 5.8%</Text>
+            <View className="flex-row items-end justify-between bg-transparent">
+                <View className="w-32 h-32 items-center justify-center bg-transparent">
+                <Image 
+                    source={require('../../assets/images/time-mascot.svg')} 
+                    style={{ width: 120, height: 120 }}
+                    contentFit="contain"
+                />
+                </View>
+
+                <View className="bg-white p-6 rounded-[32px] shadow-sm w-[60%]">
+                <View className="flex-row items-center mb-1 bg-transparent">
+                    <Text className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">Total Focused</Text>
+                    <View className="ml-2 w-2 h-2 bg-green-500 rounded-full" />
+                </View>
+                <Text className="text-3xl font-black text-klowk-black italic leading-8 pr-2">
+                    {formatDuration(totalTimeRecorded)}
+                </Text>
+                <Text className="text-[9px] text-gray-400 font-bold mt-1">Focus efficiency is up 5.8%</Text>
+                </View>
             </View>
           </View>
         </View>
 
         <View className="px-6 -mt-6">
-          {/* Donut Chart Integrated */}
           <View className="bg-white p-8 rounded-[40px] shadow-md border border-gray-50 flex-row items-center justify-between mb-8">
             <DonutChart data={categoryStats} total={totalTimeRecorded} />
             <View className="flex-1 ml-6 bg-transparent">
-               {categoryStats.slice(0, 3).map(stat => (
+               {categoryStats.slice(0, 3).map((stat: any) => (
                  <View key={stat.id} className="flex-row items-center mb-2 bg-transparent">
                    <View style={{ backgroundColor: stat.color }} className="w-2 h-2 rounded-full mr-2" />
                    <Text className="text-[10px] font-bold text-gray-500">{stat.label}</Text>
@@ -177,9 +229,8 @@ export default function ReportsScreen() {
             </View>
           </View>
 
-          <WeeklyBarChart activities={activities} />
+          <WeeklyLineChart activities={activities} />
 
-          {/* Insight Card (Seamless) */}
           <View className="bg-white p-6 rounded-[34px] shadow-md border border-gray-50 relative overflow-hidden mb-8">
             <View className="flex-row items-center mb-3 bg-transparent">
               <Text className="font-black text-klowk-orange text-[10px] uppercase tracking-[3px]">Insight</Text>
@@ -189,7 +240,6 @@ export default function ReportsScreen() {
             </Text>
           </View>
 
-          {/* Allocations Section */}
           <View className="mb-8">
             <View className="flex-row items-center justify-between mb-6 bg-transparent">
               <Text className="font-black text-lg text-klowk-black italic">Allocations</Text>
@@ -198,7 +248,7 @@ export default function ReportsScreen() {
               </View>
             </View>
 
-            {categoryStats.map((stat, i) => {
+            {categoryStats.map((stat: any, i: number) => {
                const percentage = totalTimeRecorded > 0 ? (stat.totalMins / totalTimeRecorded) * 100 : 0;
                if (stat.totalMins === 0 && i > 2) return null;
 
@@ -219,7 +269,6 @@ export default function ReportsScreen() {
                      </View>
                    </View>
                    
-                   {/* Seamless Progress Bar */}
                    <View className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
                       <View 
                         style={{ 
@@ -233,11 +282,23 @@ export default function ReportsScreen() {
                );
             })}
           </View>
-          
-          {/* Bottom Spacer for Floating Navbar */}
-          <View className="h-32 bg-transparent" />
+          <View className="h-40 bg-transparent" />
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* FIXED Mist Gradient */}
+      <LinearGradient
+        colors={['rgba(255,255,255,1)', 'rgba(255,255,255,0)']}
+        style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 40,
+            zIndex: 10,
+        }}
+        pointerEvents="none"
+      />
     </SafeAreaView>
   );
 }

@@ -19,6 +19,8 @@ type TrackingContextType = {
   stopTracker: () => Promise<void>;
   deleteActivity: (id: number) => Promise<void>;
   addManualActivity: (title: string, category: string, durationMins: number, description?: string, customDate?: Date) => Promise<void>;
+  editActivity: (id: number, title: string, category: string, durationMins: number, description?: string, customDate?: Date) => Promise<void>;
+  duplicateActivity: (id: number) => Promise<void>;
   refreshActivities: () => Promise<void>;
   getTotalFocusTimeToday: () => number;
 };
@@ -114,6 +116,36 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const editActivity = async (id: number, title: string, category: string, durationMins: number, description?: string, customDate?: Date) => {
+    try {
+      const timestamp = customDate ? customDate.getTime() : Date.now();
+      const startTime = timestamp - (durationMins * 60000);
+      await db.runAsync(
+        'UPDATE activities SET title = ?, category = ?, description = ?, start_time = ?, end_time = ?, duration = ? WHERE id = ?',
+        [title, category, description || null, startTime, timestamp, durationMins, id]
+      );
+      await refreshActivities();
+    } catch (err) {
+      console.error('Failed to edit activity:', err);
+    }
+  };
+
+  const duplicateActivity = async (id: number) => {
+    try {
+      const activityToCopy = activities.find(a => a.id === id);
+      if (!activityToCopy) return;
+      
+      const now = Date.now();
+      await db.runAsync(
+        'INSERT INTO activities (title, category, description, start_time, end_time, duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [activityToCopy.title, activityToCopy.category, activityToCopy.description, now, now + ((activityToCopy.duration || 0) * 60000), activityToCopy.duration, now]
+      );
+      await refreshActivities();
+    } catch (err) {
+      console.error('Failed to duplicate activity:', err);
+    }
+  };
+
   const getTotalFocusTimeToday = () => {
     const startOfToday = new Date().setHours(0, 0, 0, 0);
     return activities
@@ -129,6 +161,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       stopTracker, 
       deleteActivity, 
       addManualActivity,
+      editActivity,
+      duplicateActivity,
       refreshActivities,
       getTotalFocusTimeToday
     }}>

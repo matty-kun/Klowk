@@ -1,74 +1,95 @@
-import { Image } from 'expo-image';
-import { Text, View } from '@/components/Themed';
+import LogActionSheet from '@/components/LogActionSheet';
 import { CATEGORIES } from '@/constants/Categories';
-import { useTracking } from '@/context/TrackingContext';
-import { formatDate, formatDuration, formatLiveDuration, formatTimestamp } from '@/utils/time';
+import { Activity, useTracking } from '@/context/TrackingContext';
+import { formatDate, formatDuration, formatLiveDuration, formatLogDuration, formatTimestamp } from '@/utils/time';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
+  ArrowDown,
+  ArrowUp,
   BookOpen,
   Briefcase,
   Coffee,
   Heart,
-  History,
   MoreHorizontal,
-  Tag,
-  Trophy,
-  Zap,
-  Settings2
+  Settings2,
+  Tag
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { Link } from 'expo-router';
-import { Dimensions, Pressable, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Dimensions, Pressable, TouchableOpacity, ScrollView, View, Text } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 export default function TabOneScreen() {
-  const { activities, currentActivity, startTracker, stopTracker, getTotalFocusTimeToday, addManualActivity } = useTracking();
-  const [activityTitle, setActivityTitle] = useState('');
+  const { activities, currentActivity, stopTracker, getTotalFocusTimeToday, deleteActivity, duplicateActivity } = useTracking();
+  const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
-  const [isParsing, setIsParsing] = useState(false);
-  const [summaryPeriod, setSummaryPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month'>('today');
+  
+  const handleRangeChange = (r: 'today' | 'week' | 'month') => {
+    setTimeRange(r);
+  };
 
-  // Calculate stats for Period Toggle
   const now = new Date();
   
+  const getPeriodTotal = (range: 'today' | 'week' | 'month', offset: number = 0) => {
+    const ref = new Date(now);
+    const startOfRange = new Date(ref);
+    const endOfRange = new Date(ref);
+    
+    if (range === 'today') {
+      startOfRange.setDate(ref.getDate() + offset);
+      startOfRange.setHours(0,0,0,0);
+      endOfRange.setDate(ref.getDate() + offset);
+      endOfRange.setHours(23,59,59,999);
+    } else if (range === 'week') {
+      const day = ref.getDay();
+      startOfRange.setDate(ref.getDate() - day + (offset * 7));
+      startOfRange.setHours(0,0,0,0);
+      endOfRange.setDate(startOfRange.getDate() + 6);
+      endOfRange.setHours(23,59,59,999);
+    } else if (range === 'month') {
+      startOfRange.setMonth(ref.getMonth() + offset, 1);
+      startOfRange.setHours(0,0,0,0);
+      endOfRange.setMonth(ref.getMonth() + offset + 1, 0);
+      endOfRange.setHours(23,59,59,999);
+    }
+    
+    return activities
+      .filter((a: Activity) => {
+        const t = new Date(a.start_time).getTime();
+        return t >= startOfRange.getTime() && t <= endOfRange.getTime();
+      })
+      .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+  };
+
+  const rangeMinsTotal = getPeriodTotal(timeRange, 0);
+  const prevRangeMinsTotal = getPeriodTotal(timeRange, -1);
+  const trendUp = rangeMinsTotal > prevRangeMinsTotal;
+  const isNeutral = rangeMinsTotal === prevRangeMinsTotal;
+  const trendColor = isNeutral ? '#121212' : (trendUp ? '#10b981' : '#ef4444');
   const todayMinsTotal = activities
-    .filter(a => new Date(a.start_time).toDateString() === now.toDateString())
-    .reduce((sum, a) => sum + (a.duration || 0), 0);
+    .filter((a: Activity) => new Date(a.start_time).toDateString() === now.toDateString())
+    .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
     
-  const weekMinsTotal = activities
-    .filter(a => a.start_time >= now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    .reduce((sum, a) => sum + (a.duration || 0), 0);
-    
-  const monthMinsTotal = activities
-    .filter(a => a.start_time >= now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    .reduce((sum, a) => sum + (a.duration || 0), 0);
-
-  const displayMins = ({
-    day: todayMinsTotal,
-    week: weekMinsTotal,
-    month: monthMinsTotal
-  }[summaryPeriod]) || 0;
-
-  // Dynamic Chart Data logic (Last 7 Days)
+  const currentDay = now.getDay();
   const dailyChartData = [0, 1, 2, 3, 4, 5, 6].map(i => {
-    const d = new Date();
-    d.setDate(now.getDate() - (6 - i));
+    const d = new Date(now);
+    d.setDate(now.getDate() - currentDay + i);
     const dayStr = d.toDateString();
-    const isToday = d.toDateString() === now.toDateString();
+    const isToday = dayStr === now.toDateString();
     const label = d.toLocaleDateString('en-US', { weekday: 'narrow' });
     const mins = activities
-      .filter(a => new Date(a.start_time).toDateString() === dayStr)
-      .reduce((sum, a) => sum + (a.duration || 0), 0);
+      .filter((a: Activity) => new Date(a.start_time).toDateString() === dayStr)
+      .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
     return { mins, label, isToday };
   });
   
   const maxWeeklyMins = Math.max(...dailyChartData.map(d => d.mins), 1);
 
-
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (currentActivity) {
       setNowMs(Date.now());
       interval = setInterval(() => setNowMs(Date.now()), 1000);
@@ -76,178 +97,186 @@ export default function TabOneScreen() {
     return () => clearInterval(interval);
   }, [currentActivity]);
 
-  const totalHoursToday = (getTotalFocusTimeToday() / 60).toFixed(1);
-
-  const handleStartTracker = async () => {
-    if (currentActivity) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const finalTitle = activityTitle.trim() || 'Untitled Session';
-    await startTracker(finalTitle, 'Uncategorized');
-    setActivityTitle('');
-  };
-
   const dayOfWeek = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
   const dayOfMonth = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' }).format(new Date());
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: '#fff', paddingTop: 40 }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
         
-        <View className="px-6 py-4 flex-row justify-end items-center bg-transparent">
-          <Link href="/(tabs)/settings" asChild>
-            <Pressable className="bg-white px-4 py-2 rounded-full flex-row items-center border border-gray-100 shadow-sm active:opacity-70">
-              <Settings2 size={16} color="#FF5A00" />
-              <Text className="ml-2 font-bold text-klowk-black">Settings</Text>
+        {/* Header */}
+        <View style={{ paddingHorizontal: 24, paddingVertical: 8, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <Pressable 
+                onPress={() => console.log('Settings pressed')}
+                style={{ backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#f3f4f6' }}
+            >
+                <Settings2 size={16} color="#FF5A00" />
+                <Text style={{ marginLeft: 8, fontWeight: '700', color: '#121212' }}>Settings</Text>
             </Pressable>
-          </Link>
         </View>
 
         {/* Greeting Section */}
-        <View className="px-6 mb-10 mt-6 bg-white">
-          <Text className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1">
-            {dayOfWeek}, {dayOfMonth}
-          </Text>
-          <Text className="text-3xl font-black text-klowk-black mb-8 italic" numberOfLines={1}>
-            Good afternoon, <Text className="text-klowk-orange">User!</Text>
-          </Text>
+        <View style={{ paddingHorizontal: 24, marginBottom: 32, marginTop: 12 }}>
+            <Text style={{ color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', fontSize: 10, letterSpacing: 1.5, marginBottom: 4 }}>
+                {dayOfWeek}, {dayOfMonth}
+            </Text>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 26, fontWeight: '900', color: '#121212', marginBottom: 40 }}>
+                Good afternoon, <Text style={{ color: '#FF5A00' }}>User!</Text>
+            </Text>
 
-          {/* Mascot + Bubble Inline Row */}
-          <View className="flex-row items-center bg-white">
-            {/* Mascot on the Left - LARGE */}
-            <View style={{ width: 130, height: 130, marginRight: 8, alignItems: 'center', justifyContent: 'center' }}>
-              <Image 
-                source={require('../../assets/images/idle-mascot.svg')} 
-                style={{ width: 120, height: 120 }}
-                contentFit="contain"
-                transition={200}
-              />
+            <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ position: 'absolute', left: -24, right: -24, height: 60, backgroundColor: '#FF5A00', top: '45%' }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 130, height: 130, marginRight: 8, alignItems: 'center', justifyContent: 'center' }}>
+                        <Image 
+                            source={require('../../assets/images/idle-mascot.svg')} 
+                            style={{ width: 120, height: 120 }}
+                            contentFit="contain"
+                        />
+                    </View>
+                    <View style={{ flex: 1, backgroundColor: '#fff', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: '#f3f4f6', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 }}>
+                        <Text style={{ fontSize: 12, color: '#121212', fontWeight: '600', lineHeight: 20 }}>
+                            {todayMinsTotal > 0 
+                            ? `You've focused for ${formatDuration(todayMinsTotal)} today. Stellar work!`
+                            : "Ready for a deep focus session? I'm here to help you track your wins."}
+                        </Text>
+                        <View style={{ position: 'absolute', left: -6, top: 40, width: 16, height: 16, backgroundColor: '#fff', transform: [{ rotate: '45deg' }], borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#f3f4f6' }} />
+                    </View>
+                </View>
             </View>
-
-            {/* Inline Bubble on the Right */}
-            <View className="flex-1 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative">
-               <Text className="text-[12px] text-klowk-black font-semibold leading-5">
-                {todayMinsTotal > 0 
-                  ? `You've focused for ${formatDuration(todayMinsTotal)} today. Stellar work!`
-                  : "Ready for a deep focus session? I'm here to help you track your wins."}
-              </Text>
-              <View className="absolute left-[-6] top-10 w-4 h-4 bg-white rotate-45 border-l border-b border-gray-100" />
-            </View>
-          </View>
         </View>
 
-        {/* Analytics Section Row */}
-        <View className="px-6 flex-row justify-between mb-6">
-          {/* Last 7 Days Dynamic Heat Chart */}
-          <View className="w-[48%] bg-white rounded-3xl p-4 shadow-sm border border-gray-50">
-            <Text className="text-[10px] uppercase font-bold text-gray-400 mb-3">Intensity</Text>
-            <View className="flex-row items-end justify-between h-20">
+        {/* Analytics Section */}
+        <View style={{ paddingHorizontal: 24, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 }}>
+          {/* Intensity Card */}
+          <View style={{ width: '48.5%', backgroundColor: '#fff', borderRadius: 32, padding: 20, borderWidth: 1, borderColor: '#f9fafb', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 }}>
+            <Text style={{ fontSize: 10, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 20 }}>Intensity</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 64 }}>
               {dailyChartData.map((item, i) => {
                 const intensity = (item.mins / maxWeeklyMins) || 0;
-                const height = Math.max(12, intensity * 80);
-
+                const barHeight = Math.max(4, intensity * 40);
                 return (
-                  <View key={i} className="items-center flex-1">
-                    <View 
-                      style={{ 
-                        height: height,
-                        backgroundColor: item.isToday 
-                          ? '#FF5A00' 
-                          : (intensity > 0.05 ? `rgba(255, 90, 0, ${0.15 + intensity * 0.7})` : '#f3f4f6')
-                      }} 
-                      className={`w-2.5 rounded-full ${item.isToday ? 'shadow-lg' : ''}`} 
-                    />
-                    <Text className={`text-[8px] mt-2 font-bold ${item.isToday ? 'text-klowk-orange' : 'text-gray-300'}`}>
-                      {item.label}
-                    </Text>
+                  <View key={i} style={{ width: '12%', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                    <View style={{ 
+                        height: barHeight, 
+                        width: 10, 
+                        borderRadius: 5, 
+                        backgroundColor: item.isToday ? '#FF5A00' : (intensity > 0.05 ? `rgba(255, 90, 0, ${0.15 + intensity * 0.7})` : '#f3f4f6') 
+                    }} />
+                    <Text style={{ marginTop: 8, fontSize: 7, fontWeight: '900', textTransform: 'uppercase', color: item.isToday ? '#FF5A00' : '#d1d5db' }}>{item.label}</Text>
                   </View>
                 );
               })}
             </View>
           </View>
 
-          {/* Today Summary Card */}
-          <View className="w-[48%] bg-white rounded-3xl p-4 shadow-sm border border-gray-50 justify-between">
+          {/* Summary Card */}
+          <View style={{ width: '48.5%', backgroundColor: '#fff', borderRadius: 32, padding: 20, borderWidth: 1, borderColor: '#f9fafb', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2, justifyContent: 'space-between' }}>
             <View>
-              <Text className="text-[10px] uppercase font-bold text-gray-400 mb-1">Today</Text>
-              <View className="flex-row items-baseline mb-2">
-                <Text className="text-5xl font-black text-klowk-black italic pr-4">{(todayMinsTotal / 60).toFixed(1)}</Text>
-                <Text className="text-[10px] font-bold text-gray-400">HRS</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  {timeRange === 'today' ? 'Today' : timeRange === 'week' ? 'This Week' : 'This Month'}
+                </Text>
+                {trendUp ? <ArrowUp size={12} color="#10b981" strokeWidth={3} /> : <ArrowDown size={12} color="#ef4444" strokeWidth={3} />}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                <Text style={{ fontSize: 34, fontWeight: '900', color: trendColor }}>{(rangeMinsTotal / 60).toFixed(1)}</Text>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: '#d1d5db', marginLeft: 4 }}>HRS</Text>
               </View>
             </View>
-            <View className="flex-row items-center">
-              <View className="w-1.5 h-1.5 rounded-full bg-klowk-orange mr-2" />
+
+            {/* THE TOGGLE */}
+            <View style={{ flexDirection: 'row', backgroundColor: '#f9fafb', padding: 4, borderRadius: 16 }}>
+                {(['today', 'week', 'month'] as const).map((r) => {
+                    const isActive = timeRange === r;
+                    return (
+                        <TouchableOpacity 
+                            key={r}
+                            activeOpacity={0.7}
+                            onPress={() => handleRangeChange(r)}
+                            style={{ 
+                                flex: 1, 
+                                alignItems: 'center', 
+                                paddingVertical: 8, 
+                                borderRadius: 12, 
+                                backgroundColor: isActive ? '#fff' : 'transparent',
+                                shadowColor: isActive ? '#000' : 'transparent',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.05,
+                                shadowRadius: 2,
+                                elevation: isActive ? 1 : 0
+                            }}
+                        >
+                            <Text style={{ fontSize: 7, fontWeight: '900', textTransform: 'uppercase', color: isActive ? '#FF5A00' : '#9ca3af' }}>{r}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </View>
           </View>
         </View>
 
-        {/* Action / Tracker Card - Only show when LIVE */}
+        {/* Live Timer Card */}
         {currentActivity && (
-          <View className="px-6 mb-8">
-             <View className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 italic">
-                <View className="items-center">
-                   <Text className="text-klowk-orange font-bold text-lg mb-1">{currentActivity.title}</Text>
-                   <Text className="text-4xl font-black text-klowk-black mb-4" style={{ fontFamily: 'SpaceMono' }}>
+          <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
+             <View style={{ backgroundColor: '#fff', borderRadius: 32, padding: 24, borderWidth: 1, borderColor: '#f3f4f6', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 4 }}>
+                <View style={{ alignItems: 'center' }}>
+                   <Text style={{ color: '#FF5A00', fontWeight: '700', fontSize: 18, marginBottom: 4 }}>{currentActivity.title}</Text>
+                   <Text style={{ fontSize: 40, fontWeight: '900', color: '#121212', marginBottom: 16 }}>
                      {formatLiveDuration(currentActivity.start_time, nowMs)}
                    </Text>
-                   <Pressable 
+                   <TouchableOpacity 
                     onPress={stopTracker}
-                    className="w-full bg-klowk-black py-4 rounded-2xl items-center"
+                    style={{ width: '100%', backgroundColor: '#121212', paddingVertical: 16, borderRadius: 16, alignItems: 'center' }}
                    >
-                     <Text className="text-white font-bold">Stop Timer</Text>
-                   </Pressable>
+                     <Text style={{ color: '#fff', fontWeight: '700' }}>Stop Timer</Text>
+                   </TouchableOpacity>
                 </View>
              </View>
           </View>
         )}
 
-
-
-        {/* Recent Logs List Title */}
-        <View className="px-6 mb-4">
-             <Text className="text-[10px] font-black text-klowk-orange uppercase tracking-widest">LOGS</Text>
+        {/* Logs List */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+             <Text style={{ fontSize: 10, fontWeight: '900', color: '#FF5A00', textTransform: 'uppercase', letterSpacing: 2 }}>LOGS</Text>
         </View>
 
-        {/* Recent Logs List */}
-        <View className="px-6 mb-32">
-          {activities.slice(0, 5).map((log) => {
+        <View style={{ paddingHorizontal: 24, marginBottom: 120 }}>
+          {activities.slice(0, 5).map((log: Activity) => {
             const category = CATEGORIES.find(c => c.id === log.category);
             const catColor = category?.color || '#6b7280';
-            const Icon = {
-              briefcase: Briefcase,
-              heart: Heart,
-              'book-open': BookOpen,
-              coffee: Coffee,
-              'more-horizontal': MoreHorizontal,
-            }[category?.iconName as string] || Tag;
+            const Icon = { briefcase: Briefcase, heart: Heart, 'book-open': BookOpen, coffee: Coffee }[category?.iconName as string] || Tag;
 
             return (
-              <View key={log.id} className="bg-white rounded-[24px] p-4 mb-3 flex-row items-center shadow-sm border border-gray-50">
-                <View 
-                  style={{ backgroundColor: `${catColor}15` }} 
-                  className="w-10 h-10 rounded-xl items-center justify-center mr-4"
-                >
+              <View key={log.id} style={{ backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#f9fafb', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 5, elevation: 1 }}>
+                <View style={{ backgroundColor: `${catColor}15`, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
                    <Icon size={18} color={catColor} />
                 </View>
-                <View className="flex-1">
-                   <Text className="font-bold text-klowk-black" numberOfLines={1}>{log.title}</Text>
-                   <View className="flex-row items-center">
-                    <Text style={{ color: catColor }} className="text-[10px] font-black uppercase tracking-tighter mr-2">
-                      {category?.label || 'Personal'}
-                    </Text>
-                    <Text className="text-[8px] text-gray-400 font-bold uppercase">{formatDate(log.start_time)} • {formatTimestamp(log.start_time)}</Text>
+                <View style={{ flex: 1 }}>
+                   <Text style={{ fontWeight: '700', color: '#121212' }} numberOfLines={1}>{log.title || 'Untitled Session'}</Text>
+                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: catColor, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', marginRight: 8 }}>{category?.label || 'Personal'}</Text>
+                    <Text style={{ fontSize: 8, color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase' }}>{formatDate(log.start_time)} • {formatTimestamp(log.start_time)}</Text>
                    </View>
                 </View>
-                <Text className="font-black text-klowk-black">{formatDuration(log.duration || 0)}</Text>
+                 <View style={{ alignItems: 'flex-end', marginLeft: 16 }}>
+                   <Text style={{ fontWeight: '900', color: '#121212', marginBottom: 4, textAlign: 'right' }}>{formatLogDuration(log.start_time, log.end_time, log.duration)}</Text>
+                   <Pressable hitSlop={10} onPress={() => setSelectedActionLogId(log.id)} style={{ padding: 4 }}>
+                     <MoreHorizontal size={16} color="#9ca3af" />
+                   </Pressable>
+                 </View>
               </View>
             );
           })}
-          
-          {/* Bottom Spacer for Floating Navbar */}
-          <View className="h-32 bg-transparent" />
         </View>
-
       </ScrollView>
 
-    </SafeAreaView>
+      <LogActionSheet
+        visible={selectedActionLogId !== null}
+        onClose={() => setSelectedActionLogId(null)}
+        onEdit={() => console.log('Edit:', selectedActionLogId)}
+        onDuplicate={() => selectedActionLogId && duplicateActivity(selectedActionLogId)}
+        onDelete={() => selectedActionLogId && deleteActivity(selectedActionLogId)}
+      />
+    </View>
   );
 }

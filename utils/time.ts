@@ -16,26 +16,22 @@ export function formatDuration(durationMins: number): string {
 }
 
 export function formatLogDuration(startTimeMs: number, endTimeMs: number | null, fallbackDurationMins: number | null): string {
-  if (endTimeMs) {
-    const diffSecs = Math.max(0, Math.floor((endTimeMs - startTimeMs) / 1000));
-    if (diffSecs < 60) return `${diffSecs}s`;
-    
-    const hours = Math.floor(diffSecs / 3600);
-    const mins = Math.floor((diffSecs % 3600) / 60);
-    if (hours === 0) return `${mins}m`;
-    return `${hours}h ${mins}m`;
-  }
-  return formatDuration(fallbackDurationMins || 0);
-}
-
-export function formatLiveDuration(startTimeMs: number, currentTimeMs: number): string {
-  const diffSecs = Math.max(0, Math.floor((currentTimeMs - startTimeMs) / 1000));
+  const end = endTimeMs || (fallbackDurationMins ? startTimeMs + fallbackDurationMins * 60000 : Date.now());
+  const diffSecs = Math.max(0, Math.floor((end - startTimeMs) / 1000));
+  
   const hours = Math.floor(diffSecs / 3600);
   const mins = Math.floor((diffSecs % 3600) / 60);
   const secs = diffSecs % 60;
-  
+
+  const mStr = mins.toString().padStart(2, '0');
+  const sStr = secs.toString().padStart(2, '0');
+
   if (hours > 0) {
-    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hours}:${mStr}:${sStr}`;
   }
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${mStr}:${sStr}`;
+}
+
+export function formatLiveDuration(startTimeMs: number, currentTimeMs: number): string {
+  return formatLogDuration(startTimeMs, currentTimeMs, null);
 }

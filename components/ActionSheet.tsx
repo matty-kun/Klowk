@@ -7,9 +7,10 @@ type ActionWidgetProps = {
   visible: boolean;
   onClose: () => void;
   onTalkToKala: () => void;
+  onLogManually: () => void;
 };
 
-export default function ActionWidget({ visible, onClose, onTalkToKala }: ActionWidgetProps) {
+export default function ActionWidget({ visible, onClose, onTalkToKala, onLogManually }: ActionWidgetProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -30,7 +31,7 @@ export default function ActionWidget({ visible, onClose, onTalkToKala }: ActionW
   const handleLogManually = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
-    console.log('Log manually pressed');
+    onLogManually();
   };
 
   const handleTalkToKala = () => {

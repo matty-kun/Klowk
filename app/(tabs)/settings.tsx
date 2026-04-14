@@ -25,7 +25,7 @@ export default function SettingsScreen() {
               <User size={30} color="#FF5A00" />
            </View>
            <View className="flex-1">
-              <Text className="text-xl font-black text-klowk-black italic pr-2">Premium User</Text>
+              <Text className="text-xl font-black text-klowk-black pr-2">Premium User</Text>
               <Text className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Klowk Pro Account</Text>
            </View>
            <View className="bg-klowk-orange/10 px-3 py-1 rounded-full">

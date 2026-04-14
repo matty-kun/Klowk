@@ -1,0 +1,226 @@
+import React from 'react';
+import { View, ScrollView, Pressable, Text, Switch, Platform, Dimensions, Alert, TouchableOpacity } from 'react-native';
+import { View as MotiView, AnimatePresence } from 'moti';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { ArrowLeft, Moon, Sun, Info, ChevronRight, Shield, Bell, Heart, Globe, Trash2 } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import { useColorScheme } from 'nativewind';
+import { useLanguage } from '@/context/LanguageContext';
+
+const { width } = Dimensions.get('window');
+
+const SettingItem = ({ icon: Icon, label, value, type = 'info', onPress, color = '#121212', destructive = false, isDark }: any) => {
+    return (
+    <Pressable 
+        onPress={() => {
+            if (type === 'action') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onPress?.();
+            } else if (type === 'switch') {
+                onPress?.();
+            }
+        }}
+        className={`flex-row items-center justify-between py-5 px-6 bg-white dark:bg-zinc-900 border-b border-gray-50 dark:border-zinc-800 ${type === 'action' ? 'active:bg-gray-100 dark:active:bg-zinc-800' : ''}`}
+    >
+        <View className="flex-row items-center">
+            <View style={{ backgroundColor: destructive ? (isDark ? '#450a0a' : '#FEF2F2') : (isDark ? '#27272a' : '#F9FAFB') }} className="w-10 h-10 rounded-xl items-center justify-center mr-4">
+                <Icon size={20} color={destructive ? '#EF4444' : (isDark ? '#e5e7eb' : color)} />
+            </View>
+            <Text className={`text-base font-bold ${destructive ? 'text-red-500' : 'text-klowk-black dark:text-white'}`}>{label}</Text>
+        </View>
+        <View className="flex-row items-center">
+            {type === 'switch' ? (
+                <View className="w-12 h-6 bg-gray-100 dark:bg-zinc-800 rounded-full p-1 justify-center">
+                    <MotiView 
+                        animate={{ 
+                            translateX: value ? 24 : 0,
+                            backgroundColor: value ? '#FF5A00' : (isDark ? '#3f3f46' : '#d1d5db')
+                        }}
+                        transition={{ type: 'spring', damping: 15, stiffness: 120 }}
+                        className="w-4 h-4 rounded-full"
+                    />
+                </View>
+            ) : value ? (
+                <Text className="text-gray-400 dark:text-gray-500 font-bold text-sm">{value}</Text>
+            ) : null}
+        </View>
+    </Pressable>
+    );
+};
+
+export default function SettingsScreen() {
+  const { colorScheme, toggleColorScheme, setColorScheme } = useColorScheme();
+  const { t, language, setLanguage } = useLanguage();
+  const isDarkMode = colorScheme === 'dark';
+  const [notifications, setNotifications] = React.useState(true);
+  const [langToggleWidth, setLangToggleWidth] = React.useState(0);
+  const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
+
+  return (
+    <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
+        <Pressable onPress={() => router.back()} className="w-10 h-10 items-center justify-center rounded-full bg-gray-50 dark:bg-zinc-900">
+          <ArrowLeft size={20} color={isDarkMode ? '#fff' : '#121212'} />
+        </Pressable>
+        <Text className="text-lg font-black text-klowk-black dark:text-white">{t('settings_title')}</Text>
+        <View className="w-10" />
+      </View>
+
+      <ScrollView className="flex-1 bg-gray-50/30 dark:bg-klowk-black" showsVerticalScrollIndicator={false}>
+        <View className="py-8 items-center bg-white dark:bg-klowk-black mb-8">
+            <View className="w-24 h-24 rounded-[32px] bg-gray-50 dark:bg-zinc-900 items-center justify-center mb-4 overflow-hidden border border-gray-100 dark:border-zinc-800">
+                <Image source={require('../assets/images/idle-mascot.svg')} style={{ width: 80, height: 80 }} contentFit="contain" />
+            </View>
+            <Text className="text-2xl font-black text-klowk-black dark:text-white">Klowk</Text>
+        </View>
+
+        <View className="mb-8">
+            <Text className="px-6 mb-3 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('appearance_stats')}</Text>
+            <View className="bg-white dark:bg-klowk-black border-y border-gray-50 dark:border-zinc-800">
+                
+                {/* Theme Dual Buttons */}
+                <View className="flex-row items-center px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
+                    <View style={{ backgroundColor: '#FF5A0015' }} className="w-10 h-10 rounded-[12px] items-center justify-center mr-4">
+                        <Moon size={20} color="#FF5A00" />
+                    </View>
+                    <View 
+                        onLayout={(e) => setThemeToggleWidth(e.nativeEvent.layout.width)}
+                        className="flex-1 flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
+                    >
+                        <MotiView 
+                            animate={{ 
+                                translateX: (isDarkMode ? 1 : 0) * ((themeToggleWidth - 8) / 2)
+                            }}
+                            transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+                            style={{ 
+                                position: 'absolute', 
+                                top: 4, 
+                                bottom: 4, 
+                                left: 4, 
+                                width: (themeToggleWidth - 8) / 2 || '48%', 
+                                backgroundColor: isDarkMode ? '#3f3f46' : '#fff', 
+                                borderRadius: 12,
+                                elevation: 2,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4
+                            }}
+                        />
+                        <TouchableOpacity 
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setColorScheme('light');
+                            }}
+                            className="flex-1 py-3 items-center z-10"
+                        >
+                            <Text className={`text-xs font-black uppercase ${!isDarkMode ? 'text-klowk-orange' : 'text-gray-400'}`}>Light</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setColorScheme('dark');
+                            }}
+                            className="flex-1 py-3 items-center z-10"
+                        >
+                            <Text className={`text-xs font-black uppercase ${isDarkMode ? 'text-klowk-orange' : 'text-gray-400'}`}>Dark</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                
+                {/* Language Dual Buttons */}
+                <View className="flex-row items-center px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
+                    <View style={{ backgroundColor: '#FF5A0015' }} className="w-10 h-10 rounded-[12px] items-center justify-center mr-4">
+                        <Globe size={20} color="#FF5A00" />
+                    </View>
+                    <View 
+                        onLayout={(e) => setLangToggleWidth(e.nativeEvent.layout.width)}
+                        className="flex-1 flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
+                    >
+                        <MotiView 
+                            animate={{ 
+                                translateX: (language === 'en' ? 0 : 1) * ((langToggleWidth - 8) / 2)
+                            }}
+                            transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+                            style={{ 
+                                position: 'absolute', 
+                                top: 4, 
+                                bottom: 4, 
+                                left: 4, 
+                                width: (langToggleWidth - 8) / 2 || '48%', 
+                                backgroundColor: isDarkMode ? '#3f3f46' : '#fff', 
+                                borderRadius: 12,
+                                elevation: 2,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4
+                            }}
+                        />
+                        <TouchableOpacity 
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setLanguage('en');
+                            }}
+                            className="flex-1 py-3 items-center z-10"
+                        >
+                            <Text className={`text-xs font-black uppercase ${language === 'en' ? 'text-klowk-orange' : 'text-gray-400'}`}>English</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setLanguage('tl');
+                            }}
+                            className="flex-1 py-3 items-center z-10"
+                        >
+                            <Text className={`text-xs font-black uppercase ${language === 'tl' ? 'text-klowk-orange' : 'text-gray-400'}`}>Filipino</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                <SettingItem 
+                    icon={Bell} 
+                    label={t('focus_notifications')} 
+                    type="switch" 
+                    value={notifications} 
+                    onPress={() => setNotifications(!notifications)} 
+                    isDark={isDarkMode}
+                />
+            </View>
+        </View>
+
+        <View className="mb-8">
+            <Text className="px-6 mb-3 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('about_klowk')}</Text>
+            <View className="bg-white dark:bg-klowk-black border-y border-gray-50 dark:border-zinc-800">
+                <SettingItem 
+                    icon={Info} 
+                    label={t('app_version')} 
+                    value="1.0.4 (24)" 
+                    type="info"
+                    isDark={isDarkMode}
+                />
+            </View>
+        </View>
+
+        <View className="mb-20">
+            <View className="bg-white dark:bg-klowk-black border-y border-gray-50 dark:border-zinc-800">
+                <SettingItem 
+                    icon={Trash2} 
+                    label={t('clear_logs')} 
+                    destructive 
+                    type="action"
+                    isDark={isDarkMode}
+                    onPress={() => {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                        Alert.alert(t('clear_data_title'), t('clear_data_desc'));
+                    }}
+                />
+            </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

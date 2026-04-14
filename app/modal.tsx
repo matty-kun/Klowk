@@ -7,15 +7,12 @@ import {
   ScrollView, 
   KeyboardAvoidingView, 
   Platform,
-  ActivityIndicator,
   Modal
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { 
   ArrowLeft, 
-  Wand2, 
   Clock, 
   Calendar as CalendarIcon, 
   Tag, 
@@ -32,7 +29,6 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTracking } from '@/context/TrackingContext';
-import { parseNaturalLanguage } from '@/services/nlp';
 import { CATEGORIES } from '@/constants/Categories';
 
 export default function EntryModal() {
@@ -44,6 +40,7 @@ export default function EntryModal() {
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
+  const [seconds, setSeconds] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState('work');
@@ -59,14 +56,15 @@ export default function EntryModal() {
         setDescription(activityToEdit.description || '');
         setDate(new Date(activityToEdit.start_time));
         if (activityToEdit.duration) {
-          setHours(Math.floor(activityToEdit.duration / 60).toString());
-          setMinutes((activityToEdit.duration % 60).toString());
+          setHours(Math.floor(activityToEdit.duration / 3600).toString());
+          setMinutes(Math.floor((activityToEdit.duration % 3600) / 60).toString());
+          setSeconds((activityToEdit.duration % 60).toString());
         }
       }
     }
   }, [editId]);
   
-  // Custom Calendar Logic (Restored)
+  // Custom Calendar Logic
   const [viewedMonth, setViewedMonth] = useState(new Date());
   
   const getDaysInMonth = (date: Date) => {
@@ -94,12 +92,12 @@ export default function EntryModal() {
     if (!title) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
-    const totalMins = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
+    const totalSecs = (parseInt(hours) || 0) * 3600 + (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
     
     if (editId && typeof editId === 'string') {
-      await editActivity(Number(editId), title, category, totalMins, description, date);
-    } else if (totalMins > 0) {
-      await addManualActivity(title, category, totalMins, description, date);
+      await editActivity(Number(editId), title, category, totalSecs, description, date);
+    } else if (totalSecs > 0) {
+      await addManualActivity(title, category, totalSecs, description, date);
     } else {
       await startTracker(title, category, description);
     }
@@ -108,235 +106,210 @@ export default function EntryModal() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
-        <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
-          {/* Header Area: Back Button + Title Linked */}
-          <View className="flex-row items-center mb-8">
+        <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }} showsVerticalScrollIndicator={false}>
+          {/* Header Area */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 32 }}>
             <Pressable 
               onPress={() => router.back()}
-              className="w-12 h-12 items-center justify-center rounded-2xl bg-gray-50 mr-4"
+              style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: '#f9fafb', marginRight: 16 }}
             >
               <ArrowLeft size={24} color="#121212" />
             </Pressable>
-
-            <View className="flex-1">
-              <Text className="text-3xl font-black text-klowk-black italic">{editId ? 'Edit Log' : 'New Log'}</Text>
-            </View>
+            <Text style={{ fontSize: 28, fontWeight: '900', color: '#121212' }}>{editId ? 'Edit Log' : 'New Log'}</Text>
           </View>
           
           {/* Form Fields */}
-          <View className="mb-8">
-            <Text className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4">Manual Details</Text>
+          <View style={{ marginBottom: 32 }}>
+            <Text style={{ fontSize: 10, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Manual Details</Text>
             
-            {/* Title with Integrated AI */}
-            <View className="mb-5">
-              <View className="flex-row items-center mb-2 ml-1">
+            {/* Title */}
+            <View style={{ marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Zap size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500">What did you do?</Text>
+                <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '700', color: '#6b7280' }}>What did you do?</Text>
               </View>
-              <View className="bg-gray-50 rounded-2xl border border-gray-100 flex-row items-center">
+              <View style={{ backgroundColor: '#f9fafb', borderRadius: 20, borderWidth: 1, borderColor: '#f3f4f6' }}>
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
                   placeholder="What are you focusing on?"
-                  className="flex-1 p-4 font-bold text-klowk-black"
+                  style={{ padding: 16, fontSize: 16, fontWeight: '700', color: '#121212' }}
                 />
               </View>
             </View>
 
-            {/* Duration & Date Row */}
-            <View className="flex-row mb-5" style={{ gap: 10 }}>
-              <View className="flex-1">
-                <View className="flex-row items-center mb-2 ml-1">
-                  <Clock size={14} color="#9ca3af" />
-                  <Text className="ml-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Hours</Text>
+            {/* Duration Row */}
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 20 }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Clock size={12} color="#9ca3af" />
+                  <Text style={{ marginLeft: 4, fontSize: 8, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Hrs</Text>
                 </View>
                 <TextInput
                   value={hours}
                   onChangeText={setHours}
                   keyboardType="numeric"
                   placeholder="0"
-                  className="bg-gray-50 px-3 py-4 rounded-2xl font-bold text-klowk-black border border-gray-100 h-[58px] text-sm"
+                  placeholderTextColor="#d1d5db"
+                  style={{ backgroundColor: '#f9fafb', height: 54, borderRadius: 16, fontSize: 14, fontWeight: '900', color: '#121212', textAlign: 'center', borderWidth: 1, borderColor: '#f3f4f6', paddingHorizontal: 0 }}
                 />
               </View>
-              <View className="flex-1">
-                <View className="flex-row items-center mb-2 ml-1">
-                  <Clock size={14} color="#9ca3af" />
-                  <Text className="ml-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Minutes</Text>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Clock size={12} color="#9ca3af" />
+                  <Text style={{ marginLeft: 4, fontSize: 8, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Min</Text>
                 </View>
                 <TextInput
                   value={minutes}
                   onChangeText={setMinutes}
                   keyboardType="numeric"
-                  placeholder="30"
-                  className="bg-gray-50 px-3 py-4 rounded-2xl font-bold text-klowk-black border border-gray-100 h-[58px] text-sm"
+                  placeholder="0"
+                  placeholderTextColor="#d1d5db"
+                  style={{ backgroundColor: '#f9fafb', height: 54, borderRadius: 16, fontSize: 14, fontWeight: '900', color: '#121212', textAlign: 'center', borderWidth: 1, borderColor: '#f3f4f6', paddingHorizontal: 0 }}
                 />
               </View>
-              <View className="flex-[1.2]">
-                <View className="flex-row items-center mb-2 ml-1">
-                  <CalendarIcon size={14} color="#9ca3af" />
-                  <Text className="ml-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</Text>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Clock size={12} color="#9ca3af" />
+                  <Text style={{ marginLeft: 4, fontSize: 8, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Sec</Text>
+                </View>
+                <TextInput
+                  value={seconds}
+                  onChangeText={setSeconds}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#d1d5db"
+                  style={{ backgroundColor: '#f9fafb', height: 54, borderRadius: 16, fontSize: 14, fontWeight: '900', color: '#121212', textAlign: 'center', borderWidth: 1, borderColor: '#f3f4f6', paddingHorizontal: 0 }}
+                />
+              </View>
+              <View style={{ flex: 1.2 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <CalendarIcon size={12} color="#9ca3af" />
+                  <Text style={{ marginLeft: 4, fontSize: 8, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase' }}>Date</Text>
                 </View>
                 <Pressable 
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setShowDatePicker(!showDatePicker);
+                    setShowDatePicker(true);
                   }}
-                  className={`bg-gray-50 px-3 py-4 rounded-2xl border items-center justify-center flex-1 h-[58px] ${showDatePicker ? 'border-klowk-orange' : 'border-gray-100'}`}
+                  style={{ backgroundColor: '#f9fafb', height: 54, borderRadius: 16, borderWidth: 1, borderColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Text className="font-bold text-klowk-black text-sm" numberOfLines={1}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#121212' }}>
                     {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </Text>
                 </Pressable>
               </View>
             </View>
 
-            <Modal
-              visible={showDatePicker}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowDatePicker(false)}
-            >
-              <Pressable 
-                className="flex-1 bg-klowk-black/40 items-center justify-center px-6"
-                onPress={() => setShowDatePicker(false)}
-              >
-                <Pressable className="w-full bg-white p-6 rounded-[32px] shadow-2xl" onPress={(e) => e.stopPropagation()}>
-                  {/* Calendar Header */}
-                  <View className="flex-row items-center mb-6">
-                    <Pressable onPress={() => changeMonth(-1)} className="w-10 h-10 items-center justify-center bg-gray-50 rounded-xl">
+            <Modal visible={showDatePicker} transparent animationType="fade">
+              <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 24 }} onPress={() => setShowDatePicker(false)}>
+                <Pressable style={{ width: '100%', backgroundColor: '#fff', padding: 24, borderRadius: 32 }} onPress={e => e.stopPropagation()}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+                    <Pressable onPress={() => changeMonth(-1)} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', borderRadius: 12 }}>
                       <ChevronLeft size={18} color="#FF5A00" />
                     </Pressable>
-                    <View className="flex-1 items-center">
-                      <Text className="font-black text-lg text-klowk-black italic text-center leading-5">{monthName}</Text>
-                      <Text className="text-[9px] font-black text-gray-400 uppercase tracking-[2px] text-center">{yearName}</Text>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ textAlign: 'center', fontWeight: '900', fontSize: 18, color: '#121212' }}>{monthName}</Text>
+                      <Text style={{ textAlign: 'center', fontSize: 10, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' }}>{yearName}</Text>
                     </View>
-                    <Pressable onPress={() => changeMonth(1)} className="w-10 h-10 items-center justify-center bg-gray-50 rounded-xl">
+                    <Pressable onPress={() => changeMonth(1)} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', borderRadius: 12 }}>
                       <ChevronRight size={18} color="#FF5A00" />
                     </Pressable>
                   </View>
-
-                  {/* Days Grid - Strict 7-column layout */}
-                  <View className="flex-row flex-wrap">
-                    {['S','M','T','W','T','F','S'].map((d, i) => (
-                      <Text key={i} className="w-[14.2%] text-center text-[9px] font-black text-gray-300 mb-4">{d}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    {['S','M','T','W','T','F','S'].map(d => (
+                      <Text key={d} style={{ width: '14.2%', textAlign: 'center', fontSize: 9, fontWeight: '900', color: '#d1d5db', marginBottom: 16 }}>{d}</Text>
                     ))}
-                    {days.map((d, i) => {
-                      const isSelected = d && d.toDateString() === date.toDateString();
-                      const isToday = d && d.toDateString() === new Date().toDateString();
-
-                      return (
-                        <Pressable 
-                          key={i} 
-                          onPress={() => {
-                            if (d) {
-                              setDate(d);
-                              setShowDatePicker(false);
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                            }
-                          }}
-                          className={`w-[14.2%] aspect-square items-center justify-center rounded-xl mb-1 ${isSelected ? 'bg-klowk-orange shadow-lg shadow-klowk-orange/40' : ''} ${!d ? 'opacity-0' : ''}`}
-                        >
-                          <Text className={`font-black text-sm ${isSelected ? 'text-white' : (isToday ? 'text-klowk-orange' : 'text-klowk-black')}`}>
-                            {d ? d.getDate() : ''}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
+                    {days.map((d, i) => (
+                      <Pressable 
+                        key={i} 
+                        onPress={() => { if(d){ setDate(d); setShowDatePicker(false); }}}
+                        style={{ width: '14.2%', aspectRatio: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 4, backgroundColor: d?.toDateString() === date.toDateString() ? '#FF5A00' : 'transparent' }}
+                      >
+                        <Text style={{ fontWeight: '900', color: d?.toDateString() === date.toDateString() ? '#fff' : (d?.toDateString() === new Date().toDateString() ? '#FF5A00' : '#121212') }}>{d ? d.getDate() : ''}</Text>
+                      </Pressable>
+                    ))}
                   </View>
-
-                  <Pressable 
-                    onPress={() => setShowDatePicker(false)}
-                    className="mt-4 py-2 items-center"
-                  >
-                    <Text className="text-gray-300 font-bold text-[10px] uppercase tracking-widest">Close</Text>
-                  </Pressable>
                 </Pressable>
               </Pressable>
             </Modal>
 
             {/* Description */}
-            <View className="mb-8">
-              <View className="flex-row items-center mb-2 ml-1">
+            <View style={{ marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <AlignLeft size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500">Description (Optional)</Text>
+                <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '700', color: '#6b7280' }}>Description (Optional)</Text>
               </View>
               <TextInput
                 value={description}
                 onChangeText={setDescription}
-                placeholder="How did it go? Any notes?"
+                placeholder="How did it go?"
                 multiline
                 numberOfLines={3}
-                className="bg-gray-50 p-4 rounded-2xl font-bold text-klowk-black border border-gray-100 h-24"
-                style={{ textAlignVertical: 'top' }}
+                style={{ backgroundColor: '#f9fafb', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#f3f4f6', height: 100, textAlignVertical: 'top', fontSize: 14, fontWeight: '600', color: '#121212' }}
               />
             </View>
 
-            {/* Category Selection */}
-            <View className="mb-8">
-              <View className="flex-row items-center mb-3 ml-1">
+            {/* Category */}
+            <View style={{ marginBottom: 32 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <Tag size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500">Category</Text>
+                <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '700', color: '#6b7280' }}>Category</Text>
               </View>
-              <View className="flex-row flex-wrap">
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {CATEGORIES.map((cat) => {
-                  const Icon = {
-                    briefcase: Briefcase,
-                    heart: Heart,
-                    'book-open': BookOpen,
-                    coffee: Coffee,
-                    'more-horizontal': MoreHorizontal,
-                  }[cat.iconName as string] || Tag;
-
+                  const Icon = { briefcase: Briefcase, heart: Heart, 'book-open': BookOpen, coffee: Coffee, 'more-horizontal': MoreHorizontal }[cat.iconName as string] || Tag;
+                  const isSelected = category === cat.id;
                   return (
                     <Pressable
                       key={cat.id}
-                      onPress={() => {
-                        setCategory(cat.id);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }}
+                      onPress={() => setCategory(cat.id)}
                       style={{ 
-                        backgroundColor: category === cat.id ? cat.color : '#f9fafb',
-                        borderColor: category === cat.id ? cat.color : '#f3f4f6'
+                        backgroundColor: isSelected ? cat.color : '#f9fafb',
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 14,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: isSelected ? cat.color : '#f3f4f6'
                       }}
-                      className="px-4 py-2 rounded-full mr-2 mb-2 border flex-row items-center"
                     >
-                      <Icon size={12} color={category === cat.id ? 'white' : cat.color} style={{ marginRight: 6 }} />
-                      <Text 
-                        style={{ color: category === cat.id ? 'white' : '#6b7280' }}
-                        className="text-xs font-bold"
-                      >
-                        {cat.label}
-                      </Text>
+                      <Icon size={12} color={isSelected ? '#fff' : cat.color} />
+                      <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '700', color: isSelected ? '#fff' : '#6b7280' }}>{cat.label}</Text>
                     </Pressable>
                   );
                 })}
               </View>
             </View>
-
-            {/* Removed Live/Past Toggle */}
-
           </View>
         </ScrollView>
 
         {/* Action Button */}
-        <View className="px-6 py-4 bg-white shadow-xl border-t border-gray-100">
+        <View style={{ padding: 24, borderTopWidth: 1, borderTopColor: '#f9fafb' }}>
           <Pressable 
             onPress={handleSave}
             disabled={!title}
-            className={`w-full py-5 rounded-[24px] items-center flex-row justify-center ${!title ? 'bg-gray-200' : 'bg-klowk-black'}`}
+            style={{ 
+              backgroundColor: !title ? '#f3f4f6' : '#121212',
+              paddingVertical: 20,
+              borderRadius: 24,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            <Check size={20} color={!title ? '#9ca3af' : 'white'} strokeWidth={3} style={{ marginRight: 8 }} />
-            <Text className={`font-black uppercase tracking-tighter ${!title ? 'text-gray-400' : 'text-white'}`}>
-              {editId ? 'Save Changes' : ((parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) > 0 ? 'Save Time Entry' : 'Launch Focus Session')}
+            <Check size={20} color={!title ? '#9ca3af' : '#fff'} style={{ marginRight: 12 }} />
+            <Text style={{ color: !title ? '#9ca3af' : '#fff', fontWeight: '900', textTransform: 'uppercase' }}>
+              {editId ? 'Save Changes' : ( (parseInt(hours) || 0) * 3600 + (parseInt(minutes) || 0) * 60 > 0 ? 'Save Entry' : 'Launch Session')}
             </Text>
           </Pressable>
         </View>
-
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

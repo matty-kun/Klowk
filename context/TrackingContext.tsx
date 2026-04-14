@@ -9,17 +9,18 @@ export type Activity = {
   start_time: number;
   end_time: number | null;
   duration: number | null;
+  target_duration: number | null;
   created_at: number;
 };
 
 type TrackingContextType = {
   activities: Activity[];
   currentActivity: Activity | null;
-  startTracker: (title: string, category: string, description?: string) => Promise<void>;
+  startTracker: (title: string, category: string, description?: string, targetSecs?: number) => Promise<void>;
   stopTracker: () => Promise<void>;
   deleteActivity: (id: number) => Promise<void>;
-  addManualActivity: (title: string, category: string, durationMins: number, description?: string, customDate?: Date) => Promise<void>;
-  editActivity: (id: number, title: string, category: string, durationMins: number, description?: string, customDate?: Date) => Promise<void>;
+  addManualActivity: (title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => Promise<void>;
+  editActivity: (id: number, title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => Promise<void>;
   duplicateActivity: (id: number) => Promise<void>;
   refreshActivities: () => Promise<void>;
   getTotalFocusTimeToday: () => number;
@@ -63,13 +64,13 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     return () => { isMounted = false; };
   }, [db]); // Re-run if DB instance changes
 
-  const startTracker = async (title: string, category: string, description?: string) => {
+  const startTracker = async (title: string, category: string, description?: string, targetSecs?: number) => {
     if (currentActivity) return;
     try {
       const now = Date.now();
       await db.runAsync(
-        'INSERT INTO activities (title, category, description, start_time, created_at) VALUES (?, ?, ?, ?, ?)',
-        [title, category, description || null, now, now]
+        'INSERT INTO activities (title, category, description, start_time, target_duration, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [title, category, description || null, now, targetSecs || null, now]
       );
       await refreshActivities();
     } catch (err) {
@@ -81,11 +82,11 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     if (!currentActivity) return;
     try {
       const now = Date.now();
-      const durationMins = Math.round((now - currentActivity.start_time) / 60000);
+      const durationSecs = Math.max(0, Math.floor((now - currentActivity.start_time) / 1000));
       
       await db.runAsync(
         'UPDATE activities SET end_time = ?, duration = ? WHERE id = ?',
-        [now, durationMins, currentActivity.id]
+        [now, durationSecs, currentActivity.id]
       );
       await refreshActivities();
     } catch (err) {
@@ -102,13 +103,13 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addManualActivity = async (title: string, category: string, durationMins: number, description?: string, customDate?: Date) => {
+  const addManualActivity = async (title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => {
     try {
       const timestamp = customDate ? customDate.getTime() : Date.now();
-      const startTime = timestamp - (durationMins * 60000);
+      const startTime = timestamp - (durationSecs * 1000);
       await db.runAsync(
-        'INSERT INTO activities (title, category, description, start_time, end_time, duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [title, category, description || null, startTime, timestamp, durationMins, timestamp]
+        'INSERT INTO activities (title, category, description, start_time, end_time, duration, target_duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [title, category, description || null, startTime, timestamp, durationSecs, durationSecs, timestamp]
       );
       await refreshActivities();
     } catch (err) {
@@ -116,13 +117,13 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const editActivity = async (id: number, title: string, category: string, durationMins: number, description?: string, customDate?: Date) => {
+  const editActivity = async (id: number, title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => {
     try {
       const timestamp = customDate ? customDate.getTime() : Date.now();
-      const startTime = timestamp - (durationMins * 60000);
+      const startTime = timestamp - (durationSecs * 1000);
       await db.runAsync(
         'UPDATE activities SET title = ?, category = ?, description = ?, start_time = ?, end_time = ?, duration = ? WHERE id = ?',
-        [title, category, description || null, startTime, timestamp, durationMins, id]
+        [title, category, description || null, startTime, timestamp, durationSecs, id]
       );
       await refreshActivities();
     } catch (err) {
@@ -148,9 +149,10 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
 
   const getTotalFocusTimeToday = () => {
     const startOfToday = new Date().setHours(0, 0, 0, 0);
-    return activities
+    const secs = activities
       .filter(a => a.created_at >= startOfToday && a.duration)
       .reduce((acc, curr) => acc + (curr.duration || 0), 0);
+    return Math.floor(secs / 60); // Return minutes for the dashboard summary compatibility
   };
 
   return (

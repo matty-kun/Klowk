@@ -7,6 +7,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { SQLiteProvider, type SQLiteDatabase } from 'expo-sqlite';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'nativewind';
 
 async function migrateDbIfNeeded(db: SQLiteDatabase) {
   await db.execAsync(`
@@ -19,6 +21,7 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
       start_time INTEGER NOT NULL,
       end_time INTEGER,
       duration INTEGER,
+      target_duration INTEGER,
       created_at INTEGER NOT NULL
     );
   `);
@@ -27,13 +30,16 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
   try {
     await db.execAsync('ALTER TABLE activities ADD COLUMN description TEXT;');
     console.log('Migration: Added description column');
-  } catch (error) {
-    // Column probably already exists, which is fine
-  }
+  } catch (error) {}
+  
+  try {
+    await db.execAsync('ALTER TABLE activities ADD COLUMN target_duration INTEGER;');
+    console.log('Migration: Added target_duration column');
+  } catch (error) {}
 }
 
-import { useColorScheme } from '@/components/useColorScheme';
 import { TrackingProvider } from '@/context/TrackingContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -71,19 +77,28 @@ export default function RootLayout() {
 
   return (
     <SQLiteProvider databaseName="klowk.db" onInit={migrateDbIfNeeded}>
-      <TrackingProvider>
-        <RootLayoutNav />
-      </TrackingProvider>
+      <LanguageProvider>
+        <TrackingProvider>
+          <RootLayoutNav />
+        </TrackingProvider>
+      </LanguageProvider>
     </SQLiteProvider>
   );
 }
 
 function RootLayoutNav() {
+  const { colorScheme } = useColorScheme();
+
   return (
-    <ThemeProvider value={DefaultTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="live" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="tracker" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="chat" options={{ presentation: 'card', headerShown: false }} />
+        <Stack.Screen name="settings" options={{ presentation: 'card', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

@@ -18,101 +18,7 @@ import ReportsScreen from './reports';
 const Tab = createMaterialTopTabNavigator();
 const { width } = Dimensions.get('window');
 
-// Draggable Floating Widget
-function FloatingTrackerWidget() {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const router = useRouter();
-  const { currentActivity } = useTracking();
-  const [nowMs, setNowMs] = useState(Date.now());
-  
-  const pan = useRef(new Animated.ValueXY({ x: 50, y: 100 })).current;
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        pan.setOffset({
-          x: (pan.x as any)._value || 0,
-          y: (pan.y as any)._value || 0
-        });
-      },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: () => {
-        pan.flattenOffset();
-      }
-    })
-  ).current;
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (currentActivity) {
-      interval = setInterval(() => setNowMs(Date.now()), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [currentActivity]);
-
-  if (!currentActivity) return null;
-
-  const elapsed = Math.floor((nowMs - currentActivity.start_time) / 1000);
-  let timeStr = '';
-  if (currentActivity.target_duration) {
-    const remaining = Math.max(0, currentActivity.target_duration - elapsed);
-    const m = Math.floor(remaining / 60);
-    const s = remaining % 60;
-    timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  } else {
-    const m = Math.floor(elapsed / 60);
-    const s = elapsed % 60;
-    timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  }
-
-  return (
-    <Animated.View
-      {...panResponder.panHandlers}
-      style={[
-        {
-          position: 'absolute',
-          zIndex: 9999,
-          transform: [{ translateX: pan.x }, { translateY: pan.y }],
-          left: -110,
-        }
-      ]}
-    >
-      <MotiView from={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }}>
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push('/tracker');
-          }}
-          style={{
-            backgroundColor: isDark ? '#1C1C1E' : '#fff',
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            borderRadius: 24,
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: isDark ? '#2c2c2e' : '#eee',
-            shadowColor: '#FF5A00',
-            shadowOpacity: 0.15,
-            shadowRadius: 15,
-            elevation: 10
-          }}
-        >
-          <MotiView animate={{ translateY: [0, -4, 0] }} transition={{ loop: true, duration: 2000, type: 'timing' }}>
-            <Image source={require('../../assets/images/idle-mascot.svg')} style={{ width: 30, height: 30, marginRight: 8 }} contentFit="contain" />
-          </MotiView>
-          <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#fff' : '#121212', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-            {timeStr}
-          </Text>
-        </Pressable>
-      </MotiView>
-    </Animated.View>
-  );
-}
 
 // Custom Tab Bar component to ensure it looks exactly like our island
 function CustomTabBar({ state, descriptors, navigation }: any) {
@@ -205,7 +111,7 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#121212' : '#fff' }}>
-      <FloatingTrackerWidget />
+
       
         <Tab.Navigator
             tabBar={(props) => <CustomTabBar {...props} />}
@@ -217,13 +123,10 @@ export default function TabLayout() {
             initialRouteName="index"
         >
             <Tab.Screen name="index" component={TabOneScreen} />
-            <Tab.Screen name="goals" component={TabGoalsWrapper} />
-            <Tab.Screen name="reports" component={TabReportsWrapper} />
+            <Tab.Screen name="goals" component={GoalsScreen} />
+            <Tab.Screen name="reports" component={ReportsScreen} />
         </Tab.Navigator>
     </View>
   );
 }
 
-// Wrappers to ensure screens are treated as components for the Navigator
-function TabGoalsWrapper() { return <GoalsScreen />; }
-function TabReportsWrapper() { return <ReportsScreen />; }

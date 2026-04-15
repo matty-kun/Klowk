@@ -31,7 +31,7 @@ const CIRCLE_SIZE = width * 0.8;
 
 export default function TrackerPage() {
   const router = useRouter();
-  const { currentActivity, stopTracker } = useTracking();
+  const { currentActivity, stopTracker, setIsMinimized } = useTracking();
   const [isPaused, setIsPaused] = useState(false);
   const [accumulatedSecs, setAccumulatedSecs] = useState(0);
 
@@ -53,6 +53,12 @@ export default function TrackerPage() {
       router.replace('/(tabs)');
     }
   }, [currentActivity]);
+
+  const handleMinimize = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsMinimized(true);
+    router.replace('/(tabs)');
+  };
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -121,15 +127,13 @@ export default function TrackerPage() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.replace('/(tabs)')} style={styles.minimizeBtn}>
+        <Pressable onPress={handleMinimize} style={styles.minimizeBtn}>
           <Minimize2 size={24} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'} />
         </Pressable>
       </View>
 
       <MotiView 
-        from={{ opacity: 0, scale: 0.85, translateY: 30 }}
         animate={{ opacity: 1, scale: 1, translateY: 0 }}
-        transition={{ type: 'spring', damping: 15, stiffness: 100 }}
         style={styles.content}
       >
         <View style={styles.mascotContainer}>
@@ -150,7 +154,7 @@ export default function TrackerPage() {
               cx={CIRCLE_SIZE / 2}
               cy={CIRCLE_SIZE / 2}
               r={radius}
-              stroke="#FFD700"
+              stroke="#FF5A00"
               strokeWidth="10"
               fill="transparent"
               strokeDasharray={circumference}
@@ -171,7 +175,7 @@ export default function TrackerPage() {
         <View style={styles.controls}>
           <Pressable 
             onPress={togglePause}
-            style={[styles.controlBtn, { backgroundColor: '#FFD700' }]}
+            style={[styles.controlBtn, { backgroundColor: '#FF5A00' }]}
           >
             {isPaused ? <Play size={24} color="#121212" fill="#121212" /> : <Pause size={24} color="#121212" fill="#121212" />}
           </Pressable>

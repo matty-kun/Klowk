@@ -152,7 +152,7 @@ export default function GoalsScreen() {
           <Text className="text-4xl font-black text-[#121212] dark:text-white">Goals</Text>
         </View>
 
-        <View className="flex-1 items-center justify-center px-10">
+        <View className="flex-1 items-center justify-center px-10 pb-20">
           <View className="w-24 h-24 bg-[#FF5A00]/10 rounded-full items-center justify-center mb-8">
             <Target size={48} color="#FF5A00" strokeWidth={1.5} />
           </View>

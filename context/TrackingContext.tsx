@@ -48,6 +48,8 @@ type TrackingContextType = {
   addCustomGoal: (goal: CustomGoal) => void;
   deleteCustomGoal: (id: string) => void;
   editCustomGoal: (goal: CustomGoal) => void;
+  isMinimized: boolean;
+  setIsMinimized: (val: boolean) => void;
 };
 
 const TrackingContext = createContext<TrackingContextType | null>(null);
@@ -58,6 +60,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [customGoals, setCustomGoals] = useState<CustomGoal[]>([]);
+  const [isMinimized, setIsMinimized] = useState(false);
   const isRefreshing = useRef(false);
 
   const addCustomGoal = (goal: CustomGoal) => setCustomGoals(prev => [...prev, goal]);
@@ -130,6 +133,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         'UPDATE activities SET end_time = ?, duration = ? WHERE id = ?',
         [now, durationSecs, currentActivity.id]
       );
+      setIsMinimized(false);
       await refreshActivities();
     } catch (err) {
       console.error('Failed to stop tracker:', err);
@@ -214,7 +218,9 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       customGoals,
       addCustomGoal,
       deleteCustomGoal,
-      editCustomGoal
+      editCustomGoal,
+      isMinimized,
+      setIsMinimized
     }}>
       {children}
     </TrackingContext.Provider>

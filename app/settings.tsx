@@ -112,7 +112,7 @@ export default function SettingsScreen() {
                             animate={{ 
                                 translateX: (localIsDark ? 1 : 0) * ((themeToggleWidth - 8) / 2)
                             }}
-                            transition={{ type: 'timing', duration: 150 }}
+                            transition={{ type: 'spring', damping: 20, stiffness: 150 }}
                             style={{ 
                                 position: 'absolute', 
                                 top: 4, 

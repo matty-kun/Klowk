@@ -40,6 +40,7 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
 import { TrackingProvider } from '@/context/TrackingContext';
 import { LanguageProvider } from '@/context/LanguageContext';
+import FloatingTimer from '@/components/FloatingTimer';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -92,7 +93,11 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack>
+      <Stack
+        screenOptions={{
+          contentStyle: { backgroundColor: colorScheme === 'dark' ? '#121212' : '#FFFFFF' }
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="live" options={{ presentation: 'modal', headerShown: false }} />
@@ -102,6 +107,7 @@ function RootLayoutNav() {
         <Stack.Screen name="history" options={{ presentation: 'card', headerShown: false }} />
         <Stack.Screen name="categories" options={{ presentation: 'card', headerShown: false }} />
       </Stack>
+      <FloatingTimer />
     </ThemeProvider>
   );
 }

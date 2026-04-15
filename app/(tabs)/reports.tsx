@@ -86,25 +86,37 @@ const DonutChart = ({ data, total }: { data: any[], total: number }) => {
   const circumference = 2 * Math.PI * radius;
   
   let currentOffset = 0;
+  let currentOffsetCount = 0;
 
   return (
     <View className="items-center justify-center bg-transparent mb-8">
       <Svg width={size} height={size}>
         <G rotation="-90" origin={`${center}, ${center}`}>
+          {/* Background Track */}
           <Circle
             cx={center}
             cy={center}
             r={radius}
-            stroke={colorScheme === 'dark' ? '#27272a' : '#f3f4f6'}
+            stroke={colorScheme === 'dark' ? '#1c1c1e' : '#f9fafb'}
             strokeWidth={strokeWidth}
             fill="transparent"
           />
           {data.map((item) => {
-            if (item.totalMins === 0 || total === 0) return null;
+            if (item.totalMins <= 0 || total <= 0) return null;
             const percentage = item.totalMins / total;
-            const strokeDashoffset = circumference - percentage * circumference;
-            const rotation = (currentOffset / total) * 360;
+            
+            // Adding a small gap for spacing
+            const gapDegrees = 4; 
+            const activeSegments = data.filter(d => d.totalMins > 0).length;
+            const totalGaps = activeSegments > 1 ? activeSegments * gapDegrees : 0;
+            const availableDegrees = 360 - totalGaps;
+            
+            const segmentDegrees = percentage * availableDegrees;
+            const strokeDashoffset = circumference - (segmentDegrees / 360) * circumference;
+            
+            const rotation = (currentOffset / total) * availableDegrees + (currentOffsetCount * gapDegrees);
             currentOffset += item.totalMins;
+            currentOffsetCount++;
 
             return (
               <Circle
@@ -114,7 +126,7 @@ const DonutChart = ({ data, total }: { data: any[], total: number }) => {
                 r={radius}
                 stroke={item.color}
                 strokeWidth={strokeWidth}
-                strokeDasharray={circumference}
+                strokeDasharray={`${circumference} ${circumference}`}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 fill="transparent"
@@ -125,8 +137,8 @@ const DonutChart = ({ data, total }: { data: any[], total: number }) => {
         </G>
       </Svg>
       <View className="absolute items-center bg-transparent">
-        <Text className="text-gray-400 dark:text-gray-500 font-bold text-[8px] uppercase tracking-widest">Focused</Text>
-        <Text className="text-xl font-black text-klowk-black dark:text-white">{Math.round(total / 60)}h</Text>
+        <Text className="text-gray-400 dark:text-gray-500 font-black text-[8px] uppercase tracking-widest mb-1">Focused</Text>
+        <Text className="text-2xl font-black text-klowk-black dark:text-white">{Math.floor(total / 3600)}h</Text>
       </View>
     </View>
   );
@@ -149,13 +161,13 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
     return ms;
   });
 
-  const max = Math.max(...dailyData, 60);
+  const max = Math.max(...dailyData, 3600); // Max at least 1 hour for scale
   const chartHeight = 100;
   const chartWidth = width - 80;
   
   const points = dailyData.map((val, i) => {
     const x = (i / (days.length - 1)) * chartWidth;
-    const y = chartHeight - (val / max) * chartHeight;
+    const y = chartHeight - (val / max) * (chartHeight - 30) - 15; // Closer to base
     return `${x},${y}`;
   }).join(' ');
 
@@ -166,14 +178,14 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
         <TrendIcon size={16} color="#FF5A00" />
       </View>
       
-      <View className="h-32 bg-transparent relative">
-        <View className="absolute top-0 left-0 right-0 h-full justify-between bg-transparent">
+      <View className="h-40 bg-transparent relative">
+        <View className="absolute top-0 left-0 right-0 h-[100px] justify-between bg-transparent">
             {[...Array(4)].map((_, i) => (
                 <View key={i} className="w-full h-[1px] bg-gray-50 dark:bg-zinc-800" />
             ))}
         </View>
 
-        <View className="flex-1 bg-transparent mt-2">
+        <View className="h-[100px] bg-transparent mt-2">
             <Svg height={chartHeight} width={chartWidth}>
                 <Defs>
                     <SvgGradient id="grad" x1="0" y1="0" x2="0" y2="1">
@@ -195,7 +207,7 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
                 />
                 {dailyData.map((val, i) => {
                     const x = (i / (days.length - 1)) * chartWidth;
-                    const y = chartHeight - (val / max) * chartHeight;
+                    const y = chartHeight - (val / max) * (chartHeight - 30) - 15; // Sync with points
                     return (
                         <Circle key={i} cx={x} cy={y} r="4" fill={i === currentDay ? '#FF5A00' : (colorScheme === 'dark' ? '#121212' : 'white')} stroke="#FF5A00" strokeWidth="2" />
                     );
@@ -203,7 +215,7 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
             </Svg>
         </View>
 
-        <View className="flex-row justify-between items-center bg-transparent mt-4 px-1">
+        <View className="flex-row justify-between items-center bg-transparent mt-8 px-1 pb-2">
             {days.map((day, i) => (
                 <Text key={i} className={`text-[10px] font-bold ${i === currentDay ? 'text-klowk-orange' : 'text-gray-400 dark:text-gray-600'}`}>
                     {day}
@@ -214,7 +226,8 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
     </View>
   );
 };
-
+// Helper to capitalize first letter
+const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
 export default React.memo(function ReportsScreen() {
   const { colorScheme } = useColorScheme();
   const { t, language } = useLanguage();
@@ -338,7 +351,7 @@ export default React.memo(function ReportsScreen() {
                         <View className="ml-2 w-2 h-2 bg-green-500 rounded-full" />
                     </View>
                     <Text className="text-3xl font-black text-klowk-black dark:text-white leading-8">
-                        {Math.floor(totalTimeRecorded / 60)}h {totalTimeRecorded % 60}m
+                        {Math.floor(totalTimeRecorded / 3600)}h {Math.floor((totalTimeRecorded % 3600) / 60)}m
                     </Text>
                     
                     <Pressable 
@@ -368,17 +381,19 @@ export default React.memo(function ReportsScreen() {
         </View>
 
         <View className="px-6 mt-4">
-           <View className="flex-row justify-between mb-8">
-                <View className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] shadow-sm border border-gray-50 dark:border-zinc-800 flex-1 mr-4">
-                    <DonutChart data={categoryStats} total={totalTimeRecorded} />
-                </View>
-                <View className="flex-1 justify-center space-y-4">
-                    {categoryStats.slice(0, 3).map((stat: any) => (
-                        <View key={stat.id} className="flex-row items-center mb-2">
-                           <View style={{ backgroundColor: stat.color }} className="w-2.5 h-2.5 rounded-full mr-3" />
-                           <Text className="text-xs font-bold text-gray-500">{stat.label}</Text>
+           <View className="bg-white dark:bg-zinc-900 p-8 rounded-[40px] shadow-sm border border-gray-50 dark:border-zinc-800 mb-8 items-center">
+                <DonutChart data={categoryStats} total={totalTimeRecorded} />
+                
+                <View className="flex-row flex-wrap justify-center gap-x-6 gap-y-3 mt-2">
+                    {categoryStats.filter(s => s.totalMins > 0).map((stat: any) => (
+                        <View key={stat.id} className="flex-row items-center">
+                           <View style={{ backgroundColor: stat.color }} className="w-2 h-2 rounded-full mr-2" />
+                           <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">{capitalize(stat.label)}</Text>
                         </View>
                     ))}
+                    {categoryStats.filter(s => s.totalMins > 0).length === 0 && (
+                      <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No activities yet</Text>
+                    )}
                 </View>
            </View>
 
@@ -417,7 +432,9 @@ export default React.memo(function ReportsScreen() {
                             <View className="flex-1">
                                 <View className="flex-row justify-between items-end mb-3">
                                     <View>
-                                        <Text className="font-black text-klowk-black dark:text-white text-base">{t(stat.label.toLowerCase() as any) || stat.label}</Text>
+                                        <Text className="font-black text-klowk-black dark:text-white text-base">
+                                          {capitalize(t(stat.label.toLowerCase() as any) || stat.label)}
+                                        </Text>
                                         <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase">{stat.sessionCount} {t('sessions')}</Text>
                                     </View>
                                     <View className="items-end">
@@ -458,7 +475,9 @@ export default React.memo(function ReportsScreen() {
                     <View style={{ backgroundColor: selectedCatData?.color + '15', padding: 20, borderRadius: 24, marginBottom: 16 }}>
                         <CategoryIcon name={selectedCatData?.iconName || 'tag'} size={40} color={selectedCatData?.color || '#FF5A00'} />
                     </View>
-                    <Text className="text-3xl font-black text-klowk-black dark:text-white mb-1">{t((selectedCatData?.label || '').toLowerCase() as any) || selectedCatData?.label}</Text>
+                    <Text className="text-3xl font-black text-klowk-black dark:text-white mb-1">
+                      {capitalize(t((selectedCatData?.label || '').toLowerCase() as any) || selectedCatData?.label || '')}
+                    </Text>
                     <Text className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[4px]">{selectedCatLogs.length} {t('sessions_total')}</Text>
                 </View>
 

@@ -6,7 +6,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-import { View } from 'react-native';
+import { LogBox, View } from 'react-native';
 import { SQLiteProvider, type SQLiteDatabase } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
@@ -55,6 +55,9 @@ export const unstable_settings = {
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+LogBox.ignoreLogs([
+  "SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead.",
+]);
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -115,6 +118,7 @@ function RootLayoutNav() {
           <Stack.Screen name="live" options={{ presentation: 'modal' }} />
           <Stack.Screen name="tracker" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
           <Stack.Screen name="chat" />
+          <Stack.Screen name="chat-help" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="history" />
           <Stack.Screen name="categories" />

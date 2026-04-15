@@ -55,6 +55,7 @@ type TrackingContextType = {
 };
 
 const TrackingContext = createContext<TrackingContextType | null>(null);
+const GOALS_STORAGE_KEY = 'klowk_goals_v1';
 
 export function TrackingProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
@@ -69,7 +70,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadGoals = async () => {
       try {
-        const saved = await AsyncStorage.getItem('klowk_goals_v1');
+        const saved = await AsyncStorage.getItem(GOALS_STORAGE_KEY);
         if (saved) setCustomGoals(JSON.parse(saved));
       } catch (e) {
         console.error('Failed to load goals', e);
@@ -81,12 +82,16 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const saveGoals = async () => {
       try {
-        await AsyncStorage.setItem('klowk_goals_v1', JSON.stringify(customGoals));
+        if (customGoals.length === 0) {
+          await AsyncStorage.removeItem(GOALS_STORAGE_KEY);
+          return;
+        }
+        await AsyncStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(customGoals));
       } catch (e) {
         console.error('Failed to save goals', e);
       }
     };
-    if (customGoals.length > 0) saveGoals();
+    saveGoals();
   }, [customGoals]);
 
   const addCustomGoal = (goal: CustomGoal) => setCustomGoals(prev => [...prev, goal]);
@@ -179,9 +184,12 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const clearAllActivities = async () => {
     try {
       await db.runAsync('DELETE FROM activities');
+      await AsyncStorage.removeItem(GOALS_STORAGE_KEY);
       setCurrentActivity(null);
       setIsMinimized(false);
       setActivities([]);
+      setCustomGoals([]);
+      setCategories(DEFAULT_CATEGORIES);
     } catch (err) {
       console.error('Failed to clear activities:', err);
     }

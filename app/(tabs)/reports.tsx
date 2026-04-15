@@ -13,6 +13,7 @@ import { formatDuration, formatTimestamp, formatDate } from '@/utils/time';
 import LogActionSheet from '@/components/LogActionSheet';
 import { useColorScheme } from 'nativewind';
 import { useLanguage } from '@/context/LanguageContext';
+import { View as MotiView } from 'moti';
 import {
   Tag, 
   TrendingUp as TrendIcon,
@@ -243,6 +244,8 @@ export default React.memo(function ReportsScreen() {
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month'>('today');
+  const [toggleWidth, setToggleWidth] = useState(0);
 
   // New Category State
   const [newCatName, setNewCatName] = useState('');
@@ -252,15 +255,45 @@ export default React.memo(function ReportsScreen() {
   const slideAnim = useRef(new Animated.Value(width)).current;
   const forecastAnim = useRef(new Animated.Value(width)).current;
 
-  // Optimized analytics logic: Lifetime Aggregate
+  const filteredActivities = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    const end = new Date(now);
+
+    if (timeRange === 'today') {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (timeRange === 'week') {
+      const day = now.getDay();
+      start.setDate(now.getDate() - day);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(now.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+
+    return activities.filter((a: Activity) => {
+      const ts = a.start_time;
+      return ts >= startMs && ts <= endMs;
+    });
+  }, [activities, timeRange]);
+
+  // Analytics logic scoped to selected period
   const categoryStats = useMemo(() => {
     return categories.map((cat: Category) => {
-      const logs = activities.filter((a: Activity) => a.category === cat.id);
+      const logs = filteredActivities.filter((a: Activity) => a.category === cat.id);
       const totalMins = logs.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
       const sessionCount = logs.length;
       return { ...cat, totalMins, sessionCount };
     }).sort((a: any, b: any) => (b.totalMins || 0) - (a.totalMins || 0));
-  }, [activities, categories]);
+  }, [filteredActivities, categories]);
 
   const totalTimeRecorded = useMemo(() => {
     return categoryStats.reduce((sum: number, c: any) => sum + (c.totalMins || 0), 0);
@@ -271,8 +304,8 @@ export default React.memo(function ReportsScreen() {
   }, [selectedCategory, categories]);
 
   const selectedCatLogs = useMemo(() => {
-    return selectedCategory ? activities.filter((a: Activity) => a.category === selectedCategory) : [];
-  }, [selectedCategory, activities]);
+    return selectedCategory ? filteredActivities.filter((a: Activity) => a.category === selectedCategory) : [];
+  }, [selectedCategory, filteredActivities]);
 
   useEffect(() => {
     Animated.spring(slideAnim, {
@@ -330,7 +363,49 @@ export default React.memo(function ReportsScreen() {
         
         {/* Header Section */}
         <View className="bg-white dark:bg-klowk-black pt-8 pb-4 px-6">
-          <Text className="text-4xl font-extrabold text-klowk-black dark:text-white mb-10">{t('data')}</Text>
+          <View className="flex-row items-center justify-between mb-10">
+            <Text className="text-4xl font-extrabold text-klowk-black dark:text-white">{t('data')}</Text>
+            <View
+              onLayout={(e) => {
+                const w = e.nativeEvent.layout.width;
+                if (w > 0) setToggleWidth(w);
+              }}
+              className="bg-gray-50 dark:bg-zinc-900 rounded-[16px] p-1 flex-row relative overflow-hidden"
+            >
+              <MotiView
+                animate={{
+                  translateX: (timeRange === 'today' ? 0 : timeRange === 'week' ? 1 : 2) * ((toggleWidth - 8) / 3),
+                }}
+                transition={{ type: 'spring', damping: 20, stiffness: 180 }}
+                style={{
+                  position: 'absolute',
+                  top: 4,
+                  bottom: 4,
+                  left: 4,
+                  width: (toggleWidth - 8) / 3 || undefined,
+                  backgroundColor: isDark ? '#3f3f46' : '#fff',
+                  borderRadius: 12,
+                }}
+              />
+              {(['today', 'week', 'month'] as const).map((range) => {
+                const isActive = timeRange === range;
+                return (
+                  <Pressable
+                    key={range}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setTimeRange(range);
+                    }}
+                    className="px-3 py-2 rounded-[12px] items-center z-10"
+                  >
+                    <Text className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-klowk-orange' : 'text-gray-400 dark:text-zinc-500'}`}>
+                      {t(range === 'week' ? 'this_week' : range === 'month' ? 'this_month' : 'today')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
           
           <View className="relative items-center justify-center">
              <View 
@@ -356,30 +431,34 @@ export default React.memo(function ReportsScreen() {
                         {Math.floor(totalTimeRecorded / 3600)}h {Math.floor((totalTimeRecorded % 3600) / 60)}m
                     </Text>
                     
-                    <Pressable 
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                            setShowForecast(true);
-                        }}
-                        className="mt-4 bg-klowk-orange/10 py-2.5 px-4 rounded-xl flex-row items-center justify-center border border-klowk-orange/20"
-                    >
-                        <Sparkles size={12} color="#FF5A00" />
-                        <Text className="ml-2 text-[10px] font-black text-klowk-orange uppercase tracking-wider">{t('forecast')}</Text>
-                    </Pressable>
+                    {filteredActivities.length > 0 && (
+                      <Pressable 
+                          onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                              setShowForecast(true);
+                          }}
+                          className="mt-4 bg-klowk-orange/10 py-2.5 px-4 rounded-xl flex-row items-center justify-center border border-klowk-orange/20"
+                      >
+                          <Sparkles size={12} color="#FF5A00" />
+                          <Text className="ml-2 text-[10px] font-black text-klowk-orange uppercase tracking-wider">{t('forecast')}</Text>
+                      </Pressable>
+                    )}
                 </View>
             </View>
           </View>
 
-          {/* AI Insight Below Mascot */}
-          <View style={{ marginTop: 24 }} className="bg-white dark:bg-zinc-900 p-6 rounded-[34px] shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden">
-            <View className="flex-row items-center mb-3 bg-transparent">
-              <Sparkles size={14} color="#FF5A00" />
-              <Text className="ml-2 font-black text-klowk-orange text-[10px] uppercase tracking-[3px]">{t('ai_insight')}</Text>
+          {/* AI Insight only after real tracking data exists */}
+          {filteredActivities.length > 0 && (
+            <View style={{ marginTop: 24 }} className="bg-white dark:bg-zinc-900 p-6 rounded-[34px] shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden">
+              <View className="flex-row items-center mb-3 bg-transparent">
+                <Sparkles size={14} color="#FF5A00" />
+                <Text className="ml-2 font-black text-klowk-orange text-[10px] uppercase tracking-[3px]">{t('ai_insight')}</Text>
+              </View>
+              <Text className="text-klowk-black dark:text-white font-semibold text-sm leading-5">
+                {t('ai_insight_body')}
+              </Text>
             </View>
-            <Text className="text-klowk-black dark:text-white font-semibold text-sm leading-5">
-              {t('ai_insight_body')}
-            </Text>
-          </View>
+          )}
         </View>
 
         <View className="px-6 mt-4">
@@ -399,7 +478,7 @@ export default React.memo(function ReportsScreen() {
                 </View>
            </View>
 
-           <WeeklyLineChart activities={activities} />
+           <WeeklyLineChart activities={filteredActivities} />
 
            <View className="mb-8">
                 <View className="flex-row items-center justify-between mb-6 px-1">
@@ -504,68 +583,70 @@ export default React.memo(function ReportsScreen() {
       </Animated.View>
 
       {/* Forecast Overlay (Stay on same page) */}
-      <Animated.View 
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isDark ? '#121212' : '#fff', zIndex: 110, transform: [{ translateX: forecastAnim }] }}
-      >
-        <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
-            <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
-                <Pressable onPress={() => setShowForecast(false)} className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full active:bg-gray-100 dark:active:bg-zinc-800">
-                    <ArrowLeft size={20} color={isDark ? '#fff' : '#121212'} />
-                </Pressable>
-                <Text className="text-lg font-black text-klowk-black dark:text-white">{t('forecast')}</Text>
-                <View className="w-10" />
-            </View>
+      {filteredActivities.length > 0 && (
+        <Animated.View 
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isDark ? '#121212' : '#fff', zIndex: 110, transform: [{ translateX: forecastAnim }] }}
+        >
+          <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
+              <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
+                  <Pressable onPress={() => setShowForecast(false)} className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full active:bg-gray-100 dark:active:bg-zinc-800">
+                      <ArrowLeft size={20} color={isDark ? '#fff' : '#121212'} />
+                  </Pressable>
+                  <Text className="text-lg font-black text-klowk-black dark:text-white">{t('forecast')}</Text>
+                  <View className="w-10" />
+              </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-6 bg-white dark:bg-klowk-black">
-                <View className="items-center py-4 mb-2">
-                    <View className="bg-klowk-orange/10 w-24 h-24 rounded-[32px] items-center justify-center">
-                        <Sparkles size={40} color="#FF5A00" />
-                    </View>
-                    <Text className="text-3xl font-black text-klowk-black dark:text-white mt-6 text-center">{forecastContent.title}</Text>
-                    <Text className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-[3px] mt-2">{t('ai_momentum_engine')}</Text>
-                </View>
+              <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-6 bg-white dark:bg-klowk-black">
+                  <View className="items-center py-4 mb-2">
+                      <View className="bg-klowk-orange/10 w-24 h-24 rounded-[32px] items-center justify-center">
+                          <Sparkles size={40} color="#FF5A00" />
+                      </View>
+                      <Text className="text-3xl font-black text-klowk-black dark:text-white mt-6 text-center">{forecastContent.title}</Text>
+                      <Text className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-[3px] mt-2">{t('ai_momentum_engine')}</Text>
+                  </View>
 
-                <LinearGradient colors={['#FF5A00', '#FF8A00']} style={{ borderRadius: 34, padding: 32, marginBottom: 32, marginTop: 24 }}>
-                    <Text className="text-white text-2xl font-black leading-9">{forecastContent.heroText}</Text>
-                </LinearGradient>
+                  <LinearGradient colors={['#FF5A00', '#FF8A00']} style={{ borderRadius: 34, padding: 32, marginBottom: 32, marginTop: 24 }}>
+                      <Text className="text-white text-2xl font-black leading-9">{forecastContent.heroText}</Text>
+                  </LinearGradient>
 
-                {/* Simplified Chart (Stay under memory/render limit) */}
-                <View className="bg-white dark:bg-zinc-900 p-8 rounded-[40px] shadow-sm border border-gray-100 dark:border-zinc-800 mb-8">
-                    <Text className="text-lg font-black text-klowk-black dark:text-white mb-8">{t('forecast_trend')}</Text>
-                    <View className="h-32 flex-row items-end justify-between px-1">
-                        {forecastContent.chartData.map((h, i) => (
-                            <View key={i} className="items-center flex-1">
-                                <View style={{ height: h * 80, width: 10, backgroundColor: h > 0.8 ? '#FF5A00' : (isDark ? '#27272a' : '#f3f4f6'), borderRadius: 5 }} />
-                                <Text className="text-[7px] font-black text-gray-300 dark:text-zinc-600 mt-2 uppercase">{forecastContent.chartLabels[i]}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
+                  {/* Simplified Chart (Stay under memory/render limit) */}
+                  <View className="bg-white dark:bg-zinc-900 p-8 rounded-[40px] shadow-sm border border-gray-100 dark:border-zinc-800 mb-8">
+                      <Text className="text-lg font-black text-klowk-black dark:text-white mb-8">{t('forecast_trend')}</Text>
+                      <View className="h-32 flex-row items-end justify-between px-1">
+                          {forecastContent.chartData.map((h, i) => (
+                              <View key={i} className="items-center flex-1">
+                                  <View style={{ height: h * 80, width: 10, backgroundColor: h > 0.8 ? '#FF5A00' : (isDark ? '#27272a' : '#f3f4f6'), borderRadius: 5 }} />
+                                  <Text className="text-[7px] font-black text-gray-300 dark:text-zinc-600 mt-2 uppercase">{forecastContent.chartLabels[i]}</Text>
+                              </View>
+                          ))}
+                      </View>
+                  </View>
 
-                {/* Rich Strategies List */}
-                <View className="mb-8">
-                    <Text className="text-xl font-black text-klowk-black dark:text-white mb-6">{t('winning_strategy')}</Text>
-                    {forecastContent.strategies.map((s: any, i: number) => {
-                        const Icon = s.icon || Target;
-                        return (
-                            <View key={i} className="bg-gray-50 dark:bg-zinc-900 p-6 rounded-[32px] mb-4 flex-row items-center border border-transparent dark:border-zinc-800">
-                                <View className="bg-white dark:bg-zinc-800 w-12 h-12 rounded-2xl items-center justify-center shadow-sm">
-                                    <Icon size={20} color="#FF5A00" />
-                                </View>
-                                <View className="flex-1 ml-4">
-                                    <Text className="font-bold text-klowk-black dark:text-white text-base">{s.title}</Text>
-                                    <Text className="text-xs text-gray-400 dark:text-gray-500 mt-1">{s.detail}</Text>
-                                </View>
-                                <ArrowRight size={16} color={isDark ? '#3f3f46' : '#d1d5db'} />
-                            </View>
-                        );
-                    })}
-                </View>
+                  {/* Rich Strategies List */}
+                  <View className="mb-8">
+                      <Text className="text-xl font-black text-klowk-black dark:text-white mb-6">{t('winning_strategy')}</Text>
+                      {forecastContent.strategies.map((s: any, i: number) => {
+                          const Icon = s.icon || Target;
+                          return (
+                              <View key={i} className="bg-gray-50 dark:bg-zinc-900 p-6 rounded-[32px] mb-4 flex-row items-center border border-transparent dark:border-zinc-800">
+                                  <View className="bg-white dark:bg-zinc-800 w-12 h-12 rounded-2xl items-center justify-center shadow-sm">
+                                      <Icon size={20} color="#FF5A00" />
+                                  </View>
+                                  <View className="flex-1 ml-4">
+                                      <Text className="font-bold text-klowk-black dark:text-white text-base">{s.title}</Text>
+                                      <Text className="text-xs text-gray-400 dark:text-gray-500 mt-1">{s.detail}</Text>
+                                  </View>
+                                  <ArrowRight size={16} color={isDark ? '#3f3f46' : '#d1d5db'} />
+                              </View>
+                          );
+                      })}
+                  </View>
 
-                <View className="h-48" />
-            </ScrollView>
-        </SafeAreaView>
-      </Animated.View>
+                  <View className="h-48" />
+              </ScrollView>
+          </SafeAreaView>
+        </Animated.View>
+      )}
 
       <LogActionSheet
         visible={selectedActionLogId !== null}

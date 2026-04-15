@@ -58,6 +58,8 @@ const SettingItem = ({ icon: Icon, label, value, type = 'info', onPress, color =
     );
 };
 
+import { registerForPushNotificationsAsync } from '@/utils/notifications';
+
 export default function SettingsScreen() {
   const { colorScheme, toggleColorScheme, setColorScheme } = useColorScheme();
   const { t, language, setLanguage } = useLanguage();
@@ -67,10 +69,23 @@ export default function SettingsScreen() {
 
   React.useEffect(() => setLocalIsDark(isDarkMode), [isDarkMode]);
   React.useEffect(() => setLocalLang(language), [language]);
-  const [notifications, setNotifications] = React.useState(true);
+  const [notifications, setNotifications] = React.useState(false);
   const [langToggleWidth, setLangToggleWidth] = React.useState(0);
   const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
   const [notifToggleWidth, setNotifToggleWidth] = React.useState(0);
+
+  const handleToggleNotifications = async (val: boolean) => {
+    if (val) {
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+            setNotifications(true);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(t('notifications_enabled'), t('notifications_enabled_desc'));
+        }
+    } else {
+        setNotifications(false);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
@@ -247,7 +262,7 @@ export default function SettingsScreen() {
                         <TouchableOpacity 
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setNotifications(false);
+                                handleToggleNotifications(false);
                             }}
                             className="flex-1 py-3 items-center z-10"
                         >
@@ -256,7 +271,7 @@ export default function SettingsScreen() {
                         <TouchableOpacity 
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setNotifications(true);
+                                handleToggleNotifications(true);
                             }}
                             className="flex-1 py-3 items-center z-10"
                         >

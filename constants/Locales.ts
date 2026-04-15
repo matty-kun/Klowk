@@ -34,7 +34,8 @@ export const translations = {
     good_afternoon: "Good afternoon,",
     good_evening: "Good evening,",
     focus_win: "You've focused for {time} today. Stellar work!",
-    focus_ready: "Ready for a deep focus session? I'm here to help you track your wins.",
+    focus_ready:
+      "Ready for a deep focus session? I'm here to help you track your wins.",
     weekly_trend: "Weekly Trend",
 
     // History
@@ -57,7 +58,8 @@ export const translations = {
     // Chat
     talk_to_klowk: "Talk to Klowk",
     ask_anything: "Ask me anything...",
-    klowk_mistakes: "Klowk can make mistakes. Review important details before acting on them.",
+    klowk_mistakes:
+      "Klowk can make mistakes. Review important details before acting on them.",
 
     // Categories
     work: "Work",
@@ -81,7 +83,8 @@ export const translations = {
     day_left: "Day Left",
     complete: "Complete",
     no_goals_yet: "No Goals Yet",
-    no_goals_desc: "Track your progress on long term projects bounded by dates and limits.",
+    no_goals_desc:
+      "Track your progress on long term projects bounded by dates and limits.",
     create_new_goal: "Create New Goal",
     new_goal: "New Goal",
     edit_goal: "Edit Goal",
@@ -91,10 +94,12 @@ export const translations = {
     // Reports
     focused: "Focused",
     no_activities_yet: "No activities yet",
-    ai_insight_body: "Your focus peak is arriving! Historically, you're 40% more efficient tomorrow morning. Plan a deep session then.",
+    ai_insight_body:
+      "Your focus peak is arriving! Historically, you're 40% more efficient tomorrow morning. Plan a deep session then.",
     ai_momentum_engine: "AI Momentum Engine",
     focus_prime_time: "Focus Prime Time",
-    forecast_hero: '"Tomorrow at 10:00 AM is your biological focus prime time."',
+    forecast_hero:
+      '"Tomorrow at 10:00 AM is your biological focus prime time."',
     deep_work_block: "Deep Work Block",
     deep_work_detail: "9:30 - 11:30 AM is ideal.",
     caffeine_timing: "Caffeine Timing",
@@ -107,7 +112,7 @@ export const translations = {
 
     // ActionSheet widget
     start_live_session: "Start live session",
-    talk_to_kloe: "Talk to Kloe",
+    talk_to_klowk: "Talk to Klowk",
     log_manually: "Log manually",
 
     // Live session
@@ -138,7 +143,7 @@ export const translations = {
     cancel: "Cancel",
     delete: "Delete",
     duplicate: "Duplicate",
-    edit: "Edit"
+    edit: "Edit",
   },
   tl: {
     // Settings
@@ -151,7 +156,8 @@ export const translations = {
     push_notifications: "Push Notifications",
     notifications_desc: "Maabihan tungkol sa mga milestone at layunin.",
     notifications_enabled: "Naka-on na ang Notifications",
-    notifications_enabled_desc: "Makakatanggap ka na ng updates tungkol sa iyong progress.",
+    notifications_enabled_desc:
+      "Makakatanggap ka na ng updates tungkol sa iyong progress.",
     about_klowk: "Tungkol sa Klowk",
     app_version: "Bersyon ng App",
     app_version_desc: "Impormasyon tungkol sa bersyon ng software.",
@@ -175,7 +181,8 @@ export const translations = {
     good_afternoon: "Magandang hapon,",
     good_evening: "Magandang gabi,",
     focus_win: "Nakapag-focus ka na ng {time} ngayong araw. Magaling!",
-    focus_ready: "Handa na para sa focus session? Nandito ako para tulungan ka.",
+    focus_ready:
+      "Handa na para sa focus session? Nandito ako para tulungan ka.",
     weekly_trend: "Takbo Ngayong Linggo",
 
     // History
@@ -198,7 +205,8 @@ export const translations = {
     // Chat
     talk_to_klowk: "Kausapin si Klowk",
     ask_anything: "Magtanong kahit ano...",
-    klowk_mistakes: "Maaaring magkamali si Klowk. Tiyaking suriin ang mahahalagang detalye.",
+    klowk_mistakes:
+      "Maaaring magkamali si Klowk. Tiyaking suriin ang mahahalagang detalye.",
 
     // Categories
     work: "Trabaho",
@@ -222,7 +230,8 @@ export const translations = {
     day_left: "Araw na Natitira",
     complete: "Tapos na",
     no_goals_yet: "Wala Pang Layunin",
-    no_goals_desc: "Subaybayan ang iyong pag-unlad sa mga pangmatagalang proyekto na may mga limitasyon at petsa.",
+    no_goals_desc:
+      "Subaybayan ang iyong pag-unlad sa mga pangmatagalang proyekto na may mga limitasyon at petsa.",
     create_new_goal: "Gumawa ng Bagong Layunin",
     new_goal: "Bagong Layunin",
     edit_goal: "I-edit ang Layunin",
@@ -232,10 +241,12 @@ export const translations = {
     // Reports
     focused: "Natuon",
     no_activities_yet: "Wala pang aktibidad",
-    ai_insight_body: "Malapit na ang iyong pinakamataas na konsentrasyon! Sa kasaysayan, 40% kang mas mahusay bukas sa umaga. Mag-plano ng isang malalim na sesyon.",
+    ai_insight_body:
+      "Malapit na ang iyong pinakamataas na konsentrasyon! Sa kasaysayan, 40% kang mas mahusay bukas sa umaga. Mag-plano ng isang malalim na sesyon.",
     ai_momentum_engine: "AI Momentum Engine",
     focus_prime_time: "Pinakamainam na Oras ng Focus",
-    forecast_hero: '"Bukas ng 10:00 AM ang iyong pinakamagandang oras ng focus."',
+    forecast_hero:
+      '"Bukas ng 10:00 AM ang iyong pinakamagandang oras ng focus."',
     deep_work_block: "Bloke ng Malalim na Trabaho",
     deep_work_detail: "9:30 - 11:30 AM ang pinakamainam.",
     caffeine_timing: "Tamang Oras ng Kape",
@@ -248,7 +259,7 @@ export const translations = {
 
     // ActionSheet widget
     start_live_session: "Magsimula ng live session",
-    talk_to_kloe: "Makipag-usap kay Kloe",
+    talk_to_klowk: "Makipag-usap kay Klowk",
     log_manually: "Mag-log nang manu-mano",
 
     // Live session
@@ -279,8 +290,8 @@ export const translations = {
     cancel: "Kanselahin",
     delete: "Burahin",
     duplicate: "Kopyahin",
-    edit: "I-edit"
-  }
+    edit: "I-edit",
+  },
 };
 
-export type Language = 'en' | 'tl';
+export type Language = "en" | "tl";

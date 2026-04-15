@@ -30,6 +30,7 @@ import { View as MotiView } from 'moti';
 import { Animated, Dimensions, Pressable, TouchableOpacity, ScrollView, View, Text, Platform } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useLanguage } from '@/context/LanguageContext';
+import { getForecast } from '@/utils/forecast';
 
 const { width } = Dimensions.get('window');
 
@@ -137,6 +138,10 @@ export default React.memo(function TabOneScreen() {
   }, [currentActivity]);
 
   const activeGoalsCount = customGoals ? customGoals.filter(g => g.endDate >= Date.now()).length : 0;
+  const klowkForecast = React.useMemo(
+    () => getForecast({ activities, goals: customGoals || [], range: 'week' }),
+    [activities, customGoals]
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
@@ -194,9 +199,11 @@ export default React.memo(function TabOneScreen() {
                     </View>
                     <View className="flex-1 bg-white dark:bg-zinc-900 p-5 rounded-[24px] border border-gray-100 dark:border-zinc-800 shadow-sm">
                         <Text className="text-xs text-klowk-black dark:text-white font-semibold leading-5">
-                            {todayMinsTotal > 0
-                            ? t('focus_win').replace('{time}', formatDuration(Math.floor(todayMinsTotal / 60)))
-                            : t('focus_ready')}
+                            {klowkForecast.status === 'no_goal'
+                              ? (todayMinsTotal > 0
+                                ? t('focus_win').replace('{time}', formatDuration(Math.floor(todayMinsTotal / 60)))
+                                : t('focus_ready'))
+                              : klowkForecast.message}
                         </Text>
                         <View className="absolute -left-1.5 top-10 w-4 h-4 bg-white dark:bg-zinc-900 border-l border-b border-gray-100 dark:border-zinc-800 rotate-[45deg]" />
                     </View>

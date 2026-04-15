@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSQLiteContext } from 'expo-sqlite';
 import * as Haptics from 'expo-haptics';
 import { CATEGORIES as DEFAULT_CATEGORIES, CategoryId } from '@/constants/Categories';
@@ -38,6 +39,7 @@ type TrackingContextType = {
   startTracker: (title: string, category: string, description?: string, targetSecs?: number) => Promise<void>;
   stopTracker: () => Promise<void>;
   deleteActivity: (id: number) => Promise<void>;
+  clearAllActivities: () => Promise<void>;
   addManualActivity: (title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => Promise<void>;
   editActivity: (id: number, title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => Promise<void>;
   duplicateActivity: (id: number) => Promise<void>;
@@ -63,9 +65,34 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const isRefreshing = useRef(false);
 
+  // Persistence for Goals
+  useEffect(() => {
+    const loadGoals = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('klowk_goals_v1');
+        if (saved) setCustomGoals(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load goals', e);
+      }
+    };
+    loadGoals();
+  }, []);
+
+  useEffect(() => {
+    const saveGoals = async () => {
+      try {
+        await AsyncStorage.setItem('klowk_goals_v1', JSON.stringify(customGoals));
+      } catch (e) {
+        console.error('Failed to save goals', e);
+      }
+    };
+    if (customGoals.length > 0) saveGoals();
+  }, [customGoals]);
+
   const addCustomGoal = (goal: CustomGoal) => setCustomGoals(prev => [...prev, goal]);
   const deleteCustomGoal = (id: string) => setCustomGoals(prev => prev.filter(g => g.id !== id));
   const editCustomGoal = (goal: CustomGoal) => setCustomGoals(prev => prev.map(g => g.id === goal.id ? goal : g));
+
 
   const addCategory = (label: string, iconName: string, color: string) => {
     const newCat: Category = {
@@ -149,6 +176,17 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const clearAllActivities = async () => {
+    try {
+      await db.runAsync('DELETE FROM activities');
+      setCurrentActivity(null);
+      setIsMinimized(false);
+      setActivities([]);
+    } catch (err) {
+      console.error('Failed to clear activities:', err);
+    }
+  };
+
   const addManualActivity = async (title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => {
     try {
       const timestamp = customDate ? customDate.getTime() : Date.now();
@@ -202,13 +240,14 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <TrackingContext.Provider value={{ 
-      activities, 
-      currentActivity, 
+    <TrackingContext.Provider value={{
+      activities,
+      currentActivity,
       categories,
-      startTracker, 
-      stopTracker, 
-      deleteActivity, 
+      startTracker,
+      stopTracker,
+      deleteActivity,
+      clearAllActivities,
       addManualActivity,
       editActivity,
       duplicateActivity,

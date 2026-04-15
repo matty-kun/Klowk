@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -18,6 +18,7 @@ import {
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { useTracking } from '@/context/TrackingContext';
+import { sendLocalNotification } from '@/utils/notifications';
 import { formatLiveDuration } from '@/utils/time';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
@@ -34,6 +35,7 @@ export default function TrackerPage() {
   const { currentActivity, stopTracker, setIsMinimized } = useTracking();
   const [isPaused, setIsPaused] = useState(false);
   const [accumulatedSecs, setAccumulatedSecs] = useState(0);
+  const hasAlerted = useRef(false);
 
   const radius = (CIRCLE_SIZE / 2) - 10;
   const circumference = 2 * Math.PI * radius;
@@ -69,6 +71,20 @@ export default function TrackerPage() {
     }
     return () => clearInterval(interval);
   }, [currentActivity, isPaused]);
+
+  // Fire haptic + notification when countdown hits zero
+  useEffect(() => {
+    const targetSecs = currentActivity?.target_duration;
+    if (!targetSecs || hasAlerted.current || isPaused) return;
+    if (accumulatedSecs >= targetSecs) {
+      hasAlerted.current = true;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      sendLocalNotification(
+        "Time's up! ⏱",
+        `You completed "${currentActivity?.title}". Great work!`
+      );
+    }
+  }, [accumulatedSecs]);
 
   // Handle Smooth Animation
   useEffect(() => {

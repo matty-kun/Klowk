@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Target, Trophy, Flame, Plus, X, Calendar as CalendarIcon, Clock, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useTracking, Activity, Category, CustomGoal } from '@/context/TrackingContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import LogActionSheet from '@/components/LogActionSheet';
 import * as Haptics from 'expo-haptics';
@@ -15,6 +16,7 @@ export default function GoalsScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { activities, categories, customGoals, addCustomGoal, editCustomGoal, deleteCustomGoal } = useTracking();
+  const { t } = useLanguage();
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -149,23 +151,23 @@ export default function GoalsScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white dark:bg-[#121212]" edges={['top']}>
         <View className="flex-row items-center justify-between mb-6 mt-8 px-6">
-          <Text className="text-4xl font-black text-[#121212] dark:text-white">Goals</Text>
+          <Text className="text-4xl font-black text-[#121212] dark:text-white">{t('goals')}</Text>
         </View>
 
         <View className="flex-1 items-center justify-center px-10 pb-20">
           <View className="w-24 h-24 bg-[#FF5A00]/10 rounded-full items-center justify-center mb-8">
             <Target size={48} color="#FF5A00" strokeWidth={1.5} />
           </View>
-          <Text className="text-2xl font-black text-[#121212] dark:text-white mb-3 text-center">No Goals Yet</Text>
+          <Text className="text-2xl font-black text-[#121212] dark:text-white mb-3 text-center">{t('no_goals_yet')}</Text>
           <Text className="text-[14px] font-bold text-gray-400 dark:text-zinc-500 text-center mb-10 leading-6">
-            Track your progress on long term projects bounded by dates and limits.
+            {t('no_goals_desc')}
           </Text>
 
-          <Pressable 
+          <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); openSheet(); }}
             className="w-full bg-[#FF5A00] py-4 rounded-[20px] items-center justify-center shadow-lg shadow-[#FF5A00]/30"
           >
-            <Text className="text-white font-black text-[15px] tracking-wider uppercase">Create New Goal</Text>
+            <Text className="text-white font-black text-[15px] tracking-wider uppercase">{t('create_new_goal')}</Text>
           </Pressable>
         </View>
 
@@ -179,7 +181,7 @@ export default function GoalsScreen() {
     <SafeAreaView className="flex-1 bg-white dark:bg-[#121212]" edges={['top']}>
       <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between mb-6 mt-8">
-          <Text className="text-4xl font-black text-[#121212] dark:text-white">Goals</Text>
+          <Text className="text-4xl font-black text-[#121212] dark:text-white">{t('goals')}</Text>
           <Pressable 
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); openSheet(); }}
             className="w-10 h-10 bg-[#FF5A00]/10 rounded-full items-center justify-center"
@@ -191,7 +193,7 @@ export default function GoalsScreen() {
         {/* The Streak */}
         <View className="mb-6">
           <Text className="text-[10px] font-black tracking-widest uppercase text-gray-400 dark:text-zinc-500 mb-3 ml-1">
-            Activity
+            {t('activity')}
           </Text>
           <MotiView 
               from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 100 }}
@@ -202,9 +204,9 @@ export default function GoalsScreen() {
                 <Flame size={28} color="#f43f5e" fill="#f43f5e" />
               </View>
               <View>
-                <Text className="text-[13px] font-bold text-[#f43f5e] uppercase tracking-wider mb-0.5">Focus Streak</Text>
+                <Text className="text-[13px] font-bold text-[#f43f5e] uppercase tracking-wider mb-0.5">{t('focus_streak')}</Text>
                 <Text className="text-2xl font-black text-[#121212] dark:text-white leading-tight">
-                  {currentStreak} {currentStreak === 1 ? 'Day' : 'Days'}
+                  {currentStreak} {currentStreak === 1 ? t('day') : t('days')}
                 </Text>
               </View>
             </View>
@@ -213,7 +215,7 @@ export default function GoalsScreen() {
 
         {/* Custom Goals List */}
         <Text className="text-[10px] font-black tracking-widest uppercase text-gray-400 dark:text-zinc-500 mb-3 ml-1">
-          Active Objectives
+          {t('active_objectives')}
         </Text>
         <View className="gap-4">
           {customGoals.map((goal, idx) => {
@@ -247,7 +249,7 @@ export default function GoalsScreen() {
                          </Text>
                          <View className="flex-row items-center">
                             <Text className="text-[11px] font-bold tracking-widest uppercase text-gray-400 dark:text-zinc-500">
-                               {catData.label}
+                               {t(catData.id as any) || catData.label}
                             </Text>
                          </View>
                       </View>
@@ -264,7 +266,7 @@ export default function GoalsScreen() {
                          {formatHrs(currentMins)} <Text className="text-gray-400">/ {formatHrs(goal.targetMins)}h</Text>
                       </Text>
                       <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase">
-                        {daysRemaining} {daysRemaining === 1 ? 'Day' : 'Days'} Left
+                        {daysRemaining} {daysRemaining === 1 ? t('day_left') : t('days_left')}
                       </Text>
                    </View>
                 </View>
@@ -322,7 +324,7 @@ export default function GoalsScreen() {
               
                   {/* Sheet header */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-                    <Text style={{ fontSize: 24, fontWeight: '900', color: isDark ? '#fff' : '#121212' }}>{editId ? 'Edit Goal' : 'New Goal'}</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: isDark ? '#fff' : '#121212' }}>{editId ? t('edit_goal') : t('new_goal')}</Text>
                     <Pressable
                       onPress={closeSheet}
                       style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? '#2c2c2e' : '#f3f4f6', alignItems: 'center', justifyContent: 'center' }}
@@ -333,7 +335,7 @@ export default function GoalsScreen() {
 
                   {/* Goal Name Input */}
                   <Text style={{ fontSize: 11, fontWeight: '900', color: isDark ? '#71717a' : '#9ca3af', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>
-                    Goal Name
+                    {t('goal_name')}
                   </Text>
                   <View style={{ backgroundColor: isDark ? '#2c2c2e' : '#f9fafb', borderRadius: 20, borderWidth: 1, borderColor: isDark ? '#3a3a3c' : '#f3f4f6', marginBottom: 24 }}>
                     <TextInput
@@ -347,7 +349,7 @@ export default function GoalsScreen() {
 
                   {/* Select Category */}
                   <Text style={{ fontSize: 11, fontWeight: '900', color: isDark ? '#71717a' : '#9ca3af', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>
-                    Category
+                    {t('category_label')}
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
                     <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -364,7 +366,7 @@ export default function GoalsScreen() {
                         >
                           <CategoryIcon name={cat.iconName} size={14} color={selectedCatId === cat.id ? cat.color : (isDark ? '#a1a1aa' : '#9ca3af')} />
                           <Text style={{ marginLeft: 8, fontSize: 13, fontWeight: '700', color: selectedCatId === cat.id ? (isDark ? '#fff' : '#121212') : (isDark ? '#a1a1aa' : '#9ca3af') }}>
-                            {cat.label}
+                            {t(cat.id as any) || cat.label}
                           </Text>
                         </Pressable>
                       ))}

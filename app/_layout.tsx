@@ -6,6 +6,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { View } from 'react-native';
 import { SQLiteProvider, type SQLiteDatabase } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
@@ -90,24 +91,36 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const { colorScheme } = useColorScheme();
 
+  const AppDarkTheme = { ...DarkTheme, colors: { ...DarkTheme.colors, background: '#121212', card: '#121212' } };
+  const AppLightTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#FFFFFF', card: '#FFFFFF' } };
+
+  const bg = colorScheme === 'dark' ? '#121212' : '#FFFFFF';
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? AppDarkTheme : AppLightTheme}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          contentStyle: { backgroundColor: colorScheme === 'dark' ? '#121212' : '#FFFFFF' }
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="live" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="tracker" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="chat" options={{ presentation: 'card', headerShown: false }} />
-        <Stack.Screen name="settings" options={{ presentation: 'card', headerShown: false }} />
-        <Stack.Screen name="history" options={{ presentation: 'card', headerShown: false }} />
-        <Stack.Screen name="categories" options={{ presentation: 'card', headerShown: false }} />
-      </Stack>
-      <FloatingTimer />
+      <View style={{ flex: 1, backgroundColor: bg }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: bg },
+            cardStyle: { backgroundColor: bg },
+            cardOverlayEnabled: false,
+            cardShadowEnabled: false,
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="live" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="tracker" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+          <Stack.Screen name="chat" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="history" />
+          <Stack.Screen name="categories" />
+        </Stack>
+        <FloatingTimer />
+      </View>
     </ThemeProvider>
   );
 }

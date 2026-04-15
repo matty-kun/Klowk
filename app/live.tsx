@@ -19,10 +19,12 @@ import {
   Briefcase,
   Heart,
   BookOpen,
-  Coffee
+  Coffee,
+  Target
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTracking, Category } from '@/context/TrackingContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useColorScheme } from 'nativewind';
 import { CategoryIcon } from '@/components/CategoryIcon';
 
@@ -30,21 +32,34 @@ export default function LiveSessionPage() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
-  const { startTracker, categories } = useTracking();
+  const { startTracker, categories, customGoals, activities } = useTracking();
+  const { t } = useLanguage();
   
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
   const [seconds, setSeconds] = useState('');
   const [category, setCategory] = useState('work');
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+
+  const getGoalRemainingSecs = (goalId: string) => {
+    const goal = customGoals.find(g => g.id === goalId);
+    if (!goal) return 0;
+    const logged = activities
+      .filter(a => a.title === goal.name && a.category === goal.categoryId && a.duration && a.start_time >= goal.startDate && a.start_time <= goal.endDate)
+      .reduce((acc, a) => acc + (a.duration || 0), 0);
+    return Math.max(0, goal.targetMins * 60 - logged);
+  };
+
+  const plannedSecs = (parseInt(hours) || 0) * 3600 + (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
+  const canStart = !!title && plannedSecs > 0;
 
   const handleStart = async () => {
-    if (!title) return;
+    if (!canStart) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
-    const plannedSecs = (parseInt(hours) || 0) * 3600 + (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
-    const description = plannedSecs > 0 ? `Target: ${Math.floor(plannedSecs/60)}m ${plannedSecs%60}s` : undefined;
-    
+
+    const description = `Target: ${Math.floor(plannedSecs/60)}m ${plannedSecs%60}s`;
+
     await startTracker(title, category, description, plannedSecs);
     router.replace('/tracker');
   };
@@ -64,20 +79,23 @@ export default function LiveSessionPage() {
             >
               <ArrowLeft size={24} color={isDark ? '#fff' : '#121212'} />
             </Pressable>
-            <Text className="text-[28px] font-black text-klowk-black dark:text-white">Live Session</Text>
+            <Text className="text-[28px] font-black text-klowk-black dark:text-white">{t('live_session')}</Text>
           </View>
           
           {/* Title Input */}
           <View className="mb-8">
             <View className="flex-row items-center mb-3">
               <Zap size={14} color="#FF5A00" />
-              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">Focus Target</Text>
+              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">{t('focus_target')}</Text>
             </View>
             <View className="bg-gray-50 dark:bg-zinc-900 rounded-[20px] border border-gray-100 dark:border-zinc-800">
               <TextInput
                 value={title}
-                onChangeText={setTitle}
-                placeholder="What are you working on?"
+                onChangeText={(val) => {
+                    setTitle(val);
+                    if (selectedGoalId) setSelectedGoalId(null);
+                }}
+                placeholder={t('what_working_on')}
                 placeholderTextColor={isDark ? '#3f3f46' : '#9ca3af'}
                 className="p-5 text-base font-bold text-klowk-black dark:text-white"
               />
@@ -88,7 +106,7 @@ export default function LiveSessionPage() {
           <View className="mb-8">
             <View className="flex-row items-center mb-4">
               <Clock size={14} color="#9ca3af" />
-              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">Duration</Text>
+              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">{t('duration')}</Text>
             </View>
             <View className="flex-row gap-2">
               <View className="flex-1">
@@ -127,11 +145,66 @@ export default function LiveSessionPage() {
             </View>
           </View>
 
+          {/* Goals Selection */}
+          <View className="mb-8">
+            <View className="flex-row items-center mb-4">
+              <Target size={14} color="#FF5A00" />
+              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">{t('active_goals')}</Text>
+            </View>
+            
+            {customGoals.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                {customGoals.map((goal) => {
+                  const isSelected = selectedGoalId === goal.id;
+                  const cat = categories.find(c => c.id === goal.categoryId);
+                  
+                  return (
+                    <Pressable
+                      key={goal.id}
+                      onPress={() => {
+                        const remaining = getGoalRemainingSecs(goal.id);
+                        setSelectedGoalId(goal.id);
+                        setTitle(goal.name);
+                        setCategory(goal.categoryId);
+                        setHours(Math.floor(remaining / 3600).toString());
+                        setMinutes(Math.floor((remaining % 3600) / 60).toString());
+                        setSeconds((remaining % 60).toString());
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }}
+                      className={`mr-3 p-4 rounded-[24px] border min-w-[160px] ${isSelected ? 'border-[#FF5A00] bg-orange-50 dark:bg-orange-500/10' : 'bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800'}`}
+                    >
+                      <Text className={`text-sm font-black mb-1 ${isSelected ? 'text-[#FF5A00]' : 'text-klowk-black dark:text-white'}`} numberOfLines={1}>{goal.name}</Text>
+                      <View className="flex-row items-center mb-2">
+                        <CategoryIcon name={cat?.iconName || 'briefcase'} size={10} color={isSelected ? '#FF5A00' : '#9ca3af'} />
+                        <Text className={`ml-1 text-[10px] font-bold uppercase ${isSelected ? 'text-[#FF5A00]/70' : 'text-gray-400'}`}>{cat ? (t(cat.id as any) || cat.label) : 'General'}</Text>
+                      </View>
+                      {(() => {
+                        const rem = getGoalRemainingSecs(goal.id);
+                        const remH = Math.floor(rem / 3600);
+                        const remM = Math.floor((rem % 3600) / 60);
+                        const label = rem === 0 ? 'Complete' : remH > 0 ? `${remH}h ${remM}m left` : `${remM}m left`;
+                        return (
+                          <Text className={`text-[10px] font-black ${rem === 0 ? 'text-green-500' : (isSelected ? 'text-[#FF5A00]' : 'text-gray-400 dark:text-gray-500')}`}>
+                            {label}
+                          </Text>
+                        );
+                      })()}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+                <View className="bg-gray-50 dark:bg-zinc-900/50 rounded-[24px] p-5 border border-dashed border-gray-200 dark:border-zinc-800 items-center">
+                  <Text className="text-xs font-bold text-gray-400 dark:text-gray-500 italic">{t('no_goals_create')}</Text>
+                </View>
+            )}
+          </View>
+
           {/* Category Selection */}
           <View className="mb-10">
             <View className="flex-row items-center mb-4">
               <Tag size={14} color="#9ca3af" />
-              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">Category</Text>
+              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">{t('category_label')}</Text>
             </View>
             <View className="flex-row flex-wrap gap-2.5">
               {categories.map((cat: Category) => {
@@ -148,7 +221,7 @@ export default function LiveSessionPage() {
                   >
                     <CategoryIcon name={cat.iconName} size={14} color={isSelected ? '#fff' : cat.color} />
                     <Text className={`ml-2 text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {cat.label}
+                      {t(cat.id as any) || cat.label}
                     </Text>
                   </Pressable>
                 );
@@ -159,13 +232,13 @@ export default function LiveSessionPage() {
 
         {/* Start Button */}
         <View className="p-6 border-t border-gray-50 dark:border-zinc-900 bg-white dark:bg-klowk-black">
-          <Pressable 
+          <Pressable
             onPress={handleStart}
-            disabled={!title}
-            className={`py-5 rounded-[24px] flex-row items-center justify-center shadow-lg ${!title ? 'bg-gray-100 dark:bg-zinc-900' : 'bg-klowk-black dark:bg-white'}`}
+            disabled={!canStart}
+            className={`py-5 rounded-[24px] flex-row items-center justify-center shadow-lg ${!canStart ? 'bg-gray-100 dark:bg-zinc-900' : 'bg-klowk-black dark:bg-white'}`}
           >
-            <Check size={20} color={!title ? '#9ca3af' : (isDark ? '#121212' : '#fff')} className="mr-3" />
-            <Text className={`font-black uppercase tracking-wider ${!title ? 'text-gray-400' : (isDark ? 'text-klowk-black' : 'text-white')}`}>Launch Focus</Text>
+            <Check size={20} color={!canStart ? '#9ca3af' : (isDark ? '#121212' : '#fff')} className="mr-3" />
+            <Text className={`font-black uppercase tracking-wider ${!canStart ? 'text-gray-400' : (isDark ? 'text-klowk-black' : 'text-white')}`}>{t('launch_focus')}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

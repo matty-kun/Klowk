@@ -20,7 +20,10 @@ import {
   Settings2,
   History,
   Tag,
-  Target
+  Target,
+  Timer,
+  ClipboardEdit,
+  ChevronRight
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { View as MotiView } from 'moti';
@@ -191,8 +194,8 @@ export default React.memo(function TabOneScreen() {
                     </View>
                     <View className="flex-1 bg-white dark:bg-zinc-900 p-5 rounded-[24px] border border-gray-100 dark:border-zinc-800 shadow-sm">
                         <Text className="text-xs text-klowk-black dark:text-white font-semibold leading-5">
-                            {todayMinsTotal > 0 
-                            ? t('focus_win').replace('{time}', formatDuration(todayMinsTotal))
+                            {todayMinsTotal > 0
+                            ? t('focus_win').replace('{time}', formatDuration(Math.floor(todayMinsTotal / 60)))
                             : t('focus_ready')}
                         </Text>
                         <View className="absolute -left-1.5 top-10 w-4 h-4 bg-white dark:bg-zinc-900 border-l border-b border-gray-100 dark:border-zinc-800 rotate-[45deg]" />
@@ -201,7 +204,76 @@ export default React.memo(function TabOneScreen() {
             </View>
         </View>
 
-        {/* Analytics Section */}
+        {/* Empty State — shown when no activities yet */}
+        {activities.length === 0 && (
+          <MotiView
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'spring', delay: 300 }}
+            style={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 160 }}
+          >
+            {/* Action buttons */}
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/live'); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: '#FF5A00',
+                borderRadius: 28, padding: 20, marginBottom: 12,
+                shadowColor: '#FF5A00', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
+              }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                <Timer size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#fff' }}>{t('start_live_session')}</Text>
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>Track your focus in real time</Text>
+              </View>
+              <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
+            </Pressable>
+
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/modal'); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f9fafb',
+                borderRadius: 28, padding: 20, marginBottom: 12,
+                borderWidth: 1, borderColor: colorScheme === 'dark' ? '#27272a' : '#f3f4f6',
+              }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colorScheme === 'dark' ? '#27272a' : '#f3f4f6', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                <ClipboardEdit size={22} color={colorScheme === 'dark' ? '#a1a1aa' : '#6b7280'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: colorScheme === 'dark' ? '#fff' : '#121212' }}>{t('log_manually')}</Text>
+                <Text style={{ fontSize: 11, color: colorScheme === 'dark' ? '#71717a' : '#9ca3af', marginTop: 2 }}>Add a session you already did</Text>
+              </View>
+              <ChevronRight size={20} color={colorScheme === 'dark' ? '#3f3f46' : '#e5e7eb'} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate('goals'); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: colorScheme === 'dark' ? '#1a101f' : '#f5effa',
+                borderRadius: 28, padding: 20,
+                borderWidth: 1, borderColor: colorScheme === 'dark' ? '#2a1b33' : '#ebdcf5',
+              }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colorScheme === 'dark' ? '#2a1b33' : '#ebdcf5', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                <Target size={22} color="#8b5cf6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: colorScheme === 'dark' ? '#fff' : '#121212' }}>{t('goals')}</Text>
+                <Text style={{ fontSize: 11, color: colorScheme === 'dark' ? '#71717a' : '#9ca3af', marginTop: 2 }}>Set targets and track progress</Text>
+              </View>
+              <ChevronRight size={20} color={colorScheme === 'dark' ? '#3f3f46' : '#e5e7eb'} />
+            </Pressable>
+          </MotiView>
+        )}
+
+        {/* Analytics + Bento + Logs — only shown when there is data */}
+        {activities.length > 0 && <>
         <View className="px-6 flex-row justify-between mb-8">
           {/* Intensity Card */}
           <MotiView 
@@ -249,7 +321,7 @@ export default React.memo(function TabOneScreen() {
                 {trendUp ? <ArrowUp size={12} color="#10b981" strokeWidth={3} /> : <ArrowDown size={12} color="#ef4444" strokeWidth={3} />}
               </View>
               <View className="flex-row items-baseline">
-                <Text style={{ color: trendColor }} className="text-[34px] font-black">{(rangeMinsTotal / 60).toFixed(1)}</Text>
+                <Text style={{ color: trendColor }} className="text-[34px] font-black">{(rangeMinsTotal / 3600).toFixed(1)}</Text>
                 <Text className="text-[10px] font-black text-gray-300 dark:text-zinc-600 ml-1">{t('hrs')}</Text>
               </View>
             </View>
@@ -322,7 +394,7 @@ export default React.memo(function TabOneScreen() {
                     <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: isDark ? '#2d1f0e' : '#FFE4D0', alignItems: 'center', justifyContent: 'center' }}>
                       <CategoryIcon name="layers" size={13} color="#FF5A00" />
                     </View>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>Categories</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>{t('categories')}</Text>
                   </View>
                   <Text style={{ fontSize: 14, color: '#FF5A00', fontWeight: '700' }}>›</Text>
                 </View>
@@ -339,8 +411,9 @@ export default React.memo(function TabOneScreen() {
 
                 {/* Top 3 list */}
                 {categoryStats.slice(0, 3).map((stat: any, i: number) => {
-                  const hrs = Math.floor(stat.totalMins / 60);
-                  const mins = stat.totalMins % 60;
+                  const totalSecs = stat.totalMins; // named misleadingly — it's actually seconds
+                  const hrs = Math.floor(totalSecs / 3600);
+                  const mins = Math.floor((totalSecs % 3600) / 60);
                   const timeStr = hrs > 0 ? `${hrs}h ${mins > 0 ? mins + 'm' : ''}`.trim() : `${mins}m`;
                   return (
                     <View
@@ -357,7 +430,7 @@ export default React.memo(function TabOneScreen() {
                         <CategoryIcon name={stat.iconName} size={11} color={stat.color} />
                       </View>
                       <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: isDark ? '#d4d4d8' : '#374151' }} numberOfLines={1}>
-                        {stat.label}
+                        {t(stat.id as any) || stat.label}
                       </Text>
                       <Text style={{ fontSize: 10, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>
                         {timeStr}
@@ -375,7 +448,6 @@ export default React.memo(function TabOneScreen() {
                   backgroundColor: isDark ? '#1a101f' : '#f5effa',
                   borderRadius: 32,
                   padding: 20,
-                  justifyContent: 'space-between',
                 }}
               >
                 {/* Header row: icon + label + chevron */}
@@ -384,28 +456,34 @@ export default React.memo(function TabOneScreen() {
                     <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: isDark ? '#2a1b33' : '#ebdcf5', alignItems: 'center', justifyContent: 'center' }}>
                       <Target size={13} color="#8b5cf6" />
                     </View>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>Goals</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>{t('goals')}</Text>
                   </View>
                   <Text style={{ fontSize: 14, color: '#8b5cf6', fontWeight: '700' }}>›</Text>
                 </View>
 
-                {/* Count — small */}
+                {/* Count */}
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 14 }}>
                   <Text style={{ fontSize: 20, fontWeight: '900', color: isDark ? '#fff' : '#1a1a1a' }}>
                     {activeGoalsCount}
                   </Text>
                   <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#71717a' : '#9ca3af', marginLeft: 4 }}>
-                    {activeGoalsCount === 1 ? 'goal' : 'goals'}
+                    {activeGoalsCount === 1 ? t('goal') : t('goals_plural')}
                   </Text>
                 </View>
 
                 {/* Top 3 goals */}
                 {customGoals?.filter(g => g.endDate >= Date.now()).slice(0, 3).map((goal, i) => {
-                  const currentMins = activities
-                    .filter(a => a.category === goal.categoryId && a.start_time >= goal.startDate && a.start_time <= goal.endDate)
+                  const loggedSecs = activities
+                    .filter(a => a.title === goal.name && a.category === goal.categoryId && a.start_time >= goal.startDate && a.start_time <= goal.endDate)
                     .reduce((sum, a) => sum + (a.duration || 0), 0);
-                  const hrsDone = (currentMins / 60).toFixed(1).replace('.0', '');
-                  const hrsTarget = (goal.targetMins / 60).toFixed(1).replace('.0', '');
+                  const loggedMins = Math.floor(loggedSecs / 60);
+                  const progress = Math.min(1, loggedMins / goal.targetMins);
+                  const isComplete = loggedMins >= goal.targetMins;
+
+                  const fmtTime = (mins: number) => {
+                    if (mins >= 60) return `${(mins / 60).toFixed(1).replace('.0', '')}h`;
+                    return `${mins}m`;
+                  };
 
                   return (
                     <View
@@ -416,15 +494,19 @@ export default React.memo(function TabOneScreen() {
                         borderTopColor: isDark ? '#2a1b33' : '#ebdcf5',
                       }}
                     >
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a', marginBottom: 2 }} numberOfLines={1}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a', marginBottom: 4 }} numberOfLines={1}>
                         {goal.name}
                       </Text>
+                      {/* Progress bar */}
+                      <View style={{ height: 4, borderRadius: 4, backgroundColor: isDark ? '#2a1b33' : '#ebdcf5', marginBottom: 4, overflow: 'hidden' }}>
+                        <View style={{ height: 4, borderRadius: 4, width: `${progress * 100}%`, backgroundColor: isComplete ? '#22c55e' : '#8b5cf6' }} />
+                      </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 9, fontWeight: '700', color: isDark ? '#a1a1aa' : '#8b5cf6' }}>
-                          {hrsDone}h / {hrsTarget}h
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: isComplete ? '#22c55e' : (isDark ? '#a1a1aa' : '#8b5cf6') }}>
+                          {isComplete ? 'Complete!' : `${fmtTime(loggedMins)} of ${fmtTime(goal.targetMins)}`}
                         </Text>
                         <Text style={{ fontSize: 9, fontWeight: '700', color: isDark ? '#71717a' : '#9ca3af' }}>
-                          {Math.max(0, Math.ceil((goal.endDate - Date.now()) / (1000 * 60 * 60 * 24)))} {Math.max(0, Math.ceil((goal.endDate - Date.now()) / (1000 * 60 * 60 * 24))) === 1 ? 'day' : 'days'} left
+                          {Math.max(0, Math.ceil((goal.endDate - Date.now()) / (1000 * 60 * 60 * 24)))}d left
                         </Text>
                       </View>
                     </View>
@@ -444,7 +526,7 @@ export default React.memo(function TabOneScreen() {
         })()}
 
         {/* Logs List */}
-        <MotiView 
+        <MotiView
             from={{ opacity: 0, translateY: 10 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: 'timing', delay: 800 }}
@@ -481,6 +563,7 @@ export default React.memo(function TabOneScreen() {
             );
           })}
         </View>
+        </>}
       </ScrollView>
 
       <LogActionSheet

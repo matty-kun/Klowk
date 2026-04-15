@@ -79,6 +79,7 @@ const Coffee = ({ size, color }: { size: number, color: string }) => (
 
 const DonutChart = ({ data, total }: { data: any[], total: number }) => {
   const { colorScheme } = useColorScheme();
+  const { t } = useLanguage();
   const size = 160;
   const strokeWidth = 14;
   const center = size / 2;
@@ -137,7 +138,7 @@ const DonutChart = ({ data, total }: { data: any[], total: number }) => {
         </G>
       </Svg>
       <View className="absolute items-center bg-transparent">
-        <Text className="text-gray-400 dark:text-gray-500 font-black text-[8px] uppercase tracking-widest mb-1">Focused</Text>
+        <Text className="text-gray-400 dark:text-gray-500 font-black text-[8px] uppercase tracking-widest mb-1">{t('focused')}</Text>
         <Text className="text-2xl font-black text-klowk-black dark:text-white">{Math.floor(total / 3600)}h</Text>
       </View>
     </View>
@@ -146,6 +147,7 @@ const DonutChart = ({ data, total }: { data: any[], total: number }) => {
 
 const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
   const { colorScheme } = useColorScheme();
+  const { t } = useLanguage();
   const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   
   const now = new Date();
@@ -174,7 +176,7 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
   return (
     <View className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] shadow-sm border border-gray-50 dark:border-zinc-800 mb-8 overflow-hidden">
       <View className="flex-row justify-between items-center mb-6 bg-transparent">
-        <Text className="font-black text-lg text-klowk-black dark:text-white">Weekly Trend</Text>
+        <Text className="font-black text-lg text-klowk-black dark:text-white">{t('weekly_trend')}</Text>
         <TrendIcon size={16} color="#FF5A00" />
       </View>
       
@@ -302,17 +304,17 @@ export default React.memo(function ReportsScreen() {
 
   const forecastContent = useMemo(() => {
     return {
-        title: "Focus Prime Time",
-        heroText: '"Tomorrow at 10:00 AM is your biological focus prime time."',
+        title: t('focus_prime_time'),
+        heroText: t('forecast_hero'),
         dataLabel: "Next 24 Hours",
         chartData: [0.2, 0.4, 0.3, 0.9, 0.7, 0.8, 0.5, 0.3],
         chartLabels: ['8a', '10a', '12p', '2p', '4p', '6p', '8p', '10p'],
         strategies: [
-            { title: "Deep Work Block", detail: "9:30 - 11:30 AM is ideal.", icon: Calendar },
-            { title: "Caffeine Timing", detail: "Drink at 9:45 AM for peak effect.", icon: Coffee }
+            { title: t('deep_work_block'), detail: t('deep_work_detail'), icon: Calendar },
+            { title: t('caffeine_timing'), detail: t('caffeine_detail'), icon: Coffee }
         ]
     };
-  }, []);
+  }, [t]);
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
@@ -375,7 +377,7 @@ export default React.memo(function ReportsScreen() {
               <Text className="ml-2 font-black text-klowk-orange text-[10px] uppercase tracking-[3px]">{t('ai_insight')}</Text>
             </View>
             <Text className="text-klowk-black dark:text-white font-semibold text-sm leading-5">
-              Your focus peak is arriving! <Text className="text-gray-400 dark:text-gray-500">Historically, you're 40% more efficient tomorrow morning. Plan a deep session then.</Text>
+              {t('ai_insight_body')}
             </Text>
           </View>
         </View>
@@ -388,11 +390,11 @@ export default React.memo(function ReportsScreen() {
                     {categoryStats.filter(s => s.totalMins > 0).map((stat: any) => (
                         <View key={stat.id} className="flex-row items-center">
                            <View style={{ backgroundColor: stat.color }} className="w-2 h-2 rounded-full mr-2" />
-                           <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">{capitalize(stat.label)}</Text>
+                           <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">{capitalize(t(stat.id as any) || stat.label)}</Text>
                         </View>
                     ))}
                     {categoryStats.filter(s => s.totalMins > 0).length === 0 && (
-                      <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No activities yet</Text>
+                      <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('no_activities_yet')}</Text>
                     )}
                 </View>
            </View>
@@ -520,7 +522,7 @@ export default React.memo(function ReportsScreen() {
                         <Sparkles size={40} color="#FF5A00" />
                     </View>
                     <Text className="text-3xl font-black text-klowk-black dark:text-white mt-6 text-center">{forecastContent.title}</Text>
-                    <Text className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-[3px] mt-2">AI Momentum Engine</Text>
+                    <Text className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-[3px] mt-2">{t('ai_momentum_engine')}</Text>
                 </View>
 
                 <LinearGradient colors={['#FF5A00', '#FF8A00']} style={{ borderRadius: 34, padding: 32, marginBottom: 32, marginTop: 24 }}>
@@ -529,7 +531,7 @@ export default React.memo(function ReportsScreen() {
 
                 {/* Simplified Chart (Stay under memory/render limit) */}
                 <View className="bg-white dark:bg-zinc-900 p-8 rounded-[40px] shadow-sm border border-gray-100 dark:border-zinc-800 mb-8">
-                    <Text className="text-lg font-black text-klowk-black dark:text-white mb-8">Forecast Trend</Text>
+                    <Text className="text-lg font-black text-klowk-black dark:text-white mb-8">{t('forecast_trend')}</Text>
                     <View className="h-32 flex-row items-end justify-between px-1">
                         {forecastContent.chartData.map((h, i) => (
                             <View key={i} className="items-center flex-1">
@@ -542,7 +544,7 @@ export default React.memo(function ReportsScreen() {
 
                 {/* Rich Strategies List */}
                 <View className="mb-8">
-                    <Text className="text-xl font-black text-klowk-black dark:text-white mb-6">Winning Strategy</Text>
+                    <Text className="text-xl font-black text-klowk-black dark:text-white mb-6">{t('winning_strategy')}</Text>
                     {forecastContent.strategies.map((s: any, i: number) => {
                         const Icon = s.icon || Target;
                         return (
@@ -599,14 +601,14 @@ export default React.memo(function ReportsScreen() {
            <Pressable className="flex-1" onPress={() => setShowAddCategory(false)} />
            <View className="bg-white dark:bg-klowk-black rounded-t-[40px] p-8 pb-12 shadow-2xl">
               <View className="flex-row justify-between items-center mb-8">
-                <Text className="text-2xl font-black text-klowk-black dark:text-white">New Category</Text>
+                <Text className="text-2xl font-black text-klowk-black dark:text-white">{t('new_category')}</Text>
                 <Pressable onPress={() => setShowAddCategory(false)} className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full">
                     <X size={20} color={isDark ? '#fff' : '#121212'} />
                 </Pressable>
               </View>
 
               <View className="mb-8">
-                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Category Name</Text>
+                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">{t('category_name')}</Text>
                 <View className="bg-gray-50 dark:bg-zinc-900 rounded-[20px] border border-gray-100 dark:border-zinc-800">
                     <TextInput
                         value={newCatName}
@@ -620,7 +622,7 @@ export default React.memo(function ReportsScreen() {
               </View>
 
                <View className="mb-8">
-                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Select Icon</Text>
+                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">{t('select_icon')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
                     {ICONS.map((icon) => (
                         <Pressable 
@@ -638,7 +640,7 @@ export default React.memo(function ReportsScreen() {
               </View>
 
               <View className="mb-10">
-                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Select Color</Text>
+                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">{t('select_color')}</Text>
                 <View className="flex-row flex-wrap gap-3">
                     {COLORS.map((color) => (
                         <Pressable 
@@ -662,7 +664,7 @@ export default React.memo(function ReportsScreen() {
                 className={`py-5 rounded-[24px] flex-row items-center justify-center shadow-lg ${!newCatName ? 'bg-gray-100 dark:bg-zinc-900' : 'bg-klowk-black dark:bg-white'}`}
               >
                 <Plus size={20} color={!newCatName ? '#9ca3af' : (isDark ? '#121212' : '#fff')} className="mr-3" />
-                <Text className={`font-black uppercase tracking-wider ${!newCatName ? 'text-gray-400' : (isDark ? 'text-klowk-black' : 'text-white')}`}>Create Category</Text>
+                <Text className={`font-black uppercase tracking-wider ${!newCatName ? 'text-gray-400' : (isDark ? 'text-klowk-black' : 'text-white')}`}>{t('create_category')}</Text>
               </Pressable>
            </View>
         </View>

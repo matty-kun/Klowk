@@ -59,10 +59,12 @@ const SettingItem = ({ icon: Icon, label, value, type = 'info', onPress, color =
 };
 
 import { registerForPushNotificationsAsync } from '@/utils/notifications';
+import { useTracking } from '@/context/TrackingContext';
 
 export default function SettingsScreen() {
   const { colorScheme, toggleColorScheme, setColorScheme } = useColorScheme();
   const { t, language, setLanguage } = useLanguage();
+  const { clearAllActivities } = useTracking();
   const isDarkMode = colorScheme === 'dark';
   const [localIsDark, setLocalIsDark] = React.useState(isDarkMode);
   const [localLang, setLocalLang] = React.useState(language);
@@ -185,13 +187,13 @@ export default function SettingsScreen() {
                             animate={{ 
                                 translateX: (localLang === 'en' ? 0 : 1) * ((langToggleWidth - 8) / 2)
                             }}
-                            transition={{ type: 'timing', duration: 150 }}
-                            style={{ 
-                                position: 'absolute', 
-                                top: 4, 
-                                bottom: 4, 
-                                left: 4, 
-                                width: (langToggleWidth - 8) / 2 || '48%', 
+                            transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+                            style={{
+                                position: 'absolute',
+                                top: 4,
+                                bottom: 4,
+                                left: 4,
+                                width: (langToggleWidth - 8) / 2 || '48%',
                                 backgroundColor: isDarkMode ? '#3f3f46' : '#fff', 
                                 borderRadius: 12,
                                 elevation: 2,
@@ -309,7 +311,7 @@ export default function SettingsScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                         Alert.alert(t('clear_data_title'), t('clear_data_desc'), [
                             { text: t('cancel'), style: 'cancel' },
-                            { text: t('delete'), style: 'destructive', onPress: () => console.log('Deleted') }
+                            { text: t('delete'), style: 'destructive', onPress: () => clearAllActivities() }
                         ]);
                     }}
                 />

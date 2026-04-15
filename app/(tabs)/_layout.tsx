@@ -9,6 +9,7 @@ import ActionSheet from '@/components/ActionSheet';
 import { View as MotiView } from 'moti';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useColorScheme } from 'nativewind';
+import { useLanguage } from '@/context/LanguageContext';
 
 // Import our tab screens directly
 import TabOneScreen from './index';
@@ -24,12 +25,15 @@ const { width } = Dimensions.get('window');
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { t } = useLanguage();
   const { currentActivity, stopTracker } = useTracking();
   const [showSheet, setShowSheet] = useState(false);
   const router = useRouter();
   
   const isTimerRunning = !!currentActivity;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  // All native-driver — no color interpolation
+  const morphAnim = useRef(new Animated.Value(isTimerRunning ? 1 : 0)).current;
 
   useEffect(() => {
     if (isTimerRunning) {
@@ -43,6 +47,24 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       return () => pulse.stop();
     }
   }, [isTimerRunning]);
+
+  useEffect(() => {
+    Animated.spring(morphAnim, {
+      toValue: isTimerRunning ? 1 : 0,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 10,
+    }).start();
+  }, [isTimerRunning]);
+
+  const plusOpacity  = morphAnim.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0], extrapolate: 'clamp' });
+  const plusScale    = morphAnim.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0.3], extrapolate: 'clamp' });
+  const stopOpacity  = morphAnim.interpolate({ inputRange: [0.6, 1], outputRange: [0, 1], extrapolate: 'clamp' });
+  const stopScale    = morphAnim.interpolate({ inputRange: [0.6, 1], outputRange: [0.3, 1], extrapolate: 'clamp' });
+  const btnRotate    = morphAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] });
+  // Fade between the two background layers using native driver
+  const orangeOpacity = morphAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' });
+  const darkOpacity   = morphAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' });
 
   const handlePlusTap = async () => {
     if (isTimerRunning) {
@@ -61,6 +83,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         onClose={() => setShowSheet(false)}
         onTalkToKala={() => { setShowSheet(false); navigation.navigate('chat'); }}
         onLogManually={() => { setShowSheet(false); navigation.navigate('modal'); }}
+        onStartLiveSession={() => { setShowSheet(false); router.push('/live'); }}
       />
 
       <View style={{ flex: 1, height: 68, backgroundColor: isDark ? 'rgba(28, 28, 30, 0.98)' : 'rgba(255, 255, 255, 0.98)', borderRadius: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 15, elevation: 8, marginRight: 12 }}>
@@ -78,7 +101,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           };
 
           const icons: Record<string, any> = { index: Home, goals: Target, reports: BarChart3 };
-          const labels: Record<string, string> = { index: 'Home', goals: 'Goals', reports: 'Data' };
+          const labels: Record<string, string> = { index: t('home'), goals: t('goals'), reports: t('data_tab') };
           
           const Icon = icons[route.name] || Home;
           const label = labels[route.name] || 'Home';
@@ -97,9 +120,27 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           onPress={handlePlusTap}
           onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setShowSheet(true); }}
           delayLongPress={400}
-          style={{ width: 68, height: 68, backgroundColor: isTimerRunning ? (isDark ? '#fff' : '#121212') : '#FF5A00', borderRadius: 34, alignItems: 'center', justifyContent: 'center', elevation: 10 }}
         >
-          {isTimerRunning ? <Square size={24} color={isDark ? '#121212' : '#fff'} fill={isDark ? '#121212' : '#fff'} strokeWidth={0} /> : <Plus size={32} color="#fff" strokeWidth={3} />}
+          <Animated.View style={{
+            width: 68, height: 68, borderRadius: 34,
+            overflow: 'hidden',
+            elevation: 10,
+            transform: [{ rotate: btnRotate }],
+          }}>
+            {/* Orange layer (plus state) */}
+            <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 34, backgroundColor: '#FF5A00', opacity: orangeOpacity }} />
+            {/* Dark/white layer (stop state) */}
+            <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 34, backgroundColor: isDark ? '#ffffff' : '#121212', opacity: darkOpacity }} />
+
+            {/* Plus icon */}
+            <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', opacity: plusOpacity, transform: [{ scale: plusScale }] }}>
+              <Plus size={32} color="#fff" strokeWidth={3} />
+            </Animated.View>
+            {/* Stop icon */}
+            <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', opacity: stopOpacity, transform: [{ scale: stopScale }] }}>
+              <Square size={24} color={isDark ? '#121212' : '#fff'} fill={isDark ? '#121212' : '#fff'} strokeWidth={0} />
+            </Animated.View>
+          </Animated.View>
         </Pressable>
       </Animated.View>
     </View>

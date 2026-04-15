@@ -25,10 +25,12 @@ import {
   Coffee,
   MoreHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Target
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTracking, Activity, Category } from '@/context/TrackingContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useColorScheme } from 'nativewind';
 import { CategoryIcon } from '@/components/CategoryIcon';
 
@@ -36,7 +38,17 @@ export default function EntryModal() {
   const { colorScheme } = useColorScheme();
   const router = useRouter();
   const { editId } = useLocalSearchParams();
-  const { addManualActivity, startTracker, editActivity, activities, categories } = useTracking();
+  const { addManualActivity, startTracker, editActivity, activities, categories, customGoals } = useTracking();
+  const { t } = useLanguage();
+
+  const getGoalRemainingSecs = (goalId: string) => {
+    const goal = customGoals.find(g => g.id === goalId);
+    if (!goal) return 0;
+    const logged = activities
+      .filter(a => a.title === goal.name && a.category === goal.categoryId && a.duration && a.start_time >= goal.startDate && a.start_time <= goal.endDate)
+      .reduce((acc, a) => acc + (a.duration || 0), 0);
+    return Math.max(0, goal.targetMins * 60 - logged);
+  };
   
   // Form State
   const [title, setTitle] = useState('');
@@ -47,6 +59,7 @@ export default function EntryModal() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState('work');
   const [description, setDescription] = useState('');
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
 
   // Initial Data Population for Edit Mode
   useEffect(() => {
@@ -122,24 +135,27 @@ export default function EntryModal() {
             >
               <ArrowLeft size={24} color={colorScheme === 'dark' ? '#fff' : '#121212'} />
             </Pressable>
-            <Text className="text-[28px] font-black text-klowk-black dark:text-white">{editId ? 'Edit Log' : 'New Log'}</Text>
+            <Text className="text-[28px] font-black text-klowk-black dark:text-white">{editId ? t('edit_log') : t('new_log')}</Text>
           </View>
           
           {/* Form Fields */}
           <View className="mb-8">
-            <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Manual Details</Text>
+            <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">{t('manual_details')}</Text>
             
             {/* Title */}
             <View className="mb-5">
               <View className="flex-row items-center mb-2">
                 <Zap size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">What did you do?</Text>
+                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">{t('what_did_you_do')}</Text>
               </View>
               <View className="bg-gray-50 dark:bg-zinc-900 rounded-[20px] border border-gray-100 dark:border-zinc-800">
                 <TextInput
                   value={title}
-                  onChangeText={setTitle}
-                  placeholder="What are you focusing on?"
+                  onChangeText={(val) => {
+                    setTitle(val);
+                    if (selectedGoalId) setSelectedGoalId(null);
+                  }}
+                  placeholder={t('what_working_on')}
                   placeholderTextColor={colorScheme === 'dark' ? '#3f3f46' : '#d1d5db'}
                   className="p-4 text-base font-bold text-klowk-black dark:text-white"
                 />
@@ -248,12 +264,12 @@ export default function EntryModal() {
             <View className="mb-6">
               <View className="flex-row items-center mb-2">
                 <AlignLeft size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">Description (Optional)</Text>
+                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">{t('description_optional')}</Text>
               </View>
               <TextInput
                 value={description}
                 onChangeText={setDescription}
-                placeholder="How did it go?"
+                placeholder={t('how_did_it_go')}
                 placeholderTextColor={colorScheme === 'dark' ? '#3f3f46' : '#d1d5db'}
                 multiline
                 numberOfLines={3}
@@ -262,11 +278,66 @@ export default function EntryModal() {
               />
             </View>
 
+            {/* Goals Selection */}
+            <View className="mb-8">
+                <View className="flex-row items-center mb-4">
+                  <Target size={14} color="#FF5A00" />
+                  <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">{t('active_goals')}</Text>
+                </View>
+                
+                {customGoals.length > 0 ? (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                    {customGoals.map((goal) => {
+                      const isSelected = selectedGoalId === goal.id;
+                      const cat = categories.find(c => c.id === goal.categoryId);
+
+                      return (
+                        <Pressable
+                          key={goal.id}
+                          onPress={() => {
+                            const remaining = getGoalRemainingSecs(goal.id);
+                            setSelectedGoalId(goal.id);
+                            setTitle(goal.name);
+                            setCategory(goal.categoryId);
+                            setHours(Math.floor(remaining / 3600).toString());
+                            setMinutes(Math.floor((remaining % 3600) / 60).toString());
+                            setSeconds((remaining % 60).toString());
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          }}
+                          className={`mr-3 p-4 rounded-[20px] border min-w-[150px] ${isSelected ? 'border-[#FF5A00] bg-orange-50 dark:bg-orange-500/10' : 'bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800'}`}
+                        >
+                          <Text className={`text-sm font-black mb-1 ${isSelected ? 'text-[#FF5A00]' : 'text-klowk-black dark:text-white'}`} numberOfLines={1}>{goal.name}</Text>
+                          <View className="flex-row items-center mb-2">
+                             <CategoryIcon name={cat?.iconName || 'briefcase'} size={10} color={isSelected ? '#FF5A00' : '#9ca3af'} />
+                             <Text className={`ml-1 text-[10px] font-bold uppercase ${isSelected ? 'text-[#FF5A00]/70' : 'text-gray-400'}`}>{cat ? (t(cat.id as any) || cat.label) : 'General'}</Text>
+                          </View>
+                          {(() => {
+                            const rem = getGoalRemainingSecs(goal.id);
+                            const remH = Math.floor(rem / 3600);
+                            const remM = Math.floor((rem % 3600) / 60);
+                            const label = rem === 0 ? 'Complete' : remH > 0 ? `${remH}h ${remM}m left` : `${remM}m left`;
+                            return (
+                              <Text className={`text-[10px] font-black ${rem === 0 ? 'text-green-500' : (isSelected ? 'text-[#FF5A00]' : 'text-gray-400 dark:text-gray-500')}`}>
+                                {label}
+                              </Text>
+                            );
+                          })()}
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                ) : (
+                  <View className="bg-gray-50 dark:bg-zinc-900/50 rounded-[20px] p-5 border border-dashed border-gray-200 dark:border-zinc-800 items-center">
+                    <Text className="text-xs font-bold text-gray-400 dark:text-gray-500 italic">{t('no_goals_create')}</Text>
+                  </View>
+                )}
+            </View>
+
             {/* Category */}
             <View className="mb-8">
               <View className="flex-row items-center mb-3">
                 <Tag size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">Category</Text>
+                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">{t('category_label')}</Text>
               </View>
               <View className="flex-row flex-wrap gap-2">
                 {categories.map((cat: Category) => {
@@ -282,7 +353,7 @@ export default function EntryModal() {
                       style={{ backgroundColor: isSelected ? cat.color : undefined }}
                     >
                       <CategoryIcon name={cat.iconName} size={12} color={isSelected ? '#fff' : cat.color} />
-                      <Text className={`ml-2 text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>{cat.label}</Text>
+                      <Text className={`ml-2 text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>{t(cat.id as any) || cat.label}</Text>
                     </Pressable>
                   );
                 })}
@@ -300,7 +371,7 @@ export default function EntryModal() {
           >
             <Check size={20} color={!title ? '#939393' : (colorScheme === 'dark' ? '#121212' : '#fff')} className="mr-3" />
             <Text className={`font-black uppercase ${!title ? 'text-gray-400' : (colorScheme === 'dark' ? 'text-zinc-900' : 'text-white')}`}>
-              {editId ? 'Save Changes' : ( (parseInt(hours) || 0) * 3600 + (parseInt(minutes) || 0) * 60 > 0 ? 'Save Entry' : 'Launch Session')}
+              {editId ? t('save_changes') : ( (parseInt(hours) || 0) * 3600 + (parseInt(minutes) || 0) * 60 > 0 ? t('save_entry') : t('launch_session'))}
             </Text>
           </Pressable>
         </View>

@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Animated, Pressable, Dimensions, View, ScrollView, Platform } from 'react-native';
+import { Animated, Pressable, Dimensions, View, ScrollView, Platform, Modal, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,11 +27,43 @@ import {
   Brain,
   Target,
   ArrowRight,
-  BarChart
+  BarChart,
+  Plus,
+  Briefcase,
+  Heart,
+  BookOpen,
+  Coffee as CoffeeIcon,
+  Users,
+  Code,
+  Music,
+  Camera,
+  Layers,
+  Check
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { Activity, Category } from '@/context/TrackingContext';
 
 const { width } = Dimensions.get('window');
+
+const CategoryIcon = ({ name, size, color }: { name: string, size: number, color: string }) => {
+  const icons: Record<string, any> = {
+    'briefcase': Briefcase,
+    'heart': Heart,
+    'book-open': BookOpen,
+    'coffee': CoffeeIcon,
+    'zap': Zap,
+    'target': Target,
+    'brain': Brain,
+    'tag': Tag,
+    'users': Users,
+    'code': Code,
+    'music': Music,
+    'camera': Camera,
+    'layers': Layers,
+  };
+  const IconComponent = icons[name] || Tag;
+  return <IconComponent size={size} color={color} />;
+};
 
 const Coffee = ({ size, color }: { size: number, color: string }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -189,36 +221,42 @@ export default React.memo(function ReportsScreen() {
   const isDark = colorScheme === 'dark';
   
   const navigation = useNavigation<any>();
-  const { activities, deleteActivity, duplicateActivity } = useTracking();
+  const { activities, deleteActivity, duplicateActivity, categories, addCategory } = useTracking();
   const scrollY = useRef(new Animated.Value(0)).current;
   
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [showForecast, setShowForecast] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+
+  // New Category State
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('tag');
+  const [newCatColor, setNewCatColor] = useState('#FF5A00');
 
   const slideAnim = useRef(new Animated.Value(width)).current;
   const forecastAnim = useRef(new Animated.Value(width)).current;
 
   // Optimized analytics logic: Lifetime Aggregate
   const categoryStats = useMemo(() => {
-    return CATEGORIES.map((cat: any) => {
-      const logs = activities.filter((a: any) => a.category === cat.id);
-      const totalMins = logs.reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+    return categories.map((cat: Category) => {
+      const logs = activities.filter((a: Activity) => a.category === cat.id);
+      const totalMins = logs.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
       const sessionCount = logs.length;
       return { ...cat, totalMins, sessionCount };
-    }).sort((a: any, b: any) => b.totalMins - a.totalMins);
-  }, [activities]);
+    }).sort((a: any, b: any) => (b.totalMins || 0) - (a.totalMins || 0));
+  }, [activities, categories]);
 
   const totalTimeRecorded = useMemo(() => {
-    return categoryStats.reduce((sum: number, c: any) => sum + c.totalMins, 0);
+    return categoryStats.reduce((sum: number, c: any) => sum + (c.totalMins || 0), 0);
   }, [categoryStats]);
 
   const selectedCatData = useMemo(() => {
-    return selectedCategory ? CATEGORIES.find(c => c.id === selectedCategory) : null;
-  }, [selectedCategory]);
+    return selectedCategory ? categories.find((c: Category) => c.id === selectedCategory) : null;
+  }, [selectedCategory, categories]);
 
   const selectedCatLogs = useMemo(() => {
-    return selectedCategory ? activities.filter(a => a.category === selectedCategory) : [];
+    return selectedCategory ? activities.filter((a: Activity) => a.category === selectedCategory) : [];
   }, [selectedCategory, activities]);
 
   useEffect(() => {
@@ -238,6 +276,16 @@ export default React.memo(function ReportsScreen() {
       friction: 8
     }).start();
   }, [showForecast]);
+
+  const handleAddCategory = () => {
+    if (!newCatName) return;
+    addCategory(newCatName, newCatIcon, newCatColor);
+    setShowAddCategory(false);
+    setNewCatName('');
+  };
+
+  const ICONS = ['briefcase', 'heart', 'book-open', 'coffee', 'zap', 'target', 'brain', 'tag'];
+  const COLORS = ['#FF5A00', '#10b981', '#3b82f6', '#8b5cf6', '#f43f5e', '#f59e0b', '#06b6d4', '#4b5563'];
 
   const forecastContent = useMemo(() => {
     return {
@@ -325,7 +373,7 @@ export default React.memo(function ReportsScreen() {
                     <DonutChart data={categoryStats} total={totalTimeRecorded} />
                 </View>
                 <View className="flex-1 justify-center space-y-4">
-                    {categoryStats.slice(0, 3).map((stat) => (
+                    {categoryStats.slice(0, 3).map((stat: any) => (
                         <View key={stat.id} className="flex-row items-center mb-2">
                            <View style={{ backgroundColor: stat.color }} className="w-2.5 h-2.5 rounded-full mr-3" />
                            <Text className="text-xs font-bold text-gray-500">{stat.label}</Text>
@@ -339,9 +387,18 @@ export default React.memo(function ReportsScreen() {
            <View className="mb-8">
                 <View className="flex-row items-center justify-between mb-6 px-1">
                     <Text className="font-black text-xl text-klowk-black dark:text-white">{t('categories')}</Text>
+                    <Pressable 
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            setShowAddCategory(true);
+                        }}
+                        className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full border border-gray-100 dark:border-zinc-800"
+                    >
+                        <Plus size={20} color="#FF5A00" strokeWidth={3} />
+                    </Pressable>
                 </View>
 
-                {categoryStats.map((stat, i) => {
+                {categoryStats.map((stat: any, i: number) => {
                     const percentage = totalTimeRecorded > 0 ? (stat.totalMins / totalTimeRecorded) * 100 : 0;
                     if (stat.totalMins === 0 && i > 3) return null;
 
@@ -355,7 +412,7 @@ export default React.memo(function ReportsScreen() {
                             className="bg-white dark:bg-zinc-900 p-5 rounded-[32px] mb-4 shadow-sm border border-gray-50 dark:border-zinc-800 active:scale-[0.98] active:bg-gray-50 dark:active:bg-zinc-800 flex-row items-center"
                         >
                             <View style={{ backgroundColor: `${stat.color}10` }} className="w-12 h-12 rounded-2xl items-center justify-center mr-4">
-                                <Tag size={20} color={stat.color} />
+                                <CategoryIcon name={stat.iconName} size={20} color={stat.color} />
                             </View>
                             <View className="flex-1">
                                 <View className="flex-row justify-between items-end mb-3">
@@ -399,13 +456,13 @@ export default React.memo(function ReportsScreen() {
             <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-6 bg-white dark:bg-klowk-black">
                 <View className="items-center py-8">
                     <View style={{ backgroundColor: selectedCatData?.color + '15', padding: 20, borderRadius: 24, marginBottom: 16 }}>
-                        <Tag size={40} color={selectedCatData?.color} />
+                        <CategoryIcon name={selectedCatData?.iconName || 'tag'} size={40} color={selectedCatData?.color || '#FF5A00'} />
                     </View>
                     <Text className="text-3xl font-black text-klowk-black dark:text-white mb-1">{t((selectedCatData?.label || '').toLowerCase() as any) || selectedCatData?.label}</Text>
                     <Text className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[4px]">{selectedCatLogs.length} {t('sessions_total')}</Text>
                 </View>
 
-                {selectedCatLogs.map((log) => (
+                {selectedCatLogs.map((log: Activity) => (
                     <View key={log.id} className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] mb-4 shadow-sm border border-gray-50 dark:border-zinc-800 flex-row items-center justify-between">
                         <View className="flex-1">
                             <Text className="text-base font-bold text-klowk-black dark:text-white mb-1.5">{log.title}</Text>
@@ -506,6 +563,86 @@ export default React.memo(function ReportsScreen() {
             }
         }}
       />
+
+      {/* Add Category Sheet */}
+      <Modal
+        visible={showAddCategory}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddCategory(false)}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+           <Pressable className="flex-1" onPress={() => setShowAddCategory(false)} />
+           <View className="bg-white dark:bg-klowk-black rounded-t-[40px] p-8 pb-12 shadow-2xl">
+              <View className="flex-row justify-between items-center mb-8">
+                <Text className="text-2xl font-black text-klowk-black dark:text-white">New Category</Text>
+                <Pressable onPress={() => setShowAddCategory(false)} className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full">
+                    <X size={20} color={isDark ? '#fff' : '#121212'} />
+                </Pressable>
+              </View>
+
+              <View className="mb-8">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Category Name</Text>
+                <View className="bg-gray-50 dark:bg-zinc-900 rounded-[20px] border border-gray-100 dark:border-zinc-800">
+                    <TextInput
+                        value={newCatName}
+                        onChangeText={setNewCatName}
+                        placeholder="e.g. Learning, Workout..."
+                        placeholderTextColor={isDark ? '#3f3f46' : '#d1d5db'}
+                        autoFocus
+                        className="p-5 text-base font-bold text-klowk-black dark:text-white"
+                    />
+                </View>
+              </View>
+
+               <View className="mb-8">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Select Icon</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                    {ICONS.map((icon) => (
+                        <Pressable 
+                            key={icon} 
+                            onPress={() => {
+                                setNewCatIcon(icon);
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            }}
+                            className={`w-12 h-12 items-center justify-center rounded-2xl mr-3 ${newCatIcon === icon ? 'bg-klowk-orange' : 'bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800'}`}
+                        >
+                            <CategoryIcon name={icon} size={20} color={newCatIcon === icon ? '#fff' : (isDark ? '#52525b' : '#9ca3af')} />
+                        </Pressable>
+                    ))}
+                </ScrollView>
+              </View>
+
+              <View className="mb-10">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Select Color</Text>
+                <View className="flex-row flex-wrap gap-3">
+                    {COLORS.map((color) => (
+                        <Pressable 
+                            key={color} 
+                            onPress={() => {
+                                setNewCatColor(color);
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            }}
+                            style={{ backgroundColor: color }}
+                            className={`w-10 h-10 rounded-full items-center justify-center border-4 ${newCatColor === color ? 'border-gray-200 dark:border-zinc-700' : 'border-transparent'}`}
+                        >
+                            {newCatColor === color && <Check size={16} color="#fff" />}
+                        </Pressable>
+                    ))}
+                </View>
+              </View>
+
+              <Pressable 
+                onPress={handleAddCategory}
+                disabled={!newCatName}
+                className={`py-5 rounded-[24px] flex-row items-center justify-center shadow-lg ${!newCatName ? 'bg-gray-100 dark:bg-zinc-900' : 'bg-klowk-black dark:bg-white'}`}
+              >
+                <Plus size={20} color={!newCatName ? '#9ca3af' : (isDark ? '#121212' : '#fff')} className="mr-3" />
+                <Text className={`font-black uppercase tracking-wider ${!newCatName ? 'text-gray-400' : (isDark ? 'text-klowk-black' : 'text-white')}`}>Create Category</Text>
+              </Pressable>
+           </View>
+        </View>
+      </Modal>
 
     </SafeAreaView>
   );

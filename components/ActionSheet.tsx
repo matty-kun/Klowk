@@ -1,7 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Pressable, Animated, Easing } from 'react-native';
+import { View, Text, Pressable, Animated, Easing, Modal, Dimensions } from 'react-native';
 import { MessageCircle, ClipboardEdit } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useColorScheme } from 'nativewind';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type ActionWidgetProps = {
   visible: boolean;
@@ -11,6 +14,8 @@ type ActionWidgetProps = {
 };
 
 export default function ActionWidget({ visible, onClose, onTalkToKala, onLogManually }: ActionWidgetProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -40,95 +45,70 @@ export default function ActionWidget({ visible, onClose, onTalkToKala, onLogManu
     onTalkToKala();
   };
 
-  if (!visible) return null;
-
   return (
-    <Animated.View
-      style={{
-        position: 'absolute',
-        bottom: 80,
-        right: 0,
-        opacity: opacityAnim,
-        transform: [
-          { scale: scaleAnim },
-          { translateY: scaleAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-        ],
-      }}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
     >
-      <View style={{
-        backgroundColor: '#fff',
-        borderRadius: 24,
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 25,
-        elevation: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.06)',
-        // Use a wide explicit minimum width to ensure no text wrapping constraints
-        minWidth: 220, 
-      }}>
-        {/* Talk to Kloe */}
-        <Pressable onPress={handleTalkToKala}>
-          {({ pressed }) => (
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              paddingVertical: 14,
-              paddingHorizontal: 16,
-              borderRadius: 16,
-              backgroundColor: pressed ? '#FFF7F0' : 'transparent',
-            }}>
-              <MessageCircle size={20} color="#FF5A00" />
-              <Text 
-                numberOfLines={1} 
-                style={{ 
-                  fontSize: 16, 
-                  fontWeight: '700', 
-                  color: '#121212', 
-                  marginLeft: 16 
-                }}
-              >
-                Talk to Kloe
-              </Text>
-            </View>
-          )}
-        </Pressable>
+      <View className="flex-1">
+        {/* Backdrop to capture taps outside */}
+        <Pressable 
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          onPress={onClose}
+        />
+        
+        <Animated.View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            bottom: 100, // Adjusted to sit above the bottom island
+            right: 20,
+            opacity: opacityAnim,
+            transform: [
+              { scale: scaleAnim },
+              { translateY: scaleAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+            ],
+            zIndex: 10000,
+          }}
+        >
+          <View className="bg-white dark:bg-zinc-900 rounded-[24px] p-2 border border-black/5 dark:border-white/5 shadow-2xl min-w-[220px]">
+            {/* Talk to Kloe */}
+            <Pressable onPress={handleTalkToKala}>
+              {({ pressed }) => (
+                <View className={`flex-row items-center justify-start py-3.5 px-4 rounded-2xl ${pressed ? 'bg-orange-50 dark:bg-orange-950/20' : ''}`}>
+                  <MessageCircle size={20} color="#FF5A00" />
+                  <Text 
+                    numberOfLines={1} 
+                    className="text-base font-bold text-klowk-black dark:text-white ml-4"
+                  >
+                    Talk to Kloe
+                  </Text>
+                </View>
+              )}
+            </Pressable>
 
-        {/* Divider */}
-        <View style={{ height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 12, marginVertical: 2 }} />
+            {/* Divider */}
+            <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 mx-3 my-0.5" />
 
-        {/* Log manually */}
-        <Pressable onPress={handleLogManually}>
-          {({ pressed }) => (
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              paddingVertical: 14,
-              paddingHorizontal: 16,
-              borderRadius: 16,
-              backgroundColor: pressed ? '#f9fafb' : 'transparent',
-            }}>
-              <ClipboardEdit size={20} color="#4b5563" />
-              <Text 
-                numberOfLines={1} 
-                style={{ 
-                  fontSize: 16, 
-                  fontWeight: '700', 
-                  color: '#121212', 
-                  marginLeft: 16 
-                }}
-              >
-                Log manually
-              </Text>
-            </View>
-          )}
-        </Pressable>
+            {/* Log manually */}
+            <Pressable onPress={handleLogManually}>
+              {({ pressed }) => (
+                <View className={`flex-row items-center justify-start py-3.5 px-4 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
+                  <ClipboardEdit size={20} color={isDark ? '#9ca3af' : '#4b5563'} />
+                  <Text 
+                    numberOfLines={1} 
+                    className="text-base font-bold text-klowk-black dark:text-white ml-4"
+                  >
+                    Log manually
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+        </Animated.View>
       </View>
-    </Animated.View>
+    </Modal>
   );
 }

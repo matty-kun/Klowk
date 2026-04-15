@@ -22,6 +22,7 @@ import { formatLiveDuration } from '@/utils/time';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
 import { View as MotiView } from 'moti';
+import { useColorScheme } from 'nativewind';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -79,6 +80,9 @@ export default function TrackerPage() {
     strokeDashoffset: circumference * (1 - progressShared.value)
   }));
 
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   if (!currentActivity) return null;
   
   const targetSecs = currentActivity.target_duration || 0;
@@ -115,10 +119,10 @@ export default function TrackerPage() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.replace('/(tabs)')} style={styles.minimizeBtn}>
-          <Minimize2 size={24} color="rgba(0,0,0,0.4)" />
+          <Minimize2 size={24} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'} />
         </Pressable>
       </View>
 
@@ -138,7 +142,7 @@ export default function TrackerPage() {
               cx={CIRCLE_SIZE / 2}
               cy={CIRCLE_SIZE / 2}
               r={radius}
-              stroke="rgba(0,0,0,0.05)"
+              stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
               strokeWidth="10"
               fill="transparent"
             />
@@ -159,7 +163,7 @@ export default function TrackerPage() {
           </Svg>
           
           <View style={styles.timeOverlay}>
-            <Text style={styles.timerText}>{displayTime}</Text>
+            <Text style={[styles.timerText, { color: isDark ? '#fff' : '#121212' }]}>{displayTime}</Text>
             <Text style={styles.titleText}>{currentActivity.title}</Text>
           </View>
         </View>
@@ -174,9 +178,9 @@ export default function TrackerPage() {
           
           <Pressable 
             onPress={handleStop}
-            style={[styles.controlBtn, { backgroundColor: '#121212', marginLeft: 20 }]}
+            style={[styles.controlBtn, { backgroundColor: isDark ? '#fff' : '#121212', marginLeft: 20 }]}
           >
-            <Square size={20} color="#fff" fill="#fff" />
+            <Square size={20} color={isDark ? '#121212' : '#fff'} fill={isDark ? '#121212' : '#fff'} />
           </Pressable>
         </View>
       </MotiView>
@@ -187,7 +191,6 @@ export default function TrackerPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     paddingHorizontal: 24,
@@ -225,7 +228,6 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 54,
     fontWeight: '300',
-    color: '#121212',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   titleText: {

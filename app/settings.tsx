@@ -11,7 +11,10 @@ import { useLanguage } from '@/context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
-const SettingItem = ({ icon: Icon, label, value, type = 'info', onPress, color = '#121212', destructive = false, isDark }: any) => {
+const SettingItem = ({ icon: Icon, label, value, type = 'info', onPress, color = '#FF5A00', destructive = false, isDark, t }: any) => {
+    const iconBg = destructive ? (isDark ? '#450a0a' : '#FEF2F2') : '#FF5A0015';
+    const iconColor = destructive ? '#EF4444' : '#FF5A00';
+
     return (
     <Pressable 
         onPress={() => {
@@ -24,13 +27,18 @@ const SettingItem = ({ icon: Icon, label, value, type = 'info', onPress, color =
         }}
         className={`flex-row items-center justify-between py-5 px-6 bg-white dark:bg-zinc-900 border-b border-gray-50 dark:border-zinc-800 ${type === 'action' ? 'active:bg-gray-100 dark:active:bg-zinc-800' : ''}`}
     >
-        <View className="flex-row items-center">
-            <View style={{ backgroundColor: destructive ? (isDark ? '#450a0a' : '#FEF2F2') : (isDark ? '#27272a' : '#F9FAFB') }} className="w-10 h-10 rounded-xl items-center justify-center mr-4">
-                <Icon size={20} color={destructive ? '#EF4444' : (isDark ? '#e5e7eb' : color)} />
+        <View className="flex-row items-center flex-1 mr-4">
+            <View style={{ backgroundColor: iconBg }} className="w-10 h-10 rounded-xl items-center justify-center mr-4">
+                <Icon size={20} color={iconColor} />
             </View>
-            <Text className={`text-base font-bold ${destructive ? 'text-red-500' : 'text-klowk-black dark:text-white'}`}>{label}</Text>
+            <View className="flex-1">
+                <Text className={`text-base font-bold ${destructive ? 'text-red-500' : 'text-klowk-black dark:text-white'}`}>{label}</Text>
+                {label === t('clear_logs') && <Text className="text-[11px] text-red-400 font-medium mt-0.5" numberOfLines={1}>{t('clear_logs_desc')}</Text>}
+                {label === t('push_notifications') && <Text className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5" numberOfLines={1}>{t('notifications_desc')}</Text>}
+                {label === t('app_version') && <Text className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5" numberOfLines={1}>{t('app_version_desc')}</Text>}
+            </View>
         </View>
-        <View className="flex-row items-center">
+        <View className="items-end">
             {type === 'switch' ? (
                 <View className="w-12 h-6 bg-gray-100 dark:bg-zinc-800 rounded-full p-1 justify-center">
                     <MotiView 
@@ -57,6 +65,7 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = React.useState(true);
   const [langToggleWidth, setLangToggleWidth] = React.useState(0);
   const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
+  const [notifToggleWidth, setNotifToggleWidth] = React.useState(0);
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
@@ -86,9 +95,13 @@ export default function SettingsScreen() {
                     <View style={{ backgroundColor: '#FF5A0015' }} className="w-10 h-10 rounded-[12px] items-center justify-center mr-4">
                         <Moon size={20} color="#FF5A00" />
                     </View>
+                    <View className="flex-1 mr-4">
+                        <Text className="text-sm font-bold text-klowk-black dark:text-white">{t('dark_mode')}</Text>
+                        <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{t('dark_mode_desc')}</Text>
+                    </View>
                     <View 
                         onLayout={(e) => setThemeToggleWidth(e.nativeEvent.layout.width)}
-                        className="flex-1 flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
+                        className="w-[120px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
                     >
                         <MotiView 
                             animate={{ 
@@ -136,9 +149,13 @@ export default function SettingsScreen() {
                     <View style={{ backgroundColor: '#FF5A0015' }} className="w-10 h-10 rounded-[12px] items-center justify-center mr-4">
                         <Globe size={20} color="#FF5A00" />
                     </View>
+                    <View className="flex-1 mr-4">
+                        <Text className="text-sm font-bold text-klowk-black dark:text-white">{t('default_language')}</Text>
+                        <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{t('language_desc')}</Text>
+                    </View>
                     <View 
                         onLayout={(e) => setLangToggleWidth(e.nativeEvent.layout.width)}
-                        className="flex-1 flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
+                        className="w-[120px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
                     >
                         <MotiView 
                             animate={{ 
@@ -181,14 +198,59 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
-                <SettingItem 
-                    icon={Bell} 
-                    label={t('focus_notifications')} 
-                    type="switch" 
-                    value={notifications} 
-                    onPress={() => setNotifications(!notifications)} 
-                    isDark={isDarkMode}
-                />
+                {/* Notifications Dual Buttons */}
+                <View className="flex-row items-center px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
+                    <View style={{ backgroundColor: '#FF5A0015' }} className="w-10 h-10 rounded-[12px] items-center justify-center mr-4">
+                        <Bell size={20} color="#FF5A00" />
+                    </View>
+                    <View className="flex-1 mr-4">
+                        <Text className="text-sm font-bold text-klowk-black dark:text-white">{t('push_notifications')}</Text>
+                        <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{t('notifications_desc')}</Text>
+                    </View>
+                    <View 
+                        onLayout={(e) => setNotifToggleWidth(e.nativeEvent.layout.width)}
+                        className="w-[120px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
+                    >
+                        <MotiView 
+                            animate={{ 
+                                translateX: (notifications ? 1 : 0) * ((notifToggleWidth - 8) / 2)
+                            }}
+                            transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+                            style={{ 
+                                position: 'absolute', 
+                                top: 4, 
+                                bottom: 4, 
+                                left: 4, 
+                                width: (notifToggleWidth - 8) / 2 || '48%', 
+                                backgroundColor: isDarkMode ? '#3f3f46' : '#fff', 
+                                borderRadius: 12,
+                                elevation: 2,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4
+                            }}
+                        />
+                        <TouchableOpacity 
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setNotifications(false);
+                            }}
+                            className="flex-1 py-3 items-center z-10"
+                        >
+                            <Text className={`text-[10px] font-black uppercase ${!notifications ? 'text-klowk-orange' : 'text-gray-400'}`}>Off</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setNotifications(true);
+                            }}
+                            className="flex-1 py-3 items-center z-10"
+                        >
+                            <Text className={`text-[10px] font-black uppercase ${notifications ? 'text-klowk-orange' : 'text-gray-400'}`}>On</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
         </View>
 
@@ -201,6 +263,7 @@ export default function SettingsScreen() {
                     value="1.0.4 (24)" 
                     type="info"
                     isDark={isDarkMode}
+                    t={t}
                 />
             </View>
         </View>
@@ -213,9 +276,13 @@ export default function SettingsScreen() {
                     destructive 
                     type="action"
                     isDark={isDarkMode}
+                    t={t}
                     onPress={() => {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                        Alert.alert(t('clear_data_title'), t('clear_data_desc'));
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                        Alert.alert(t('clear_data_title'), t('clear_data_desc'), [
+                            { text: t('cancel'), style: 'cancel' },
+                            { text: t('delete'), style: 'destructive', onPress: () => console.log('Deleted') }
+                        ]);
                     }}
                 />
             </View>

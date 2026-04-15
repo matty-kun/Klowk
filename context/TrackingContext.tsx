@@ -1,5 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import * as Haptics from 'expo-haptics';
+import { CATEGORIES as DEFAULT_CATEGORIES, CategoryId } from '@/constants/Categories';
+
+export type Category = {
+  id: string;
+  label: string;
+  color: string;
+  iconName: string;
+};
 
 export type Activity = {
   id: number;
@@ -16,6 +25,7 @@ export type Activity = {
 type TrackingContextType = {
   activities: Activity[];
   currentActivity: Activity | null;
+  categories: Category[];
   startTracker: (title: string, category: string, description?: string, targetSecs?: number) => Promise<void>;
   stopTracker: () => Promise<void>;
   deleteActivity: (id: number) => Promise<void>;
@@ -23,6 +33,7 @@ type TrackingContextType = {
   editActivity: (id: number, title: string, category: string, durationSecs: number, description?: string, customDate?: Date) => Promise<void>;
   duplicateActivity: (id: number) => Promise<void>;
   refreshActivities: () => Promise<void>;
+  addCategory: (label: string, iconName: string, color: string) => void;
   getTotalFocusTimeToday: () => number;
 };
 
@@ -32,7 +43,20 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const isRefreshing = useRef(false);
+
+  const addCategory = (label: string, iconName: string, color: string) => {
+    const newCat: Category = {
+      id: label.toLowerCase().replace(/\s+/g, '-'),
+      label,
+      iconName,
+      color
+    };
+    setCategories(prev => [...prev, newCat]);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const refreshActivities = async () => {
     if (!db || isRefreshing.current) return;
     isRefreshing.current = true;
@@ -159,6 +183,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     <TrackingContext.Provider value={{ 
       activities, 
       currentActivity, 
+      categories,
       startTracker, 
       stopTracker, 
       deleteActivity, 
@@ -166,6 +191,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       editActivity,
       duplicateActivity,
       refreshActivities,
+      addCategory,
       getTotalFocusTimeToday
     }}>
       {children}

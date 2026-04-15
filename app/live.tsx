@@ -22,12 +22,15 @@ import {
   Coffee
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useTracking } from '@/context/TrackingContext';
-import { CATEGORIES } from '@/constants/Categories';
+import { useTracking, Category } from '@/context/TrackingContext';
+import { useColorScheme } from 'nativewind';
+import { CategoryIcon } from '@/components/CategoryIcon';
 
 export default function LiveSessionPage() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const router = useRouter();
-  const { startTracker } = useTracking();
+  const { startTracker, categories } = useTracking();
   
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState('');
@@ -47,92 +50,91 @@ export default function LiveSessionPage() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black">
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        className="flex-1"
       >
-        <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }} showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 32 }}>
+          <View className="flex-row items-center mb-8">
             <Pressable 
               onPress={() => router.back()}
-              style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: '#f9fafb', marginRight: 16 }}
+              className="w-12 h-12 items-center justify-center rounded-[16px] bg-gray-50 dark:bg-zinc-900 mr-4"
             >
-              <ArrowLeft size={24} color="#121212" />
+              <ArrowLeft size={24} color={isDark ? '#fff' : '#121212'} />
             </Pressable>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: '#121212' }}>Live Session</Text>
+            <Text className="text-[28px] font-black text-klowk-black dark:text-white">Live Session</Text>
           </View>
           
           {/* Title Input */}
-          <View style={{ marginBottom: 32 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <View className="mb-8">
+            <View className="flex-row items-center mb-3">
               <Zap size={14} color="#FF5A00" />
-              <Text style={{ marginLeft: 8, fontSize: 10, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1 }}>Focus Target</Text>
+              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">Focus Target</Text>
             </View>
-            <View style={{ backgroundColor: '#f9fafb', borderRadius: 20, borderWidth: 1, borderColor: '#f3f4f6' }}>
+            <View className="bg-gray-50 dark:bg-zinc-900 rounded-[20px] border border-gray-100 dark:border-zinc-800">
               <TextInput
                 value={title}
                 onChangeText={setTitle}
                 placeholder="What are you working on?"
-                placeholderTextColor="#9ca3af"
-                style={{ padding: 20, fontSize: 16, fontWeight: '700', color: '#121212' }}
+                placeholderTextColor={isDark ? '#3f3f46' : '#9ca3af'}
+                className="p-5 text-base font-bold text-klowk-black dark:text-white"
               />
             </View>
           </View>
 
           {/* Duration Section */}
-          <View style={{ marginBottom: 32 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+          <View className="mb-8">
+            <View className="flex-row items-center mb-4">
               <Clock size={14} color="#9ca3af" />
-              <Text style={{ marginLeft: 8, fontSize: 10, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1 }}>Duration</Text>
+              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">Duration</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}>
+            <View className="flex-row gap-2">
+              <View className="flex-1">
                 <TextInput
                   value={hours}
                   onChangeText={setHours}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#d1d5db"
-                  style={{ backgroundColor: '#f9fafb', paddingVertical: 18, paddingHorizontal: 0, borderRadius: 20, fontSize: 16, fontWeight: '900', color: '#121212', textAlign: 'center', borderWidth: 1, borderColor: '#f3f4f6' }}
+                  placeholderTextColor={isDark ? '#3f3f46' : '#d1d5db'}
+                  className="bg-gray-50 dark:bg-zinc-900 py-4.5 rounded-[20px] text-base font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
                 />
-                <Text style={{ textAlign: 'center', marginTop: 8, fontSize: 8, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' }}>Hrs</Text>
+                <Text className="text-center mt-2 text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">Hrs</Text>
               </View>
-              <View style={{ flex: 1 }}>
+              <View className="flex-1">
                 <TextInput
                   value={minutes}
                   onChangeText={setMinutes}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#d1d5db"
-                  style={{ backgroundColor: '#f9fafb', paddingVertical: 18, paddingHorizontal: 0, borderRadius: 20, fontSize: 16, fontWeight: '900', color: '#121212', textAlign: 'center', borderWidth: 1, borderColor: '#f3f4f6' }}
+                  placeholderTextColor={isDark ? '#3f3f46' : '#d1d5db'}
+                  className="bg-gray-50 dark:bg-zinc-900 py-4.5 rounded-[20px] text-base font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
                 />
-                <Text style={{ textAlign: 'center', marginTop: 8, fontSize: 8, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' }}>Min</Text>
+                <Text className="text-center mt-2 text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">Min</Text>
               </View>
-              <View style={{ flex: 1 }}>
+              <View className="flex-1">
                 <TextInput
                   value={seconds}
                   onChangeText={setSeconds}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#d1d5db"
-                  style={{ backgroundColor: '#f9fafb', paddingVertical: 18, paddingHorizontal: 0, borderRadius: 20, fontSize: 16, fontWeight: '900', color: '#121212', textAlign: 'center', borderWidth: 1, borderColor: '#f3f4f6' }}
+                  placeholderTextColor={isDark ? '#3f3f46' : '#d1d5db'}
+                  className="bg-gray-50 dark:bg-zinc-900 py-4.5 rounded-[20px] text-base font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
                 />
-                <Text style={{ textAlign: 'center', marginTop: 8, fontSize: 8, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' }}>Sec</Text>
+                <Text className="text-center mt-2 text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">Sec</Text>
               </View>
             </View>
           </View>
 
           {/* Category Selection */}
-          <View style={{ marginBottom: 40 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+          <View className="mb-10">
+            <View className="flex-row items-center mb-4">
               <Tag size={14} color="#9ca3af" />
-              <Text style={{ marginLeft: 8, fontSize: 10, fontWeight: '900', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1 }}>Category</Text>
+              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">Category</Text>
             </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {CATEGORIES.map((cat) => {
-                const Icon = { briefcase: Briefcase, heart: Heart, 'book-open': BookOpen, coffee: Coffee }[cat.iconName as string] || Tag;
+            <View className="flex-row flex-wrap gap-2.5">
+              {categories.map((cat: Category) => {
                 const isSelected = category === cat.id;
                 return (
                   <Pressable
@@ -141,19 +143,11 @@ export default function LiveSessionPage() {
                       setCategory(cat.id);
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
-                    style={{ 
-                      backgroundColor: isSelected ? cat.color : '#f9fafb',
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 14,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: isSelected ? cat.color : '#f3f4f6'
-                    }}
+                    className={`px-4 py-2.5 rounded-xl flex-row items-center border ${isSelected ? 'border-transparent' : 'border-gray-50 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900'}`}
+                    style={{ backgroundColor: isSelected ? cat.color : undefined }}
                   >
-                    <Icon size={14} color={isSelected ? '#fff' : cat.color} />
-                    <Text style={{ marginLeft: 8, fontSize: 12, fontWeight: '700', color: isSelected ? '#fff' : '#6b7280' }}>
+                    <CategoryIcon name={cat.iconName} size={14} color={isSelected ? '#fff' : cat.color} />
+                    <Text className={`ml-2 text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>
                       {cat.label}
                     </Text>
                   </Pressable>
@@ -164,26 +158,14 @@ export default function LiveSessionPage() {
         </ScrollView>
 
         {/* Start Button */}
-        <View style={{ padding: 24, borderTopWidth: 1, borderTopColor: '#f9fafb' }}>
+        <View className="p-6 border-t border-gray-50 dark:border-zinc-900 bg-white dark:bg-klowk-black">
           <Pressable 
             onPress={handleStart}
             disabled={!title}
-            style={{ 
-              backgroundColor: !title ? '#f3f4f6' : '#121212',
-              paddingVertical: 20,
-              borderRadius: 24,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: !title ? 0 : 0.1,
-              shadowRadius: 10,
-              elevation: !title ? 0 : 5
-            }}
+            className={`py-5 rounded-[24px] flex-row items-center justify-center shadow-lg ${!title ? 'bg-gray-100 dark:bg-zinc-900' : 'bg-klowk-black dark:bg-white'}`}
           >
-            <Check size={20} color={!title ? '#9ca3af' : '#fff'} style={{ marginRight: 12 }} />
-            <Text style={{ color: !title ? '#9ca3af' : '#fff', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 }}>Launch Focus</Text>
+            <Check size={20} color={!title ? '#9ca3af' : (isDark ? '#121212' : '#fff')} className="mr-3" />
+            <Text className={`font-black uppercase tracking-wider ${!title ? 'text-gray-400' : (isDark ? 'text-klowk-black' : 'text-white')}`}>Launch Focus</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

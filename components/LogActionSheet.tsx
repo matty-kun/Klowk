@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, Pressable, Modal, Animated, Easing } from 'react-native';
 import { Edit2, Copy, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useColorScheme } from 'nativewind';
 
 type LogActionSheetProps = {
   visible: boolean;
@@ -12,6 +13,8 @@ type LogActionSheetProps = {
 };
 
 export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, onDelete }: LogActionSheetProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const [showModal, setShowModal] = React.useState(visible);
   const slideAnim = useRef(new Animated.Value(300)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -40,7 +43,9 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
       animationType="none"
       onRequestClose={onClose}
     >
-      <Animated.View style={{ flex: 1, backgroundColor: 'rgba(18, 18, 18, 0.4)', justifyContent: 'flex-end', opacity: backdropAnim }}>
+      <Animated.View 
+        style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.4)', justifyContent: 'flex-end', opacity: backdropAnim }}
+      >
         <Pressable
           style={{ flex: 1 }}
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}
@@ -50,95 +55,58 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: '#fff',
-              borderTopLeftRadius: 32,
-              borderTopRightRadius: 32,
-              paddingHorizontal: 24,
-              paddingTop: 16,
-              paddingBottom: 40,
-            }}
+            className="bg-white dark:bg-zinc-900 rounded-t-[32px] px-6 pt-4 pb-10"
           >
-          {/* Handle Bar */}
-          <View style={{ alignSelf: 'center', width: 40, height: 4, backgroundColor: '#e5e7eb', borderRadius: 2, marginBottom: 24 }} />
+            {/* Handle Bar */}
+            <View className="self-center w-10 h-1 bg-gray-200 dark:bg-zinc-800 rounded-full mb-6" />
 
-          <Text style={{ fontSize: 20, fontWeight: '900', color: '#121212', fontStyle: 'italic', marginBottom: 20 }}>
-            Log Actions
-          </Text>
+            <Text className="text-xl font-black text-klowk-black dark:text-white italic mb-5">
+              Log Actions
+            </Text>
 
-          {/* Edit */}
-          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onEdit(); }}>
-            {({ pressed }) => (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 14,
-                paddingHorizontal: 4,
-                borderRadius: 16,
-                backgroundColor: pressed ? '#f3f4f6' : 'transparent',
-              }}>
-                <Edit2 size={20} color="#121212" />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#121212', marginLeft: 16 }}>Edit details</Text>
-              </View>
-            )}
-          </Pressable>
+            {/* Edit */}
+            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onEdit(); }}>
+              {({ pressed }) => (
+                <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
+                  <Edit2 size={20} color={isDark ? '#e5e7eb' : '#121212'} />
+                  <Text className="text-base font-bold text-klowk-black dark:text-white ml-4">Edit details</Text>
+                </View>
+              )}
+            </Pressable>
 
-          <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 4 }} />
+            <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />
 
-          {/* Duplicate */}
-          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onDuplicate(); }}>
-            {({ pressed }) => (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 14,
-                paddingHorizontal: 4,
-                borderRadius: 16,
-                backgroundColor: pressed ? '#f3f4f6' : 'transparent',
-              }}>
-                <Copy size={20} color="#4b5563" />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#121212', marginLeft: 16 }}>Duplicate activity</Text>
-              </View>
-            )}
-          </Pressable>
+            {/* Duplicate */}
+            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onDuplicate(); }}>
+              {({ pressed }) => (
+                <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
+                  <Copy size={20} color={isDark ? '#9ca3af' : '#4b5563'} />
+                  <Text className="text-base font-bold text-klowk-black dark:text-white ml-4">Duplicate activity</Text>
+                </View>
+              )}
+            </Pressable>
 
-          <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 4 }} />
+            <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />
 
-          {/* Delete */}
-          <Pressable onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onClose(); onDelete(); }}>
-            {({ pressed }) => (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 14,
-                paddingHorizontal: 4,
-                borderRadius: 16,
-                backgroundColor: pressed ? '#fef2f2' : 'transparent',
-              }}>
-                <Trash2 size={20} color="#ef4444" />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#ef4444', marginLeft: 16 }}>Delete forever</Text>
-              </View>
-            )}
-          </Pressable>
+            {/* Delete */}
+            <Pressable onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onClose(); onDelete(); }}>
+              {({ pressed }) => (
+                <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
+                  <Trash2 size={20} color="#ef4444" />
+                  <Text className="text-base font-bold text-red-500 ml-4">Delete forever</Text>
+                </View>
+              )}
+            </Pressable>
 
-          {/* Cancel */}
-          <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 8 }} />
-          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}>
-            {({ pressed }) => (
-              <View style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 14,
-                borderRadius: 16,
-                backgroundColor: pressed ? '#f3f4f6' : 'transparent',
-              }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#9ca3af' }}>Cancel</Text>
-              </View>
-            )}
-          </Pressable>
+            {/* Cancel */}
+            <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-2" />
+            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}>
+              {({ pressed }) => (
+                <View className={`items-center justify-center py-3.5 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
+                  <Text className="text-base font-bold text-gray-400 dark:text-zinc-600">Cancel</Text>
+                </View>
+              )}
+            </Pressable>
 
           </Pressable>
         </Animated.View>

@@ -99,6 +99,8 @@ function RootLayoutNav() {
         <Stack.Screen name="tracker" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="chat" options={{ presentation: 'card', headerShown: false }} />
         <Stack.Screen name="settings" options={{ presentation: 'card', headerShown: false }} />
+        <Stack.Screen name="history" options={{ presentation: 'card', headerShown: false }} />
+        <Stack.Screen name="categories" options={{ presentation: 'card', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

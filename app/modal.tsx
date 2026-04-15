@@ -225,8 +225,8 @@ export default function EntryModal() {
                     </Pressable>
                   </View>
                   <View className="flex-row flex-wrap">
-                    {['S','M','T','W','T','F','S'].map(d => (
-                      <Text key={d} className="w-[14.2%] text-center text-[9px] font-black text-gray-300 dark:text-zinc-700 mb-4">{d}</Text>
+                    {['S','M','T','W','T','F','S'].map((d, i) => (
+                      <Text key={i} className="w-[14.2%] text-center text-[9px] font-black text-gray-300 dark:text-zinc-700 mb-4">{d}</Text>
                     ))}
                     {days.map((d, i) => (
                       <Pressable 

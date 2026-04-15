@@ -2,7 +2,8 @@ import LogActionSheet from '@/components/LogActionSheet';
 import { router } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { CATEGORIES } from '@/constants/Categories';
-import { Activity, useTracking } from '@/context/TrackingContext';
+import { Activity, Category, useTracking } from '@/context/TrackingContext';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { formatDate, formatDuration, formatLiveDuration, formatLogDuration, formatTimestamp } from '@/utils/time';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
@@ -17,7 +18,9 @@ import {
   Heart,
   MoreHorizontal,
   Settings2,
-  Tag
+  History,
+  Tag,
+  Target
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { View as MotiView } from 'moti';
@@ -31,7 +34,7 @@ export default React.memo(function TabOneScreen() {
   const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
   const navigation = useNavigation<any>();
-  const { activities, currentActivity, stopTracker, getTotalFocusTimeToday, deleteActivity, duplicateActivity } = useTracking();
+  const { activities, currentActivity, stopTracker, getTotalFocusTimeToday, deleteActivity, duplicateActivity, categories, customGoals } = useTracking();
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month'>('today');
@@ -109,6 +112,18 @@ export default React.memo(function TabOneScreen() {
   
   const maxWeeklyMins = React.useMemo(() => Math.max(...dailyChartData.map(d => d.mins), 1), [dailyChartData]);
 
+  const categoryStats = React.useMemo(() => {
+    const total = activities.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+    return categories
+      .map((cat: Category) => {
+        const logs = activities.filter((a: Activity) => a.category === cat.id);
+        const totalMins = logs.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+        return { ...cat, totalMins, sessionCount: logs.length, totalAll: total };
+      })
+      .filter((c: any) => c.totalMins > 0)
+      .sort((a: any, b: any) => b.totalMins - a.totalMins);
+  }, [activities, categories]);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (currentActivity) {
@@ -117,6 +132,8 @@ export default React.memo(function TabOneScreen() {
     }
     return () => clearInterval(interval);
   }, [currentActivity]);
+
+  const activeGoalsCount = customGoals ? customGoals.filter(g => g.endDate >= Date.now()).length : 0;
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={['top']}>
@@ -129,16 +146,28 @@ export default React.memo(function TabOneScreen() {
             transition={{ type: 'timing', duration: 700 }}
             className="px-6 py-2 mb-2 flex-row justify-end items-center"
         >
-          <TouchableOpacity 
-            onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                navigation.navigate('settings');
-            }}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-            className="p-2 bg-gray-50 dark:bg-zinc-900 rounded-full"
-          >
-            <Settings2 size={20} color={colorScheme === 'dark' ? '#fff' : '#121212'} />
-          </TouchableOpacity>
+          <View className="flex-row items-center space-x-2">
+            <TouchableOpacity 
+              onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push('/history');
+              }}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              className="p-2 bg-gray-50 dark:bg-zinc-900 rounded-full mr-2"
+            >
+              <History size={20} color={colorScheme === 'dark' ? '#fff' : '#121212'} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  navigation.navigate('settings');
+              }}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              className="p-2 bg-gray-50 dark:bg-zinc-900 rounded-full"
+            >
+              <Settings2 size={20} color={colorScheme === 'dark' ? '#fff' : '#121212'} />
+            </TouchableOpacity>
+          </View>
         </MotiView>
 
         {/* Greeting Section */}
@@ -267,6 +296,153 @@ export default React.memo(function TabOneScreen() {
           </MotiView>
         </View>
 
+        {/* Categories Card */}
+        {categoryStats.length > 0 && (() => {
+          const isDark = colorScheme === 'dark';
+          const cardBg = isDark ? '#1e1208' : '#FFF3EC';
+          return (
+            <MotiView
+              from={{ opacity: 0, translateY: 10 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: 'timing', delay: 600 }}
+              style={{ paddingHorizontal: 24, marginBottom: 28, flexDirection: 'row', justifyContent: 'space-between' }}
+            >
+              <Pressable
+                onPress={() => router.push('/categories')}
+                style={{
+                  width: '48.5%',
+                  backgroundColor: cardBg,
+                  borderRadius: 32,
+                  padding: 20,
+                }}
+              >
+                {/* Header row: icon + label + chevron */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                    <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: isDark ? '#2d1f0e' : '#FFE4D0', alignItems: 'center', justifyContent: 'center' }}>
+                      <CategoryIcon name="layers" size={13} color="#FF5A00" />
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>Categories</Text>
+                  </View>
+                  <Text style={{ fontSize: 14, color: '#FF5A00', fontWeight: '700' }}>›</Text>
+                </View>
+
+                {/* Count — small */}
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 14 }}>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: isDark ? '#fff' : '#1a1a1a' }}>
+                    {categoryStats.length}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#71717a' : '#9ca3af', marginLeft: 4 }}>
+                    {categoryStats.length === 1 ? 'category' : 'categories'}
+                  </Text>
+                </View>
+
+                {/* Top 3 list */}
+                {categoryStats.slice(0, 3).map((stat: any, i: number) => {
+                  const hrs = Math.floor(stat.totalMins / 60);
+                  const mins = stat.totalMins % 60;
+                  const timeStr = hrs > 0 ? `${hrs}h ${mins > 0 ? mins + 'm' : ''}`.trim() : `${mins}m`;
+                  return (
+                    <View
+                      key={stat.id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 7,
+                        borderTopWidth: i === 0 ? 0 : 1,
+                        borderTopColor: isDark ? '#2d2008' : '#FFE4D0',
+                      }}
+                    >
+                      <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: `${stat.color}22`, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                        <CategoryIcon name={stat.iconName} size={11} color={stat.color} />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: isDark ? '#d4d4d8' : '#374151' }} numberOfLines={1}>
+                        {stat.label}
+                      </Text>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>
+                        {timeStr}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </Pressable>
+
+              {/* Goals Card */}
+              <Pressable
+                onPress={() => router.push('/goals')}
+                style={{
+                  width: '48.5%',
+                  backgroundColor: isDark ? '#1a101f' : '#f5effa',
+                  borderRadius: 32,
+                  padding: 20,
+                  justifyContent: 'space-between',
+                }}
+              >
+                {/* Header row: icon + label + chevron */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                    <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: isDark ? '#2a1b33' : '#ebdcf5', alignItems: 'center', justifyContent: 'center' }}>
+                      <Target size={13} color="#8b5cf6" />
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a' }}>Goals</Text>
+                  </View>
+                  <Text style={{ fontSize: 14, color: '#8b5cf6', fontWeight: '700' }}>›</Text>
+                </View>
+
+                {/* Count — small */}
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 14 }}>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: isDark ? '#fff' : '#1a1a1a' }}>
+                    {activeGoalsCount}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#71717a' : '#9ca3af', marginLeft: 4 }}>
+                    {activeGoalsCount === 1 ? 'goal' : 'goals'}
+                  </Text>
+                </View>
+
+                {/* Top 3 goals */}
+                {customGoals?.filter(g => g.endDate >= Date.now()).slice(0, 3).map((goal, i) => {
+                  const currentMins = activities
+                    .filter(a => a.category === goal.categoryId && a.start_time >= goal.startDate && a.start_time <= goal.endDate)
+                    .reduce((sum, a) => sum + (a.duration || 0), 0);
+                  const hrsDone = (currentMins / 60).toFixed(1).replace('.0', '');
+                  const hrsTarget = (goal.targetMins / 60).toFixed(1).replace('.0', '');
+
+                  return (
+                    <View
+                      key={goal.id}
+                      style={{
+                        paddingVertical: 7,
+                        borderTopWidth: i === 0 ? 0 : 1,
+                        borderTopColor: isDark ? '#2a1b33' : '#ebdcf5',
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#fff' : '#1a1a1a', marginBottom: 2 }} numberOfLines={1}>
+                        {goal.name}
+                      </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: isDark ? '#a1a1aa' : '#8b5cf6' }}>
+                          {hrsDone}h / {hrsTarget}h
+                        </Text>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: isDark ? '#71717a' : '#9ca3af' }}>
+                          {Math.max(0, Math.ceil((goal.endDate - Date.now()) / (1000 * 60 * 60 * 24)))} {Math.max(0, Math.ceil((goal.endDate - Date.now()) / (1000 * 60 * 60 * 24))) === 1 ? 'day' : 'days'} left
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {activeGoalsCount === 0 && (
+                   <View style={{ marginTop: 'auto' }}>
+                     <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#71717a' : '#9ca3af', lineHeight: 16 }}>
+                       No active goals right now. Let's set some!
+                     </Text>
+                   </View>
+                )}
+              </Pressable>
+            </MotiView>
+          );
+        })()}
+
         {/* Logs List */}
         <MotiView 
             from={{ opacity: 0, translateY: 10 }}
@@ -310,7 +486,12 @@ export default React.memo(function TabOneScreen() {
       <LogActionSheet
         visible={selectedActionLogId !== null}
         onClose={() => setSelectedActionLogId(null)}
-        onEdit={() => console.log('Edit:', selectedActionLogId)}
+        onEdit={() => {
+          if (selectedActionLogId) {
+            router.push({ pathname: '/modal', params: { editId: selectedActionLogId } });
+            setSelectedActionLogId(null);
+          }
+        }}
         onDuplicate={() => selectedActionLogId && duplicateActivity(selectedActionLogId)}
         onDelete={() => selectedActionLogId && deleteActivity(selectedActionLogId)}
       />

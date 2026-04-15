@@ -549,7 +549,12 @@ export default React.memo(function ReportsScreen() {
       <LogActionSheet
         visible={selectedActionLogId !== null}
         onClose={() => setSelectedActionLogId(null)}
-        onEdit={() => console.log('Edit:', selectedActionLogId)}
+        onEdit={() => {
+          if (selectedActionLogId) {
+            router.push({ pathname: '/modal', params: { editId: selectedActionLogId } });
+            setSelectedActionLogId(null);
+          }
+        }}
         onDuplicate={() => {
             if (selectedActionLogId) {
                 duplicateActivity(selectedActionLogId);

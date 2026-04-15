@@ -62,6 +62,11 @@ export default function SettingsScreen() {
   const { colorScheme, toggleColorScheme, setColorScheme } = useColorScheme();
   const { t, language, setLanguage } = useLanguage();
   const isDarkMode = colorScheme === 'dark';
+  const [localIsDark, setLocalIsDark] = React.useState(isDarkMode);
+  const [localLang, setLocalLang] = React.useState(language);
+
+  React.useEffect(() => setLocalIsDark(isDarkMode), [isDarkMode]);
+  React.useEffect(() => setLocalLang(language), [language]);
   const [notifications, setNotifications] = React.useState(true);
   const [langToggleWidth, setLangToggleWidth] = React.useState(0);
   const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
@@ -105,9 +110,9 @@ export default function SettingsScreen() {
                     >
                         <MotiView 
                             animate={{ 
-                                translateX: (isDarkMode ? 1 : 0) * ((themeToggleWidth - 8) / 2)
+                                translateX: (localIsDark ? 1 : 0) * ((themeToggleWidth - 8) / 2)
                             }}
-                            transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+                            transition={{ type: 'timing', duration: 150 }}
                             style={{ 
                                 position: 'absolute', 
                                 top: 4, 
@@ -125,21 +130,25 @@ export default function SettingsScreen() {
                         />
                         <TouchableOpacity 
                             onPress={() => {
+                                if (!localIsDark) return;
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setColorScheme('light');
+                                setLocalIsDark(false);
+                                setTimeout(() => setColorScheme('light'), 200);
                             }}
                             className="flex-1 py-3 items-center z-10"
                         >
-                            <Text className={`text-xs font-black uppercase ${!isDarkMode ? 'text-klowk-orange' : 'text-gray-400'}`}>Light</Text>
+                            <Text className={`text-xs font-black uppercase ${!localIsDark ? 'text-klowk-orange' : 'text-gray-400'}`}>Light</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             onPress={() => {
+                                if (localIsDark) return;
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setColorScheme('dark');
+                                setLocalIsDark(true);
+                                setTimeout(() => setColorScheme('dark'), 200);
                             }}
                             className="flex-1 py-3 items-center z-10"
                         >
-                            <Text className={`text-xs font-black uppercase ${isDarkMode ? 'text-klowk-orange' : 'text-gray-400'}`}>Dark</Text>
+                            <Text className={`text-xs font-black uppercase ${localIsDark ? 'text-klowk-orange' : 'text-gray-400'}`}>Dark</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -159,9 +168,9 @@ export default function SettingsScreen() {
                     >
                         <MotiView 
                             animate={{ 
-                                translateX: (language === 'en' ? 0 : 1) * ((langToggleWidth - 8) / 2)
+                                translateX: (localLang === 'en' ? 0 : 1) * ((langToggleWidth - 8) / 2)
                             }}
-                            transition={{ type: 'spring', damping: 20, stiffness: 150 }}
+                            transition={{ type: 'timing', duration: 150 }}
                             style={{ 
                                 position: 'absolute', 
                                 top: 4, 
@@ -179,21 +188,25 @@ export default function SettingsScreen() {
                         />
                         <TouchableOpacity 
                             onPress={() => {
+                                if (localLang === 'en') return;
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setLanguage('en');
+                                setLocalLang('en');
+                                setTimeout(() => setLanguage('en'), 200);
                             }}
                             className="flex-1 py-3 items-center z-10"
                         >
-                            <Text className={`text-xs font-black uppercase ${language === 'en' ? 'text-klowk-orange' : 'text-gray-400'}`}>English</Text>
+                            <Text className={`text-xs font-black uppercase ${localLang === 'en' ? 'text-klowk-orange' : 'text-gray-400'}`}>English</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             onPress={() => {
+                                if (localLang === 'tl') return;
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setLanguage('tl');
+                                setLocalLang('tl');
+                                setTimeout(() => setLanguage('tl'), 200);
                             }}
                             className="flex-1 py-3 items-center z-10"
                         >
-                            <Text className={`text-xs font-black uppercase ${language === 'tl' ? 'text-klowk-orange' : 'text-gray-400'}`}>Filipino</Text>
+                            <Text className={`text-xs font-black uppercase ${localLang === 'tl' ? 'text-klowk-orange' : 'text-gray-400'}`}>Filipino</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

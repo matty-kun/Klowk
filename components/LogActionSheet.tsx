@@ -8,11 +8,12 @@ type LogActionSheetProps = {
   visible: boolean;
   onClose: () => void;
   onEdit: () => void;
-  onDuplicate: () => void;
+  onDuplicate?: () => void;
   onDelete: () => void;
+  title?: string;
 };
 
-export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, onDelete }: LogActionSheetProps) {
+export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, onDelete, title }: LogActionSheetProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [showModal, setShowModal] = React.useState(visible);
@@ -61,7 +62,7 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
             <View className="self-center w-10 h-1 bg-gray-200 dark:bg-zinc-800 rounded-full mb-6" />
 
             <Text className="text-xl font-black text-klowk-black dark:text-white italic mb-5">
-              Log Actions
+              {title || 'Log Actions'}
             </Text>
 
             {/* Edit */}
@@ -74,17 +75,19 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
               )}
             </Pressable>
 
-            <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />
-
-            {/* Duplicate */}
-            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onDuplicate(); }}>
-              {({ pressed }) => (
-                <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
-                  <Copy size={20} color={isDark ? '#9ca3af' : '#4b5563'} />
-                  <Text className="text-base font-bold text-klowk-black dark:text-white ml-4">Duplicate activity</Text>
-                </View>
-              )}
-            </Pressable>
+            {onDuplicate && (
+              <>
+                <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />
+                <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onDuplicate(); }}>
+                  {({ pressed }) => (
+                    <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
+                      <Copy size={20} color={isDark ? '#9ca3af' : '#4b5563'} />
+                      <Text className="text-base font-bold text-klowk-black dark:text-white ml-4">Duplicate activity</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </>
+            )}
 
             <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />
 

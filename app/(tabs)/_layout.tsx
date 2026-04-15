@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Pressable, Text, Animated, Easing, PanResponder, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Square, Home, History, BarChart3 } from 'lucide-react-native';
+import { Plus, Square, Home, Target, BarChart3, History } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useTracking } from '@/context/TrackingContext';
@@ -12,7 +12,7 @@ import { useColorScheme } from 'nativewind';
 
 // Import our tab screens directly
 import TabOneScreen from './index';
-import LogsScreen from './history';
+import GoalsScreen from './goals';
 import ReportsScreen from './reports';
 
 const Tab = createMaterialTopTabNavigator();
@@ -171,8 +171,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             }
           };
 
-          const icons: Record<string, any> = { index: Home, history: History, reports: BarChart3 };
-          const labels: Record<string, string> = { index: 'Home', history: 'History', reports: 'Data' };
+          const icons: Record<string, any> = { index: Home, goals: Target, reports: BarChart3 };
+          const labels: Record<string, string> = { index: 'Home', goals: 'Goals', reports: 'Data' };
           
           const Icon = icons[route.name] || Home;
           const label = labels[route.name] || 'Home';
@@ -217,7 +217,7 @@ export default function TabLayout() {
             initialRouteName="index"
         >
             <Tab.Screen name="index" component={TabOneScreen} />
-            <Tab.Screen name="history" component={TabLogsWrapper} />
+            <Tab.Screen name="goals" component={TabGoalsWrapper} />
             <Tab.Screen name="reports" component={TabReportsWrapper} />
         </Tab.Navigator>
     </View>
@@ -225,5 +225,5 @@ export default function TabLayout() {
 }
 
 // Wrappers to ensure screens are treated as components for the Navigator
-function TabLogsWrapper() { return <LogsScreen />; }
+function TabGoalsWrapper() { return <GoalsScreen />; }
 function TabReportsWrapper() { return <ReportsScreen />; }

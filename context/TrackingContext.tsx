@@ -10,6 +10,15 @@ export type Category = {
   iconName: string;
 };
 
+export interface CustomGoal {
+  id: string;
+  name: string;
+  targetMins: number;
+  categoryId: string;
+  startDate: number;
+  endDate: number;
+}
+
 export type Activity = {
   id: number;
   title: string;
@@ -35,6 +44,10 @@ type TrackingContextType = {
   refreshActivities: () => Promise<void>;
   addCategory: (label: string, iconName: string, color: string) => void;
   getTotalFocusTimeToday: () => number;
+  customGoals: CustomGoal[];
+  addCustomGoal: (goal: CustomGoal) => void;
+  deleteCustomGoal: (id: string) => void;
+  editCustomGoal: (goal: CustomGoal) => void;
 };
 
 const TrackingContext = createContext<TrackingContextType | null>(null);
@@ -44,7 +57,12 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [customGoals, setCustomGoals] = useState<CustomGoal[]>([]);
   const isRefreshing = useRef(false);
+
+  const addCustomGoal = (goal: CustomGoal) => setCustomGoals(prev => [...prev, goal]);
+  const deleteCustomGoal = (id: string) => setCustomGoals(prev => prev.filter(g => g.id !== id));
+  const editCustomGoal = (goal: CustomGoal) => setCustomGoals(prev => prev.map(g => g.id === goal.id ? goal : g));
 
   const addCategory = (label: string, iconName: string, color: string) => {
     const newCat: Category = {
@@ -192,7 +210,11 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       duplicateActivity,
       refreshActivities,
       addCategory,
-      getTotalFocusTimeToday
+      getTotalFocusTimeToday,
+      customGoals,
+      addCustomGoal,
+      deleteCustomGoal,
+      editCustomGoal
     }}>
       {children}
     </TrackingContext.Provider>

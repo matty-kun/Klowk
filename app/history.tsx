@@ -16,6 +16,7 @@ import React, { useState } from 'react';
 import { ScrollView, TextInput, TouchableOpacity, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '@/context/LanguageContext';
+import { router } from 'expo-router';
 
 export default React.memo(function LogsScreen() {
   const { activities, deleteActivity, duplicateActivity } = useTracking();
@@ -130,7 +131,12 @@ export default React.memo(function LogsScreen() {
       <LogActionSheet
         visible={selectedActionLogId !== null}
         onClose={() => setSelectedActionLogId(null)}
-        onEdit={() => console.log('Edit:', selectedActionLogId)}
+        onEdit={() => {
+          if (selectedActionLogId) {
+            router.push({ pathname: '/modal', params: { editId: selectedActionLogId } });
+            setSelectedActionLogId(null);
+          }
+        }}
         onDuplicate={() => selectedActionLogId && duplicateActivity(selectedActionLogId)}
         onDelete={() => selectedActionLogId && deleteActivity(selectedActionLogId)}
       />

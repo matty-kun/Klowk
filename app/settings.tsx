@@ -75,14 +75,7 @@ const SettingItem = ({
               {t("clear_logs_desc")}
             </Text>
           )}
-          {label === t("push_notifications") && (
-            <Text
-              className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5"
-              numberOfLines={1}
-            >
-              {t("notifications_desc")}
-            </Text>
-          )}
+
           {label === t("app_version") && (
             <Text
               className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5"
@@ -124,7 +117,6 @@ import { getHapticsEnabled, setHapticsEnabled } from "@/utils/haptics";
 import {
   cancelDailyReminder,
   getDailyReminderSettings,
-  registerForPushNotificationsAsync,
   scheduleDailyReminder,
 } from "@/utils/notifications";
 
@@ -138,7 +130,6 @@ export default function SettingsScreen() {
 
   React.useEffect(() => setLocalIsDark(isDarkMode), [isDarkMode]);
   React.useEffect(() => setLocalLang(language), [language]);
-  const [notifications, setNotifications] = React.useState(false);
   const [dailyReminder, setDailyReminder] = React.useState(false);
   const [hapticsOn, setHapticsOn] = React.useState(getHapticsEnabled);
 
@@ -149,29 +140,23 @@ export default function SettingsScreen() {
   const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
   const [notifToggleWidth, setNotifToggleWidth] = React.useState(0);
 
-  const handleToggleNotifications = async (val: boolean) => {
-    if (val) {
-      const token = await registerForPushNotificationsAsync();
-      if (token) {
-        setNotifications(true);
-        notification(NotificationFeedbackType.Success);
-        Alert.alert(
-          t("notifications_enabled"),
-          t("notifications_enabled_desc"),
-        );
-      }
-    } else {
-      setNotifications(false);
-    }
-  };
-
   const handleToggleDailyReminder = async (val: boolean) => {
     if (val) {
-      const token = await registerForPushNotificationsAsync();
-      if (token !== undefined || Platform.OS === "ios") {
+      const Notifications = require("expo-notifications") as typeof import("expo-notifications");
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status === "granted") {
         await scheduleDailyReminder(9, 0);
         setDailyReminder(true);
         notification(NotificationFeedbackType.Success);
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Notifications on! 🔔",
+            body: "You'll get a daily nudge at 9:00 AM.",
+            sound: "default",
+            vibrate: [0, 250, 100, 250],
+          },
+          trigger: { type: "timeInterval", seconds: 1 } as any,
+        });
       }
     } else {
       await cancelDailyReminder();
@@ -369,8 +354,8 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            {/* Notifications Dual Buttons */}
-            <View className="flex-row items-center px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
+            {/* Notification Toggle */}
+            <View className="flex-row items-center px-6 py-4">
               <View
                 style={{ backgroundColor: "#FBBF2415" }}
                 className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
@@ -379,10 +364,10 @@ export default function SettingsScreen() {
               </View>
               <View className="flex-1 mr-4">
                 <Text className="text-sm font-bold text-klowk-black dark:text-white">
-                  {t("push_notifications")}
+                  Notification
                 </Text>
                 <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                  {t("notifications_desc")}
+                  Stay on top of your day with timely reminders
                 </Text>
               </View>
               <View
@@ -394,7 +379,7 @@ export default function SettingsScreen() {
                 <MotiView
                   animate={{
                     translateX:
-                      (notifications ? 1 : 0) * ((notifToggleWidth - 8) / 2),
+                      (dailyReminder ? 1 : 0) * ((notifToggleWidth - 8) / 2),
                   }}
                   transition={{ type: "spring", damping: 20, stiffness: 150 }}
                   style={{
@@ -415,12 +400,12 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                   onPress={() => {
                     impact(ImpactFeedbackStyle.Light);
-                    handleToggleNotifications(false);
+                    handleToggleDailyReminder(false);
                   }}
                   className="flex-1 py-3 items-center z-10"
                 >
                   <Text
-                    className={`text-[10px] font-black uppercase ${!notifications ? "text-amber-400" : "text-gray-400"}`}
+                    className={`text-[10px] font-black uppercase ${!dailyReminder ? "text-amber-400" : "text-gray-400"}`}
                   >
                     Off
                   </Text>
@@ -428,67 +413,17 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                   onPress={() => {
                     impact(ImpactFeedbackStyle.Light);
-                    handleToggleNotifications(true);
+                    handleToggleDailyReminder(true);
                   }}
                   className="flex-1 py-3 items-center z-10"
                 >
                   <Text
-                    className={`text-[10px] font-black uppercase ${notifications ? "text-amber-400" : "text-gray-400"}`}
+                    className={`text-[10px] font-black uppercase ${dailyReminder ? "text-amber-400" : "text-gray-400"}`}
                   >
                     On
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
-
-          {/* Daily Reminder Row */}
-          <View className="flex-row items-center px-6 py-4">
-            <View
-              style={{ backgroundColor: "#FBBF2415" }}
-              className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
-            >
-              <Bell size={20} color="#FBBF24" />
-            </View>
-            <View className="flex-1 mr-4">
-              <Text className="text-sm font-bold text-klowk-black dark:text-white">
-                Daily Reminder
-              </Text>
-              <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                Nudge at 9:00 AM if you haven't logged yet
-              </Text>
-            </View>
-            <View
-              className="w-[80px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
-            >
-              <MotiView
-                animate={{ translateX: dailyReminder ? 36 : 0 }}
-                transition={{ type: "spring", damping: 20, stiffness: 150 }}
-                style={{
-                  position: "absolute",
-                  top: 4, bottom: 4, left: 4,
-                  width: 32,
-                  backgroundColor: isDarkMode ? "#3f3f46" : "#fff",
-                  borderRadius: 10,
-                  elevation: 2,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
-                }}
-              />
-              <TouchableOpacity
-                onPress={() => { impact(ImpactFeedbackStyle.Light); handleToggleDailyReminder(false); }}
-                className="flex-1 py-3 items-center z-10"
-              >
-                <Text className={`text-[10px] font-black uppercase ${!dailyReminder ? "text-amber-400" : "text-gray-400"}`}>Off</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => { impact(ImpactFeedbackStyle.Light); handleToggleDailyReminder(true); }}
-                className="flex-1 py-3 items-center z-10"
-              >
-                <Text className={`text-[10px] font-black uppercase ${dailyReminder ? "text-amber-400" : "text-gray-400"}`}>On</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </View>

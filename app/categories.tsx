@@ -1,9 +1,9 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import LogActionSheet from "@/components/LogActionSheet";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { impact, notification } from "@/utils/haptics";
 import { formatDate, formatTimestamp } from "@/utils/time";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { impact, notification } from "@/utils/haptics";
 import { router } from "expo-router";
 import { ArrowLeft, Check, MoreHorizontal, Plus, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -24,19 +24,45 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const { width, height: screenHeight } = Dimensions.get("window");
 
 const ICONS = [
-  "briefcase", "heart", "book-open", "dumbbell", "coffee",
-  "music", "gamepad", "camera", "plane", "home",
-  "wallet", "star", "flame", "brain", "palette",
+  "briefcase",
+  "heart",
+  "book-open",
+  "dumbbell",
+  "coffee",
+  "music",
+  "gamepad",
+  "camera",
+  "plane",
+  "home",
+  "wallet",
+  "star",
+  "flame",
+  "brain",
+  "palette",
 ];
 const COLORS = [
   // Warm
-  "#FBBF24", "#f97316", "#ef4444", "#f43f5e", "#ec4899",
+  "#FBBF24",
+  "#f97316",
+  "#ef4444",
+  "#f43f5e",
+  "#ec4899",
   // Purple / Blue
-  "#a855f7", "#6366f1", "#3b82f6", "#0ea5e9", "#06b6d4",
+  "#a855f7",
+  "#6366f1",
+  "#3b82f6",
+  "#0ea5e9",
+  "#06b6d4",
   // Green / Teal
-  "#14b8a6", "#10b981", "#22c55e", "#84cc16",
+  "#14b8a6",
+  "#10b981",
+  "#22c55e",
+  "#84cc16",
   // Neutral
-  "#78716c", "#6b7280", "#ffffff", "#e5e7eb",
+  "#78716c",
+  "#6b7280",
+  "#ffffff",
+  "#e5e7eb",
 ];
 
 export default function CategoriesScreen() {
@@ -541,17 +567,35 @@ export default function CategoriesScreen() {
           <Animated.View
             style={{
               position: "absolute",
-              top: 0, left: 0, right: 0, bottom: 0,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
               backgroundColor: "rgba(0,0,0,0.5)",
               opacity: sheetBackdrop,
             }}
           />
           <Pressable
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
             onPress={closeSheet}
           />
           {/* Sheet slides up independently */}
-          <Animated.View style={{ position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: screenHeight * 0.9, transform: [{ translateY: sheetSlide }] }}>
+          <Animated.View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              maxHeight: screenHeight * 0.9,
+              transform: [{ translateY: sheetSlide }],
+            }}
+          >
             <Pressable
               onPress={(e) => e.stopPropagation()}
               style={{
@@ -566,221 +610,223 @@ export default function CategoriesScreen() {
                 contentContainerStyle={{ padding: 32, paddingBottom: 48 }}
                 keyboardShouldPersistTaps="handled"
               >
-              {/* Sheet header */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 28,
-                }}
-              >
-                <Text
+                {/* Sheet header */}
+                <View
                   style={{
-                    fontSize: 22,
-                    fontWeight: "900",
-                    color: isDark ? "#fff" : "#121212",
-                  }}
-                >
-                  New Category
-                </Text>
-                <Pressable
-                  onPress={closeSheet}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    backgroundColor: isDark ? "#27272a" : "#f3f4f6",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    justifyContent: "center",
+                    marginBottom: 28,
                   }}
                 >
-                  <X size={18} color={isDark ? "#fff" : "#121212"} />
-                </Pressable>
-              </View>
-
-              {/* Name input */}
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: "900",
-                  color: isDark ? "#71717a" : "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: 2,
-                  marginBottom: 10,
-                }}
-              >
-                Category Name
-              </Text>
-              <View
-                style={{
-                  backgroundColor: isDark ? "#18181b" : "#f9fafb",
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: isDark ? "#27272a" : "#f3f4f6",
-                  marginBottom: 24,
-                }}
-              >
-                <TextInput
-                  value={newCatName}
-                  onChangeText={setNewCatName}
-                  placeholder={
-                    newCatName.length > 0 ? "" : "e.g. Learning, Workout..."
-                  }
-                  placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
-                  autoFocus
-                  style={{
-                    padding: 18,
-                    fontSize: 15,
-                    fontWeight: "700",
-                    color: isDark ? "#fff" : "#121212",
-                  }}
-                />
-              </View>
-
-              {/* Icon picker */}
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: "900",
-                  color: isDark ? "#71717a" : "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: 2,
-                  marginBottom: 10,
-                }}
-              >
-                Icon
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: 24 }}
-              >
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  {ICONS.map((icon) => (
-                    <Pressable
-                      key={icon}
-                      onPress={() => {
-                        setNewCatIcon(icon);
-                        impact(ImpactFeedbackStyle.Light);
-                      }}
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 16,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor:
-                          newCatIcon === icon
-                            ? "#FBBF24"
-                            : isDark
-                              ? "#18181b"
-                              : "#f9fafb",
-                        borderWidth: 1,
-                        borderColor:
-                          newCatIcon === icon
-                            ? "#FBBF24"
-                            : isDark
-                              ? "#27272a"
-                              : "#f3f4f6",
-                      }}
-                    >
-                      <CategoryIcon
-                        name={icon}
-                        size={20}
-                        color={
-                          newCatIcon === icon
-                            ? "#fff"
-                            : isDark
-                              ? "#52525b"
-                              : "#9ca3af"
-                        }
-                      />
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
-
-              {/* Color picker */}
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: "900",
-                  color: isDark ? "#71717a" : "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: 2,
-                  marginBottom: 10,
-                }}
-              >
-                Color
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: 32 }}
-              >
-                <View style={{ flexDirection: "row", gap: 12 }}>
-                {COLORS.map((color) => (
-                  <Pressable
-                    key={color}
-                    onPress={() => {
-                      setNewCatColor(color);
-                      impact(ImpactFeedbackStyle.Light);
-                    }}
+                  <Text
                     style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: color,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 3,
-                      borderColor:
-                        newCatColor === color
-                          ? isDark
-                            ? "#fff"
-                            : "#121212"
-                          : "transparent",
+                      fontSize: 22,
+                      fontWeight: "900",
+                      color: isDark ? "#fff" : "#121212",
                     }}
                   >
-                    {newCatColor === color && <Check size={16} color="#fff" />}
+                    New Category
+                  </Text>
+                  <Pressable
+                    onPress={closeSheet}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: isDark ? "#27272a" : "#f3f4f6",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <X size={18} color={isDark ? "#fff" : "#121212"} />
                   </Pressable>
-                ))}
                 </View>
-              </ScrollView>
 
-              {/* Create button */}
-              <Pressable
-                onPress={handleAddCategory}
-                disabled={!newCatName.trim()}
-                style={{
-                  paddingVertical: 18,
-                  borderRadius: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: !newCatName.trim()
-                    ? isDark
-                      ? "#27272a"
-                      : "#f3f4f6"
-                    : "#FBBF24",
-                }}
-              >
+                {/* Name input */}
                 <Text
                   style={{
-                    fontSize: 15,
+                    fontSize: 10,
                     fontWeight: "900",
-                    color: !newCatName.trim()
-                      ? isDark
-                        ? "#52525b"
-                        : "#9ca3af"
-                      : "#fff",
+                    color: isDark ? "#71717a" : "#9ca3af",
                     textTransform: "uppercase",
-                    letterSpacing: 1,
+                    letterSpacing: 2,
+                    marginBottom: 10,
                   }}
                 >
-                  Create Category
+                  Category Name
                 </Text>
-              </Pressable>
+                <View
+                  style={{
+                    backgroundColor: isDark ? "#18181b" : "#f9fafb",
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: isDark ? "#27272a" : "#f3f4f6",
+                    marginBottom: 24,
+                  }}
+                >
+                  <TextInput
+                    value={newCatName}
+                    onChangeText={setNewCatName}
+                    placeholder={
+                      newCatName.length > 0 ? "" : "e.g. Learning, Workout..."
+                    }
+                    placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
+                    autoFocus
+                    style={{
+                      padding: 18,
+                      fontSize: 15,
+                      fontWeight: "700",
+                      color: isDark ? "#fff" : "#121212",
+                    }}
+                  />
+                </View>
+
+                {/* Icon picker */}
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: "900",
+                    color: isDark ? "#71717a" : "#9ca3af",
+                    textTransform: "uppercase",
+                    letterSpacing: 2,
+                    marginBottom: 10,
+                  }}
+                >
+                  Icon
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginBottom: 24 }}
+                >
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    {ICONS.map((icon, idx) => (
+                      <Pressable
+                        key={`icon-${idx}`}
+                        onPress={() => {
+                          setNewCatIcon(icon);
+                          impact(ImpactFeedbackStyle.Light);
+                        }}
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 16,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor:
+                            newCatIcon === icon
+                              ? "#FBBF24"
+                              : isDark
+                                ? "#18181b"
+                                : "#f9fafb",
+                          borderWidth: 1,
+                          borderColor:
+                            newCatIcon === icon
+                              ? "#FBBF24"
+                              : isDark
+                                ? "#27272a"
+                                : "#f3f4f6",
+                        }}
+                      >
+                        <CategoryIcon
+                          name={icon}
+                          size={20}
+                          color={
+                            newCatIcon === icon
+                              ? "#fff"
+                              : isDark
+                                ? "#52525b"
+                                : "#9ca3af"
+                          }
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                {/* Color picker */}
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: "900",
+                    color: isDark ? "#71717a" : "#9ca3af",
+                    textTransform: "uppercase",
+                    letterSpacing: 2,
+                    marginBottom: 10,
+                  }}
+                >
+                  Color
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginBottom: 32 }}
+                >
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    {COLORS.map((color, idx) => (
+                      <Pressable
+                        key={`color-${idx}`}
+                        onPress={() => {
+                          setNewCatColor(color);
+                          impact(ImpactFeedbackStyle.Light);
+                        }}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                          backgroundColor: color,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderWidth: 3,
+                          borderColor:
+                            newCatColor === color
+                              ? isDark
+                                ? "#fff"
+                                : "#121212"
+                              : "transparent",
+                        }}
+                      >
+                        {newCatColor === color && (
+                          <Check size={16} color="#fff" />
+                        )}
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                {/* Create button */}
+                <Pressable
+                  onPress={handleAddCategory}
+                  disabled={!newCatName.trim()}
+                  style={{
+                    paddingVertical: 18,
+                    borderRadius: 24,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: !newCatName.trim()
+                      ? isDark
+                        ? "#27272a"
+                        : "#f3f4f6"
+                      : "#FBBF24",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: "900",
+                      color: !newCatName.trim()
+                        ? isDark
+                          ? "#52525b"
+                          : "#9ca3af"
+                        : "#fff",
+                      textTransform: "uppercase",
+                      letterSpacing: 1,
+                    }}
+                  >
+                    Create Category
+                  </Text>
+                </Pressable>
               </ScrollView>
             </Pressable>
           </Animated.View>

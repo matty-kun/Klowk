@@ -1,48 +1,42 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import LogActionSheet from "@/components/LogActionSheet";
-import { CATEGORIES } from "@/constants/Categories";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { getForecast } from "@/utils/forecast";
 import { impact } from "@/utils/haptics";
 import {
-  formatDate,
-  formatDuration,
-  formatLogDuration,
-  formatTimestamp,
+    formatDate,
+    formatDuration,
+    formatLogDuration,
+    formatTimestamp,
 } from "@/utils/time";
 import { useNavigation } from "@react-navigation/native";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import {
-  ArrowDown,
-  ArrowUp,
-  BookOpen,
-  Briefcase,
-  ChevronRight,
-  ClipboardEdit,
-  Coffee,
-  Heart,
-  History,
-  MessageCircle,
-  MoreHorizontal,
-  Settings2,
-  Tag,
-  Target,
-  Timer,
+    ArrowDown,
+    ArrowUp,
+    ChevronRight,
+    ClipboardEdit,
+    History,
+    MessageCircle,
+    MoreHorizontal,
+    Settings2,
+    Target,
+    Timer,
 } from "lucide-react-native";
 import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
 import React, { useState } from "react";
 import {
-  Dimensions,
-  Pressable,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    Pressable,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -1096,15 +1090,8 @@ export default React.memo(function TabOneScreen() {
 
             <View className="px-6 mb-28">
               {activities.slice(0, 5).map((log: Activity) => {
-                const category = CATEGORIES.find((c) => c.id === log.category);
+                const category = categories.find((c) => c.id === log.category);
                 const catColor = category?.color || "#6b7280";
-                const Icon =
-                  {
-                    briefcase: Briefcase,
-                    heart: Heart,
-                    "book-open": BookOpen,
-                    coffee: Coffee,
-                  }[category?.iconName as string] || Tag;
 
                 return (
                   <View
@@ -1115,7 +1102,11 @@ export default React.memo(function TabOneScreen() {
                       style={{ backgroundColor: `${catColor}15` }}
                       className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
                     >
-                      <Icon size={18} color={catColor} />
+                      <CategoryIcon
+                        name={category?.iconName || "tag"}
+                        size={18}
+                        color={catColor}
+                      />
                     </View>
                     <View className="flex-1">
                       <Text
@@ -1129,8 +1120,7 @@ export default React.memo(function TabOneScreen() {
                           style={{ color: catColor }}
                           className="text-[10px] font-black uppercase mr-2"
                         >
-                          {t(category?.label.toLowerCase() as any) ||
-                            t("personal")}
+                          {category?.label || t("personal")}
                         </Text>
                         <Text className="text-[8px] text-gray-400 dark:text-gray-500 font-bold uppercase">
                           {formatDate(log.start_time)} •{" "}

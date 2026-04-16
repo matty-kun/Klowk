@@ -1,36 +1,30 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import LogActionSheet from "@/components/LogActionSheet";
-import { CATEGORIES } from "@/constants/Categories";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { impact } from "@/utils/haptics";
 import { formatLogDuration, formatTimestamp } from "@/utils/time";
-import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { impact, notification } from "@/utils/haptics";
+import { ImpactFeedbackStyle } from "expo-haptics";
 import { router } from "expo-router";
 import {
-  ArrowLeft,
-  BookOpen,
-  Briefcase,
-  Check,
-  Coffee,
-  Heart,
-  MoreHorizontal,
-  Search,
-  SlidersHorizontal,
-  Tag,
-  X,
+    ArrowLeft,
+    Check,
+    MoreHorizontal,
+    Search,
+    SlidersHorizontal,
+    X,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useRef, useState } from "react";
 import {
-  Animated,
-  Easing,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Animated,
+    Easing,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -90,7 +84,7 @@ export default React.memo(function LogsScreen() {
       const matchesSearch = search.trim()
         ? (() => {
             const q = search.toLowerCase();
-            const cat = CATEGORIES.find((c) => c.id === a.category);
+            const cat = categories.find((c) => c.id === a.category);
             return (
               a.title.toLowerCase().includes(q) ||
               (cat?.label || "").toLowerCase().includes(q)
@@ -102,7 +96,7 @@ export default React.memo(function LogsScreen() {
         selectedCategories.includes(a.category || "");
       return matchesSearch && matchesCat;
     });
-  }, [search, activities, selectedCategories]);
+  }, [search, activities, selectedCategories, categories]);
 
   // Group by date (memoized)
   const grouped = React.useMemo(() => {
@@ -276,15 +270,8 @@ export default React.memo(function LogsScreen() {
             </View>
 
             {logs.map((log) => {
-              const category = CATEGORIES.find((c) => c.id === log.category);
+              const category = categories.find((c) => c.id === log.category);
               const catColor = category?.color || "#6b7280";
-              const Icon =
-                {
-                  briefcase: Briefcase,
-                  heart: Heart,
-                  "book-open": BookOpen,
-                  coffee: Coffee,
-                }[category?.iconName as string] || Tag;
 
               return (
                 <View
@@ -295,7 +282,11 @@ export default React.memo(function LogsScreen() {
                     style={{ backgroundColor: `${catColor}10` }}
                     className="w-12 h-12 rounded-[16px] items-center justify-center mr-4"
                   >
-                    <Icon size={20} color={catColor} />
+                    <CategoryIcon
+                      name={category?.iconName || "tag"}
+                      size={20}
+                      color={catColor}
+                    />
                   </View>
                   <View className="flex-1">
                     <Text className="text-klowk-black dark:text-white font-bold text-base mb-1">
@@ -306,8 +297,7 @@ export default React.memo(function LogsScreen() {
                         style={{ color: catColor }}
                         className="text-[10px] font-black uppercase mr-2"
                       >
-                        {t(category?.label.toLowerCase() as any) ||
-                          t("personal")}
+                        {category?.label || t("personal")}
                       </Text>
                       <View className="w-1 h-1 rounded-full bg-gray-100 dark:bg-zinc-800 mr-2" />
                       <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase">

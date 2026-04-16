@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx expo *)",
+      "Bash(node -e \"const j=require\\('./assets/images/Klowk Waving.json'\\); j.layers?.forEach\\(\\(l,i\\)=>{ if\\(l.ty===1\\) console.log\\('SOLID layer',i,l.nm,l.sc\\) }\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

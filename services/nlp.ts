@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 // Securely load the OpenAI API Key from environment variables
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
@@ -9,52 +9,54 @@ function getOpenAIClient() {
   if (!openaiInstance && OPENAI_API_KEY) {
     openaiInstance = new OpenAI({
       apiKey: OPENAI_API_KEY,
-      dangerouslyAllowBrowser: true // Required for React Native usage
+      dangerouslyAllowBrowser: true, // Required for React Native usage
     });
   }
   return openaiInstance;
 }
 
 export type NLPResult =
-  | { type: 'start', title: string }
-  | { type: 'manual', title: string, durationMinutes: number }
-  | { type: 'error', message: string };
+  | { type: "start"; title: string }
+  | { type: "manual"; title: string; durationMinutes: number }
+  | { type: "error"; message: string };
 
 export async function parseNaturalLanguage(input: string): Promise<NLPResult> {
   const client = getOpenAIClient();
   if (!client) {
-    return { type: 'error', message: 'API Key not configured' };
+    return { type: "error", message: "API Key not configured" };
   }
 
   try {
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: "gpt-4o-mini",
       messages: [
         {
-          role: 'system',
-          content: `You are a helpful assistant for the Klowk time tracking app. 
-          Analyze user input and decide if they want to START a timer NOW or LOG a past activity.
+          role: "system",
+          content: `You are a helpful assistant for the Flow time tracking app. 
+          Analyze user input and extract the activity and duration.
           
-          If STARTING now: return JSON {"type": "start", "title": "activity name"}
-          If LOGGING past activity: return JSON {"type": "manual", "title": "activity name", "durationMinutes": number_of_minutes}
+          ALWAYS assume the user is LOGGING a PAST activity.
+          Extract: activity title and duration in minutes.
           
-          Example: "I am going to the gym" -> {"type": "start", "title": "Gym"}
-          Example: "Gym for 1 hour" -> {"type": "manual", "title": "Gym", "durationMinutes": 60}
-          Example: "Worked on website for 30 mins" -> {"type": "manual", "title": "Website", "durationMinutes": 30}
+          Return ONLY valid JSON: {"type": "manual", "title": "activity name", "durationMinutes": number}
           
-          Only return the JSON object.`
+          Examples:
+          "Study 15m" -> {"type": "manual", "title": "Study", "durationMinutes": 15}
+          "Coding for 1h" -> {"type": "manual", "title": "Coding", "durationMinutes": 60}
+          "Workout 45 minutes" -> {"type": "manual", "title": "Workout", "durationMinutes": 45}
+          "Design 1.5h" -> {"type": "manual", "title": "Design", "durationMinutes": 90}`,
         },
-        { role: 'user', content: input }
+        { role: "user", content: input },
       ],
-      response_format: { type: 'json_object' }
+      response_format: { type: "json_object" },
     });
 
     const content = response.choices[0]?.message?.content;
-    if (!content) throw new Error('Empty response');
+    if (!content) throw new Error("Empty response");
 
     return JSON.parse(content) as NLPResult;
   } catch (error) {
-    console.error('NLP Parsing error:', error);
-    return { type: 'error', message: 'Failed to understand' };
+    console.error("NLP Parsing error:", error);
+    return { type: "error", message: "Failed to understand" };
   }
 }

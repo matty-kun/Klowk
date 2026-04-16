@@ -49,7 +49,7 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
       >
         <Pressable
           style={{ flex: 1 }}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}
+          onPress={() => { impact(ImpactFeedbackStyle.Light); onClose(); }}
         />
         <Animated.View
           style={{ transform: [{ translateY: slideAnim }] }}
@@ -66,7 +66,7 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
             </Text>
 
             {/* Edit */}
-            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onEdit(); }}>
+            <Pressable onPress={() => { impact(ImpactFeedbackStyle.Medium); onClose(); onEdit(); }}>
               {({ pressed }) => (
                 <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
                   <Edit2 size={20} color={isDark ? '#e5e7eb' : '#121212'} />
@@ -78,7 +78,7 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
             {onDuplicate && (
               <>
                 <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />
-                <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onClose(); onDuplicate(); }}>
+                <Pressable onPress={() => { impact(ImpactFeedbackStyle.Medium); onClose(); onDuplicate(); }}>
                   {({ pressed }) => (
                     <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
                       <Copy size={20} color={isDark ? '#9ca3af' : '#4b5563'} />
@@ -92,7 +92,7 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
             <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />
 
             {/* Delete */}
-            <Pressable onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onClose(); onDelete(); }}>
+            <Pressable onPress={() => { notification(NotificationFeedbackType.Warning); onClose(); onDelete(); }}>
               {({ pressed }) => (
                 <View className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${pressed ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
                   <Trash2 size={20} color="#ef4444" />
@@ -103,7 +103,7 @@ export default function LogActionSheet({ visible, onClose, onEdit, onDuplicate, 
 
             {/* Cancel */}
             <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-2" />
-            <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}>
+            <Pressable onPress={() => { impact(ImpactFeedbackStyle.Light); onClose(); }}>
               {({ pressed }) => (
                 <View className={`items-center justify-center py-3.5 rounded-2xl ${pressed ? 'bg-gray-50 dark:bg-zinc-800' : ''}`}>
                   <Text className="text-base font-bold text-gray-400 dark:text-zinc-600">Cancel</Text>

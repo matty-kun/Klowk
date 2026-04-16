@@ -11,7 +11,7 @@ export const translations = {
     notifications_desc: "Get alerted about session milestones and goals.",
     notifications_enabled: "Notifications Enabled",
     notifications_enabled_desc: "You'll now receive updates on your progress.",
-    about_klowk: "About Klowk",
+    about_klowk: "About Flow",
     app_version: "App Version",
     app_version_desc: "Information about the current software build.",
     clear_logs: "Clear All Work logs",
@@ -56,10 +56,10 @@ export const translations = {
     sessions_total: "Sessions Total",
 
     // Chat
-    talk_to_klowk: "Talk to Klowk",
+    talk_to_klowk: "Talk to Flow",
     ask_anything: "Ask me anything...",
     klowk_mistakes:
-      "Klowk can make mistakes. Review important details before acting on them.",
+      "Flow can make mistakes. Review important details before acting on them.",
 
     // Categories
     work: "Work",
@@ -111,12 +111,12 @@ export const translations = {
     create_category: "Create Category",
 
     // ActionSheet widget
-    start_live_session: "Start live session",
-    talk_to_klowk: "Talk to Klowk",
+    start_live_session: "Start flow state",
+    talk_to_klowk: "Talk to Flow",
     log_manually: "Log manually",
 
-    // Live session
-    live_session: "Live Session",
+    // Flow state
+    live_session: "Flow State",
     focus_target: "Focus Target",
     what_working_on: "What are you working on?",
     duration: "Duration",
@@ -158,7 +158,7 @@ export const translations = {
     notifications_enabled: "Naka-on na ang Notifications",
     notifications_enabled_desc:
       "Makakatanggap ka na ng updates tungkol sa iyong progress.",
-    about_klowk: "Tungkol sa Klowk",
+    about_klowk: "Tungkol sa Flow",
     app_version: "Bersyon ng App",
     app_version_desc: "Impormasyon tungkol sa bersyon ng software.",
     clear_logs: "Burahin Lahat ng Log",
@@ -203,10 +203,10 @@ export const translations = {
     sessions_total: "Kabuuang Sesyon",
 
     // Chat
-    talk_to_klowk: "Kausapin si Klowk",
+    talk_to_klowk: "Kausapin si Flow",
     ask_anything: "Magtanong kahit ano...",
     klowk_mistakes:
-      "Maaaring magkamali si Klowk. Tiyaking suriin ang mahahalagang detalye.",
+      "Maaaring magkamali si Flow. Tiyaking suriin ang mahahalagang detalye.",
 
     // Categories
     work: "Trabaho",
@@ -258,12 +258,12 @@ export const translations = {
     create_category: "Gumawa ng Kategorya",
 
     // ActionSheet widget
-    start_live_session: "Magsimula ng live session",
-    talk_to_klowk: "Makipag-usap kay Klowk",
+    start_live_session: "Magsimula ng flow state",
+    talk_to_klowk: "Makipag-usap kay Flow",
     log_manually: "Mag-log nang manu-mano",
 
-    // Live session
-    live_session: "Buhay na Sesyon",
+    // Flow state
+    live_session: "Flow State",
     focus_target: "Target ng Focus",
     what_working_on: "Ano ang ginagawa mo?",
     duration: "Tagal",

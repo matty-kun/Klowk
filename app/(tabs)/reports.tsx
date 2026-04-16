@@ -1,11 +1,14 @@
+import { CategoryIcon } from "@/components/CategoryIcon";
 import LogActionSheet from "@/components/LogActionSheet";
 import { Text } from "@/components/Themed";
 import { useLanguage } from "@/context/LanguageContext";
+import { useOnboarding } from "@/context/OnboardingContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { getForecast } from "@/utils/forecast";
 import { formatDate, formatDuration, formatTimestamp } from "@/utils/time";
 import { useNavigation } from "@react-navigation/native";
-import * as Haptics from "expo-haptics";
+import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
+import { impact, notification } from "@/utils/haptics";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -41,6 +44,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
     Dimensions,
+    Easing,
     Modal,
     Pressable,
     ScrollView,
@@ -58,35 +62,8 @@ import Svg, {
     LinearGradient as SvgGradient,
 } from "react-native-svg";
 
-const { width } = Dimensions.get("window");
+const { width, height: screenHeight } = Dimensions.get("window");
 
-const CategoryIcon = ({
-  name,
-  size,
-  color,
-}: {
-  name: string;
-  size: number;
-  color: string;
-}) => {
-  const icons: Record<string, any> = {
-    briefcase: Briefcase,
-    heart: Heart,
-    "book-open": BookOpen,
-    coffee: CoffeeIcon,
-    zap: Zap,
-    target: Target,
-    brain: Brain,
-    tag: Tag,
-    users: Users,
-    code: Code,
-    music: Music,
-    camera: Camera,
-    layers: Layers,
-  };
-  const IconComponent = icons[name] || Tag;
-  return <IconComponent size={size} color={color} />;
-};
 
 const Coffee = ({ size, color }: { size: number; color: string }) => (
   <Svg
@@ -178,7 +155,9 @@ const DonutChart = ({ data, total }: { data: any[]; total: number }) => {
           {t("focused")}
         </Text>
         <Text className="text-2xl font-black text-klowk-black dark:text-white">
-          {Math.floor(total / 3600)}h
+          {total < 3600
+            ? `${Math.floor(total / 60)}m`
+            : `${Math.floor(total / 3600)}h ${Math.floor((total % 3600) / 60) > 0 ? `${Math.floor((total % 3600) / 60)}m` : ""}`}
         </Text>
       </View>
     </View>
@@ -225,7 +204,7 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
         <Text className="font-black text-lg text-klowk-black dark:text-white">
           {t("weekly_trend")}
         </Text>
-        <TrendIcon size={16} color="#FF5A00" />
+        <TrendIcon size={16} color="#FBBF24" />
       </View>
 
       <View className="h-40 bg-transparent relative">
@@ -263,8 +242,8 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
               <Svg height={chartHeight} width={chartWidth}>
                 <Defs>
                   <SvgGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#FF5A00" stopOpacity="0.2" />
-                    <Stop offset="1" stopColor="#FF5A00" stopOpacity="0" />
+                    <Stop offset="0" stopColor="#FBBF24" stopOpacity="0.2" />
+                    <Stop offset="1" stopColor="#FBBF24" stopOpacity="0" />
                   </SvgGradient>
                 </Defs>
                 <Path
@@ -277,7 +256,7 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
                 <Polyline
                   points={points}
                   fill="none"
-                  stroke="#FF5A00"
+                  stroke="#FBBF24"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -293,12 +272,12 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
                       r="4"
                       fill={
                         i === currentDay
-                          ? "#FF5A00"
+                          ? "#FBBF24"
                           : colorScheme === "dark"
                             ? "#121212"
                             : "white"
                       }
-                      stroke="#FF5A00"
+                      stroke="#FBBF24"
                       strokeWidth="2"
                     />
                   );
@@ -312,7 +291,7 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
           {days.map((day, i) => (
             <Text
               key={i}
-              className={`text-[10px] font-bold ${i === currentDay ? "text-klowk-orange" : "text-gray-400 dark:text-gray-600"}`}
+              className={`text-[10px] font-bold ${i === currentDay ? "text-amber-400" : "text-gray-400 dark:text-gray-600"}`}
             >
               {day}
             </Text>
@@ -332,9 +311,10 @@ const generateDynamicInsight = (
   categoryStats: any[],
   timeRange: "today" | "week" | "month",
   categories: Category[],
+  userName: string | null,
 ): string => {
   if (!activities || activities.length === 0) {
-    return "Start tracking your focus sessions to unlock personalized insights.";
+    return `Hey ${userName || "there"}! Start tracking your focus sessions to unlock personalized insights.`;
   }
 
   const totalMins = categoryStats.reduce(
@@ -401,7 +381,7 @@ const generateDynamicInsight = (
   if (sessionsPerDay > 0) {
     if (sessionsPerDay > 2) {
       insights.push(
-        `${sessionsPerDay.toFixed(1)} sessions daily—you're building strong momentum.`,
+        `${sessionsPerDay.toFixed(1)} sessions daily. You're building strong momentum.`,
       );
     } else if (sessionsPerDay > 1) {
       insights.push(
@@ -418,7 +398,7 @@ const generateDynamicInsight = (
       );
     } else if (avgSessionLength > 45) {
       insights.push(
-        `${avgSessionLength.toFixed(0)}-minute focus blocks—the sweet spot for flow.`,
+        `${avgSessionLength.toFixed(0)} minute focus blocks. The sweet spot for flow.`,
       );
     } else {
       insights.push(
@@ -440,7 +420,7 @@ const generateDynamicInsight = (
     }
   } else if (timeRange === "week" && activeDays > 5) {
     insights.push(
-      `Active ${activeDays} days this week—you're building a winning habit.`,
+      `Active ${activeDays} days this week. You're building a winning habit.`,
     );
   } else if (timeRange === "month" && activeDays > 20) {
     insights.push(
@@ -468,6 +448,7 @@ export default React.memo(function ReportsScreen() {
     addCategory,
     customGoals,
   } = useTracking();
+  const { userName } = useOnboarding();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -483,11 +464,13 @@ export default React.memo(function ReportsScreen() {
 
   // New Category State
   const [newCatName, setNewCatName] = useState("");
-  const [newCatIcon, setNewCatIcon] = useState("tag");
-  const [newCatColor, setNewCatColor] = useState("#FF5A00");
+  const [newCatIcon, setNewCatIcon] = useState("briefcase");
+  const [newCatColor, setNewCatColor] = useState("#FBBF24");
 
   const slideAnim = useRef(new Animated.Value(width)).current;
   const forecastAnim = useRef(new Animated.Value(width)).current;
+  const sheetSlide = useRef(new Animated.Value(150)).current;
+  const sheetBackdrop = useRef(new Animated.Value(0)).current;
 
   const filteredActivities = useMemo(() => {
     const now = new Date();
@@ -575,32 +558,42 @@ export default React.memo(function ReportsScreen() {
     }).start();
   }, [showForecast]);
 
+  const openAddSheet = () => {
+    sheetBackdrop.setValue(0);
+    sheetSlide.setValue(150);
+    setShowAddCategory(true);
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(sheetBackdrop, { toValue: 1, duration: 300, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(sheetSlide, { toValue: 0, duration: 380, easing: Easing.out(Easing.exp), useNativeDriver: true }),
+      ]).start();
+    }, 10);
+  };
+
+  const closeAddSheet = () => {
+    Animated.parallel([
+      Animated.timing(sheetBackdrop, { toValue: 0, duration: 260, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+      Animated.timing(sheetSlide, { toValue: 150, duration: 300, easing: Easing.in(Easing.exp), useNativeDriver: true }),
+    ]).start(() => setShowAddCategory(false));
+  };
+
   const handleAddCategory = () => {
     if (!newCatName) return;
     addCategory(newCatName, newCatIcon, newCatColor);
-    setShowAddCategory(false);
+    closeAddSheet();
     setNewCatName("");
   };
 
   const ICONS = [
-    "briefcase",
-    "heart",
-    "book-open",
-    "coffee",
-    "zap",
-    "target",
-    "brain",
-    "tag",
+    "briefcase", "heart", "book-open", "dumbbell", "coffee",
+    "music", "gamepad", "camera", "plane", "home",
+    "wallet", "star", "flame", "brain", "palette",
   ];
   const COLORS = [
-    "#FF5A00",
-    "#10b981",
-    "#3b82f6",
-    "#8b5cf6",
-    "#f43f5e",
-    "#f59e0b",
-    "#06b6d4",
-    "#4b5563",
+    "#FBBF24", "#f97316", "#ef4444", "#f43f5e", "#ec4899",
+    "#a855f7", "#6366f1", "#3b82f6", "#0ea5e9", "#06b6d4",
+    "#14b8a6", "#10b981", "#22c55e", "#84cc16",
+    "#78716c", "#6b7280", "#ffffff", "#e5e7eb",
   ];
 
   const forecast = useMemo(
@@ -616,8 +609,9 @@ export default React.memo(function ReportsScreen() {
         categoryStats,
         timeRange,
         categories,
+        userName,
       ),
-    [filteredActivities, categoryStats, timeRange, categories],
+    [filteredActivities, categoryStats, timeRange, categories, userName],
   );
 
   const forecastContent = useMemo(() => {
@@ -772,13 +766,13 @@ export default React.memo(function ReportsScreen() {
                   <Pressable
                     key={range}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      impact(ImpactFeedbackStyle.Light);
                       setTimeRange(range);
                     }}
                     className="px-3 py-2 rounded-[12px] items-center z-10"
                   >
                     <Text
-                      className={`text-[9px] font-black uppercase tracking-wider ${isActive ? "text-klowk-orange" : "text-gray-400 dark:text-zinc-500"}`}
+                      className={`text-[9px] font-black uppercase tracking-wider ${isActive ? "text-amber-400" : "text-gray-400 dark:text-zinc-500"}`}
                     >
                       {t(
                         range === "week"
@@ -794,17 +788,17 @@ export default React.memo(function ReportsScreen() {
             </View>
           </View>
 
-          <View className="relative items-center justify-center">
+          <View className="relative items-center justify-center -mt-8">
             <View
-              style={{ backgroundColor: "#FF5A00", height: 60, top: "45%" }}
+              style={{ backgroundColor: "#FBBF24", height: 60, top: "50%" }}
               className="absolute left-[-24] right-[-24]"
             />
 
             <View className="flex-row items-end justify-between bg-transparent">
-              <View className="w-32 h-32 items-center justify-center bg-transparent">
+              <View className="w-44 h-44 items-center justify-center bg-transparent">
                 <Image
-                  source={require("../../assets/images/time-mascot.svg")}
-                  style={{ width: 120, height: 120 }}
+                  source={require("../../assets/images/smart klowk.png")}
+                  style={{ width: 170, height: 170 }}
                   contentFit="contain"
                 />
               </View>
@@ -824,13 +818,13 @@ export default React.memo(function ReportsScreen() {
                 {filteredActivities.length > 0 && (
                   <Pressable
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      impact(ImpactFeedbackStyle.Medium);
                       setShowForecast(true);
                     }}
-                    className="mt-4 bg-klowk-orange/10 py-2.5 px-4 rounded-xl flex-row items-center justify-center border border-klowk-orange/20"
+                    className="mt-4 bg-amber-400/10 py-2.5 px-4 rounded-xl flex-row items-center justify-center border border-amber-400/20"
                   >
-                    <Sparkles size={12} color="#FF5A00" />
-                    <Text className="ml-2 text-[10px] font-black text-klowk-orange uppercase tracking-wider">
+                    <Sparkles size={12} color="#FBBF24" />
+                    <Text className="ml-2 text-[10px] font-black text-amber-400 uppercase tracking-wider">
                       {t("forecast")}
                     </Text>
                   </Pressable>
@@ -846,8 +840,8 @@ export default React.memo(function ReportsScreen() {
               className="bg-white dark:bg-zinc-900 p-6 rounded-[34px] shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden"
             >
               <View className="flex-row items-center mb-3 bg-transparent">
-                <Sparkles size={14} color="#FF5A00" />
-                <Text className="ml-2 font-black text-klowk-orange text-[10px] uppercase tracking-[3px]">
+                <Sparkles size={14} color="#FBBF24" />
+                <Text className="ml-2 font-black text-amber-400 text-[10px] uppercase tracking-[3px]">
                   Insight
                 </Text>
               </View>
@@ -893,12 +887,12 @@ export default React.memo(function ReportsScreen() {
               </Text>
               <Pressable
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  setShowAddCategory(true);
+                  impact(ImpactFeedbackStyle.Medium);
+                  openAddSheet();
                 }}
                 className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full border border-gray-100 dark:border-zinc-800"
               >
-                <Plus size={20} color="#FF5A00" strokeWidth={3} />
+                <Plus size={20} color="#FBBF24" strokeWidth={3} />
               </Pressable>
             </View>
 
@@ -913,7 +907,7 @@ export default React.memo(function ReportsScreen() {
                 <Pressable
                   key={stat.id}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    impact(ImpactFeedbackStyle.Light);
                     setSelectedCategory(stat.id);
                   }}
                   className="bg-white dark:bg-zinc-900 p-5 rounded-[32px] mb-4 shadow-sm border border-gray-50 dark:border-zinc-800 active:scale-[0.98] active:bg-gray-50 dark:active:bg-zinc-800 flex-row items-center"
@@ -1014,7 +1008,7 @@ export default React.memo(function ReportsScreen() {
                 <CategoryIcon
                   name={selectedCatData?.iconName || "tag"}
                   size={40}
-                  color={selectedCatData?.color || "#FF5A00"}
+                  color={selectedCatData?.color || "#FBBF24"}
                 />
               </View>
               <Text className="text-3xl font-black text-klowk-black dark:text-white mb-1">
@@ -1099,8 +1093,8 @@ export default React.memo(function ReportsScreen() {
               className="flex-1 px-6 bg-white dark:bg-klowk-black"
             >
               <View className="items-center py-4 mb-2">
-                <View className="bg-klowk-orange/10 w-24 h-24 rounded-[32px] items-center justify-center">
-                  <Sparkles size={40} color="#FF5A00" />
+                <View className="bg-amber-400/10 w-24 h-24 rounded-[32px] items-center justify-center">
+                  <Sparkles size={40} color="#FBBF24" />
                 </View>
                 <Text className="text-3xl font-black text-klowk-black dark:text-white mt-6 text-center">
                   {forecastContent.title}
@@ -1108,7 +1102,7 @@ export default React.memo(function ReportsScreen() {
               </View>
 
               <LinearGradient
-                colors={["#FF5A00", "#FF8A00"]}
+                colors={["#FBBF24", "#FCD34D"]}
                 style={{
                   borderRadius: 34,
                   padding: 32,
@@ -1135,13 +1129,13 @@ export default React.memo(function ReportsScreen() {
                     <Pressable
                       key={i}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        impact(ImpactFeedbackStyle.Light);
                         if (s.route) router.push(s.route);
                       }}
                       className="bg-gray-50 dark:bg-zinc-900 p-6 rounded-[32px] mb-4 flex-row items-center border border-transparent dark:border-zinc-800 active:opacity-80"
                     >
                       <View className="bg-white dark:bg-zinc-800 w-12 h-12 rounded-2xl items-center justify-center shadow-sm">
-                        <Icon size={20} color="#FF5A00" />
+                        <Icon size={20} color="#FBBF24" />
                       </View>
                       <View className="flex-1 ml-4">
                         <Text className="font-bold text-klowk-black dark:text-white text-base">
@@ -1196,115 +1190,62 @@ export default React.memo(function ReportsScreen() {
       <Modal
         visible={showAddCategory}
         transparent
-        animationType="slide"
-        onRequestClose={() => setShowAddCategory(false)}
+        animationType="none"
+        onRequestClose={closeAddSheet}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <Pressable
-            className="flex-1"
-            onPress={() => setShowAddCategory(false)}
-          />
-          <View className="bg-white dark:bg-klowk-black rounded-t-[40px] p-8 pb-12 shadow-2xl">
-            <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-2xl font-black text-klowk-black dark:text-white">
-                {t("new_category")}
-              </Text>
-              <Pressable
-                onPress={() => setShowAddCategory(false)}
-                className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full"
-              >
-                <X size={20} color={isDark ? "#fff" : "#121212"} />
-              </Pressable>
-            </View>
-
-            <View className="mb-8">
-              <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
-                {t("category_name")}
-              </Text>
-              <View className="bg-gray-50 dark:bg-zinc-900 rounded-[20px] border border-gray-100 dark:border-zinc-800">
-                <TextInput
-                  value={newCatName}
-                  onChangeText={setNewCatName}
-                  placeholder="e.g. Learning, Workout..."
-                  placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
-                  autoFocus
-                  className="p-5 text-base font-bold text-klowk-black dark:text-white"
-                />
-              </View>
-            </View>
-
-            <View className="mb-8">
-              <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
-                {t("select_icon")}
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="flex-row"
-              >
-                {ICONS.map((icon) => (
-                  <Pressable
-                    key={icon}
-                    onPress={() => {
-                      setNewCatIcon(icon);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    className={`w-12 h-12 items-center justify-center rounded-2xl mr-3 ${newCatIcon === icon ? "bg-klowk-orange" : "bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800"}`}
-                  >
-                    <CategoryIcon
-                      name={icon}
-                      size={20}
-                      color={
-                        newCatIcon === icon
-                          ? "#fff"
-                          : isDark
-                            ? "#52525b"
-                            : "#9ca3af"
-                      }
-                    />
+        <View style={{ flex: 1 }}>
+          <Animated.View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", opacity: sheetBackdrop }} />
+          <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={closeAddSheet} />
+          <Animated.View style={{ position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: screenHeight * 0.9, transform: [{ translateY: sheetSlide }] }}>
+            <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: isDark ? "#121212" : "#fff", borderTopLeftRadius: 40, borderTopRightRadius: 40, flex: 1 }}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 32, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+                  <Text style={{ fontSize: 22, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>New Category</Text>
+                  <Pressable onPress={closeAddSheet} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "#27272a" : "#f3f4f6", alignItems: "center", justifyContent: "center" }}>
+                    <X size={18} color={isDark ? "#fff" : "#121212"} />
                   </Pressable>
-                ))}
+                </View>
+
+                <Text style={{ fontSize: 10, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Category Name</Text>
+                <View style={{ backgroundColor: isDark ? "#18181b" : "#f9fafb", borderRadius: 20, borderWidth: 1, borderColor: isDark ? "#27272a" : "#f3f4f6", marginBottom: 24 }}>
+                  <TextInput
+                    value={newCatName}
+                    onChangeText={setNewCatName}
+                    placeholder="e.g. Learning, Workout..."
+                    placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
+                    autoFocus
+                    style={{ padding: 18, fontSize: 15, fontWeight: "700", color: isDark ? "#fff" : "#121212" }}
+                  />
+                </View>
+
+                <Text style={{ fontSize: 10, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Icon</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    {ICONS.map((icon) => (
+                      <Pressable key={icon} onPress={() => { setNewCatIcon(icon); impact(ImpactFeedbackStyle.Light); }} style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: newCatIcon === icon ? "#FBBF24" : isDark ? "#18181b" : "#f9fafb", borderWidth: 1, borderColor: newCatIcon === icon ? "#FBBF24" : isDark ? "#27272a" : "#f3f4f6" }}>
+                        <CategoryIcon name={icon} size={20} color={newCatIcon === icon ? "#fff" : isDark ? "#52525b" : "#9ca3af"} />
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                <Text style={{ fontSize: 10, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Color</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 32 }}>
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    {COLORS.map((color) => (
+                      <Pressable key={color} onPress={() => { setNewCatColor(color); impact(ImpactFeedbackStyle.Light); }} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: color, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: newCatColor === color ? isDark ? "#fff" : "#121212" : "transparent" }}>
+                        {newCatColor === color && <Check size={16} color="#fff" />}
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                <Pressable onPress={handleAddCategory} disabled={!newCatName.trim()} style={{ paddingVertical: 18, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: !newCatName.trim() ? isDark ? "#27272a" : "#f3f4f6" : "#FBBF24" }}>
+                  <Text style={{ fontSize: 15, fontWeight: "900", color: !newCatName.trim() ? isDark ? "#52525b" : "#9ca3af" : "#fff", textTransform: "uppercase", letterSpacing: 1 }}>Create Category</Text>
+                </Pressable>
               </ScrollView>
-            </View>
-
-            <View className="mb-10">
-              <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
-                {t("select_color")}
-              </Text>
-              <View className="flex-row flex-wrap gap-3">
-                {COLORS.map((color) => (
-                  <Pressable
-                    key={color}
-                    onPress={() => {
-                      setNewCatColor(color);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    style={{ backgroundColor: color }}
-                    className={`w-10 h-10 rounded-full items-center justify-center border-4 ${newCatColor === color ? "border-gray-200 dark:border-zinc-700" : "border-transparent"}`}
-                  >
-                    {newCatColor === color && <Check size={16} color="#fff" />}
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <Pressable
-              onPress={handleAddCategory}
-              disabled={!newCatName}
-              className={`py-5 rounded-[24px] flex-row items-center justify-center shadow-lg ${!newCatName ? "bg-gray-100 dark:bg-zinc-900" : "bg-klowk-black dark:bg-white"}`}
-            >
-              <Plus
-                size={20}
-                color={!newCatName ? "#9ca3af" : isDark ? "#121212" : "#fff"}
-                className="mr-3"
-              />
-              <Text
-                className={`font-black uppercase tracking-wider ${!newCatName ? "text-gray-400" : isDark ? "text-klowk-black" : "text-white"}`}
-              >
-                {t("create_category")}
-              </Text>
             </Pressable>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>

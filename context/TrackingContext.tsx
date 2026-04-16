@@ -107,7 +107,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       color
     };
     setCategories(prev => [...prev, newCat]);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    notification(NotificationFeedbackType.Success);
   };
 
   const refreshActivities = async () => {

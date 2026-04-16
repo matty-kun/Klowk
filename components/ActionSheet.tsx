@@ -1,19 +1,11 @@
 import { useLanguage } from "@/context/LanguageContext";
-import * as Haptics from "expo-haptics";
+import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
+import { impact, notification } from "@/utils/haptics";
 import { ClipboardEdit, MessageCircle, Timer } from "lucide-react-native";
+import { Image } from "expo-image";
 import { useColorScheme } from "nativewind";
-import React, { useEffect, useRef } from "react";
-import {
-    Animated,
-    Dimensions,
-    Easing,
-    Modal,
-    Pressable,
-    Text,
-    View,
-} from "react-native";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Easing, Modal, Pressable, Text, View } from "react-native";
 
 type ActionWidgetProps = {
   visible: boolean;
@@ -35,9 +27,19 @@ export default function ActionWidget({
   const { t } = useLanguage();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(visible);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
+      setMounted(true);
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -55,40 +57,44 @@ export default function ActionWidget({
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 0,
-          duration: 120,
+          duration: 150,
           easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 100,
+          duration: 120,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        if (isMounted.current) setMounted(false);
+      });
     }
   }, [visible]);
 
   const handleStartLive = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact(ImpactFeedbackStyle.Light);
     onClose();
     onStartLiveSession();
   };
 
   const handleLogManually = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact(ImpactFeedbackStyle.Light);
     onClose();
     onLogManually();
   };
 
   const handleTalkToKala = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact(ImpactFeedbackStyle.Light);
     onClose();
     onTalkToKala();
   };
 
+  if (!mounted) return null;
+
   return (
     <Modal
-      visible={visible}
+      visible={mounted}
       transparent
       animationType="none"
       onRequestClose={onClose}
@@ -119,14 +125,14 @@ export default function ActionWidget({
           }}
         >
           <View className="bg-white dark:bg-zinc-900 rounded-[28px] p-2.5 border border-black/5 dark:border-white/5 shadow-2xl min-w-[240px]">
-            {/* Start Live Session */}
+            {/* Start Flow State */}
             <Pressable onPress={handleStartLive}>
               {({ pressed }) => (
                 <View
                   className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-orange-50 dark:bg-orange-950/20" : ""}`}
                 >
                   <View className="w-9 h-9 bg-orange-100 dark:bg-orange-500/20 rounded-xl items-center justify-center mr-4">
-                    <Timer size={20} color="#FF5A00" strokeWidth={2.5} />
+                    <Timer size={20} color="#FBBF24" strokeWidth={2.5} />
                   </View>
                   <Text className="text-base font-black text-klowk-black dark:text-white">
                     {t("start_live_session")}
@@ -138,7 +144,7 @@ export default function ActionWidget({
             {/* Divider */}
             <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 mx-3 my-1" />
 
-            {/* Talk to Klowk */}
+            {/* Talk to Flow */}
             <Pressable onPress={handleTalkToKala}>
               {({ pressed }) => (
                 <View

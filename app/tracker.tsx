@@ -1,50 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  Pressable, 
-  StyleSheet, 
+import { CategoryIcon } from "@/components/CategoryIcon";
+import { useTracking } from "@/context/TrackingContext";
+import { sendLocalNotification } from "@/utils/notifications";
+import { Audio } from "expo-av";
+import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
+import { impact, notification } from "@/utils/haptics";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { Minimize2, Pause, Play, Square } from "lucide-react-native";
+import { View as MotiView } from "moti";
+import { useColorScheme } from "nativewind";
+import React, { useEffect, useRef, useState } from "react";
+import {
   Dimensions,
-  Platform
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  Play, 
-  Pause, 
-  Minimize2,
-  Square
-} from 'lucide-react-native';
-import { Image } from 'expo-image';
-import * as Haptics from 'expo-haptics';
-import { useTracking } from '@/context/TrackingContext';
-import { sendLocalNotification } from '@/utils/notifications';
-import { formatLiveDuration } from '@/utils/time';
-import Svg, { Circle } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
-import { View as MotiView } from 'moti';
-import { useColorScheme } from 'nativewind';
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Circle } from "react-native-svg";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 const CIRCLE_SIZE = width * 0.8;
 
 export default function TrackerPage() {
   const router = useRouter();
-  const { currentActivity, stopTracker, setIsMinimized } = useTracking();
+  const { currentActivity, stopTracker, setIsMinimized, categories } =
+    useTracking();
   const [isPaused, setIsPaused] = useState(false);
   const [accumulatedSecs, setAccumulatedSecs] = useState(0);
   const hasAlerted = useRef(false);
 
-  const radius = (CIRCLE_SIZE / 2) - 10;
+  const radius = CIRCLE_SIZE / 2 - 10;
   const circumference = 2 * Math.PI * radius;
   const progressShared = useSharedValue(1);
 
   // Initialize accumulatedSecs once
   useEffect(() => {
     if (currentActivity) {
-      const initialElapsed = Math.floor((Date.now() - currentActivity.start_time) / 1000);
+      const initialElapsed = Math.floor(
+        (Date.now() - currentActivity.start_time) / 1000,
+      );
       setAccumulatedSecs(initialElapsed);
     }
   }, []);
@@ -52,21 +57,36 @@ export default function TrackerPage() {
   // Sync with main navigation
   useEffect(() => {
     if (!currentActivity) {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     }
   }, [currentActivity]);
 
   const handleMinimize = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact(ImpactFeedbackStyle.Light);
     setIsMinimized(true);
-    router.replace('/(tabs)');
+    router.replace("/(tabs)");
+  };
+
+  const handleStop = () => {
+    notification(NotificationFeedbackType.Warning);
+    // Execute async operation without waiting
+    stopTracker().catch((error) => {
+      console.error("Error stopping tracker:", error);
+    });
+    // Navigate immediately without awaiting
+    router.replace("/(tabs)");
+  };
+
+  const togglePause = () => {
+    impact(ImpactFeedbackStyle.Medium);
+    setIsPaused(!isPaused);
   };
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (currentActivity && !isPaused) {
       interval = setInterval(() => {
-        setAccumulatedSecs(prev => prev + 1);
+        setAccumulatedSecs((prev) => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -78,10 +98,24 @@ export default function TrackerPage() {
     if (!targetSecs || hasAlerted.current || isPaused) return;
     if (accumulatedSecs >= targetSecs) {
       hasAlerted.current = true;
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      notification(NotificationFeedbackType.Success);
+
+      // Play sound
+      (async () => {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            require("../assets/sounds/timer-complete.mp3"),
+            { shouldPlay: true },
+          );
+          await sound.playAsync();
+        } catch (error) {
+          console.log("Could not play sound:", error);
+        }
+      })();
+
       sendLocalNotification(
         "Time's up! ⏱",
-        `You completed "${currentActivity?.title}". Great work!`
+        `You completed "${currentActivity?.title}". Great work!`,
       );
     }
   }, [accumulatedSecs]);
@@ -90,79 +124,95 @@ export default function TrackerPage() {
   useEffect(() => {
     if (currentActivity?.target_duration) {
       const targetSecs = currentActivity.target_duration;
-      const p = Math.max(0, 1 - (accumulatedSecs / targetSecs));
-      progressShared.value = withTiming(p, { duration: 1000, easing: Easing.linear });
+      const p = Math.max(0, 1 - accumulatedSecs / targetSecs);
+      progressShared.value = withTiming(p, {
+        duration: 1000,
+        easing: Easing.linear,
+      });
     } else {
       const secInMin = (accumulatedSecs % 60) / 60;
-      progressShared.value = withTiming(1 - secInMin, { duration: 1000, easing: Easing.linear });
+      progressShared.value = withTiming(1 - secInMin, {
+        duration: 1000,
+        easing: Easing.linear,
+      });
     }
   }, [accumulatedSecs, currentActivity]);
 
   const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: circumference * (1 - progressShared.value)
+    strokeDashoffset: circumference * (1 - progressShared.value),
   }));
 
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
 
   if (!currentActivity) return null;
-  
+
   const targetSecs = currentActivity.target_duration || 0;
   const isCountdown = targetSecs > 0;
-  
-  let displayTime = '';
+  const currentCategory = categories.find(
+    (c) => c.id === currentActivity.category,
+  );
+
+  let displayTime = "";
   if (isCountdown) {
     const remaining = Math.max(0, targetSecs - accumulatedSecs);
     const m = Math.floor(remaining / 60);
     const s = remaining % 60;
     const h = Math.floor(m / 60);
-    displayTime = h > 0 
-      ? `${h}:${(m % 60).toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-      : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    displayTime =
+      h > 0
+        ? `${h}:${(m % 60).toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+        : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   } else {
     // Custom formatting for count-up
     const h = Math.floor(accumulatedSecs / 3600);
     const m = Math.floor((accumulatedSecs % 3600) / 60);
     const s = accumulatedSecs % 60;
-    displayTime = h > 0 
-      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-      : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    displayTime =
+      h > 0
+        ? `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+        : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
 
-  const handleStop = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    await stopTracker();
-    router.replace('/(tabs)');
-  };
-
-  const togglePause = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsPaused(!isPaused);
-  };
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: isDark ? "#121212" : "#fff" },
+      ]}
+    >
       <View style={styles.header}>
         <Pressable onPress={handleMinimize} style={styles.minimizeBtn}>
-          <Minimize2 size={24} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'} />
+          <Minimize2
+            size={24}
+            color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"}
+          />
         </Pressable>
       </View>
 
-      <MotiView 
+      <MotiView
         animate={{ opacity: 1, scale: 1, translateY: 0 }}
         style={styles.content}
       >
         <View style={styles.mascotContainer}>
-          <Image source={require('../assets/images/idle-mascot.svg')} style={styles.mascot} contentFit="contain" />
+          <Image
+            source={require("../assets/images/focus klowk.png")}
+            style={styles.mascot}
+            contentFit="contain"
+          />
         </View>
 
         <View style={styles.circleContainer}>
-          <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE} viewBox={`0 0 ${CIRCLE_SIZE} ${CIRCLE_SIZE}`}>
+          <Svg
+            width={CIRCLE_SIZE}
+            height={CIRCLE_SIZE}
+            viewBox={`0 0 ${CIRCLE_SIZE} ${CIRCLE_SIZE}`}
+          >
             <Circle
               cx={CIRCLE_SIZE / 2}
               cy={CIRCLE_SIZE / 2}
               r={radius}
-              stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
+              stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
               strokeWidth="10"
               fill="transparent"
             />
@@ -170,7 +220,7 @@ export default function TrackerPage() {
               cx={CIRCLE_SIZE / 2}
               cy={CIRCLE_SIZE / 2}
               r={radius}
-              stroke="#FF5A00"
+              stroke="#FBBF24"
               strokeWidth="10"
               fill="transparent"
               strokeDasharray={circumference}
@@ -181,26 +231,70 @@ export default function TrackerPage() {
               origin={`${CIRCLE_SIZE / 2}, ${CIRCLE_SIZE / 2}`}
             />
           </Svg>
-          
+
           <View style={styles.timeOverlay}>
-            <Text style={[styles.timerText, { color: isDark ? '#fff' : '#121212' }]}>{displayTime}</Text>
+            <Text
+              style={[styles.timerText, { color: isDark ? "#fff" : "#121212" }]}
+            >
+              {displayTime}
+            </Text>
             <Text style={styles.titleText}>{currentActivity.title}</Text>
+            {currentCategory && (
+              <View
+                style={[
+                  styles.categoryCapsule,
+                  { backgroundColor: `${currentCategory.color}20` },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.categoryIconContainer,
+                    { backgroundColor: currentCategory.color },
+                  ]}
+                >
+                  <CategoryIcon
+                    name={currentCategory.iconName}
+                    size={12}
+                    color="#fff"
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.categoryText,
+                    { color: currentCategory.color },
+                  ]}
+                >
+                  {currentCategory.label}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
         <View style={styles.controls}>
-          <Pressable 
+          <Pressable
             onPress={togglePause}
-            style={[styles.controlBtn, { backgroundColor: '#FF5A00' }]}
+            style={[styles.controlBtn, { backgroundColor: "#FBBF24" }]}
           >
-            {isPaused ? <Play size={24} color="#121212" fill="#121212" /> : <Pause size={24} color="#121212" fill="#121212" />}
+            {isPaused ? (
+              <Play size={24} color="#121212" fill="#121212" />
+            ) : (
+              <Pause size={24} color="#121212" fill="#121212" />
+            )}
           </Pressable>
-          
-          <Pressable 
+
+          <Pressable
             onPress={handleStop}
-            style={[styles.controlBtn, { backgroundColor: isDark ? '#fff' : '#121212', marginLeft: 20 }]}
+            style={[
+              styles.controlBtn,
+              { backgroundColor: isDark ? "#fff" : "#121212", marginLeft: 20 },
+            ]}
           >
-            <Square size={20} color={isDark ? '#121212' : '#fff'} fill={isDark ? '#121212' : '#fff'} />
+            <Square
+              size={20}
+              color={isDark ? "#121212" : "#fff"}
+              fill={isDark ? "#121212" : "#fff"}
+            />
           </Pressable>
         </View>
       </MotiView>
@@ -215,15 +309,15 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
     paddingTop: 12,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   minimizeBtn: {
     padding: 10,
   },
   content: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingBottom: 60,
   },
   mascotContainer: {
@@ -237,41 +331,66 @@ const styles = StyleSheet.create({
   circleContainer: {
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   timeOverlay: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
   },
   timerText: {
     fontSize: 54,
-    fontWeight: '300',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontWeight: "300",
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   titleText: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#FF5A00',
+    fontWeight: "800",
+    color: "#FBBF24",
     marginTop: 12,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1.5,
   },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 8,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    textAlign: "center",
+  },
+  categoryCapsule: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+    gap: 6,
+  },
+  categoryIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   controls: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginTop: 60,
-    alignItems: 'center',
+    alignItems: "center",
   },
   controlBtn: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
     elevation: 4,
-  }
+  },
 });

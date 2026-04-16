@@ -1,27 +1,35 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, PanResponder, Dimensions, Pressable, Platform } from 'react-native';
+import { useTracking } from "@/context/TrackingContext";
+import { sendLocalNotification } from "@/utils/notifications";
+import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
+import { impact, notification } from "@/utils/haptics";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { useColorScheme } from "nativewind";
+import React, { useEffect, useRef } from "react";
+import {
+  Dimensions,
+  PanResponder,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import Animated, {
-  useSharedValue,
+  runOnJS,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
-import { useTracking } from '@/context/TrackingContext';
-import { Image } from 'expo-image';
-import { useColorScheme } from 'nativewind';
-import * as Haptics from 'expo-haptics';
-import { sendLocalNotification } from '@/utils/notifications';
+} from "react-native-reanimated";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BUBBLE_WIDTH = 120;
 const BUBBLE_HEIGHT = 48;
 
 export default function FloatingTimer() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
   const { currentActivity, isMinimized, setIsMinimized } = useTracking();
   const [elapsed, setElapsed] = React.useState(0);
   const hasAlerted = useRef(false);
@@ -59,15 +67,17 @@ export default function FloatingTimer() {
     if (currentActivity) {
       setElapsed(Math.floor((Date.now() - currentActivity.start_time) / 1000));
       interval = setInterval(() => {
-        const secs = Math.floor((Date.now() - currentActivity.start_time) / 1000);
+        const secs = Math.floor(
+          (Date.now() - currentActivity.start_time) / 1000,
+        );
         setElapsed(secs);
         const target = currentActivity.target_duration;
         if (target && !hasAlerted.current && secs >= target) {
           hasAlerted.current = true;
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          notification(NotificationFeedbackType.Success);
           sendLocalNotification(
             "Time's up! ⏱",
-            `You completed "${currentActivity.title}". Great work!`
+            `You completed "${currentActivity.title}". Great work!`,
           );
         }
       }, 1000);
@@ -78,7 +88,8 @@ export default function FloatingTimer() {
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4,
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4,
       onPanResponderGrant: () => {
         isDragging.current = false;
       },
@@ -102,7 +113,7 @@ export default function FloatingTimer() {
           runOnJS(onPressRef.current)();
         }
       },
-    })
+    }),
   ).current;
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -120,71 +131,94 @@ export default function FloatingTimer() {
   const s = elapsed % 60;
   const h = Math.floor(m / 60);
 
-  let timeStr = '';
+  let timeStr = "";
   const targetSecs = currentActivity.target_duration || 0;
   if (targetSecs > 0) {
     const remaining = Math.max(0, targetSecs - elapsed);
     const rm = Math.floor(remaining / 60);
     const rs = remaining % 60;
     const rh = Math.floor(rm / 60);
-    timeStr = rh > 0
-      ? `${rh}:${(rm % 60).toString().padStart(2, '0')}:${rs.toString().padStart(2, '0')}`
-      : `${rm.toString().padStart(2, '0')}:${rs.toString().padStart(2, '0')}`;
+    timeStr =
+      rh > 0
+        ? `${rh}:${(rm % 60).toString().padStart(2, "0")}:${rs.toString().padStart(2, "0")}`
+        : `${rm.toString().padStart(2, "0")}:${rs.toString().padStart(2, "0")}`;
   } else {
-    timeStr = h > 0
-      ? `${h}:${(m % 60).toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-      : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    timeStr =
+      h > 0
+        ? `${h}:${(m % 60).toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+        : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact(ImpactFeedbackStyle.Medium);
     setIsMinimized(false);
-    router.push('/tracker');
+    router.push("/tracker");
   };
   onPressRef.current = handlePress;
 
   return (
     <Animated.View
       {...panResponder.panHandlers}
-      style={[{
-        position: 'absolute',
-        zIndex: 9999,
-        width: BUBBLE_WIDTH,
-        height: BUBBLE_HEIGHT,
-      }, animatedStyle]}
+      style={[
+        {
+          position: "absolute",
+          zIndex: 9999,
+          width: BUBBLE_WIDTH,
+          height: BUBBLE_HEIGHT,
+        },
+        animatedStyle,
+      ]}
     >
       <Pressable
-        onPress={undefined}
+        onPress={() => {
+          impact(ImpactFeedbackStyle.Medium);
+          setIsMinimized(false);
+          router.push("/tracker");
+        }}
         style={{
-          width: '100%',
-          height: '100%',
+          width: "100%",
+          height: "100%",
           borderRadius: 24,
-          backgroundColor: isDark ? '#1C1C1E' : '#fff',
+          backgroundColor: isDark ? "#1C1C1E" : "#fff",
           borderWidth: 1.5,
-          borderColor: '#FF5A00',
-          shadowColor: '#FF5A00',
+          borderColor: "#FBBF24",
+          shadowColor: "#FBBF24",
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.15,
           shadowRadius: 15,
           elevation: 10,
           paddingHorizontal: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: "row",
+          alignItems: "center",
         }}
       >
         <Image
-          source={require('../assets/images/idle-mascot.svg')}
+          source={require("../assets/images/focus klowk.png")}
           style={{ width: 28, height: 28, marginRight: 8 }}
           contentFit="contain"
         />
         <View style={{ flex: 1 }}>
           <Text
             numberOfLines={1}
-            style={{ fontSize: 8, fontWeight: '900', color: isDark ? '#71717a' : '#9ca3af', textTransform: 'uppercase', letterSpacing: -0.5 }}
+            style={{
+              fontSize: 8,
+              fontWeight: "900",
+              color: isDark ? "#71717a" : "#9ca3af",
+              textTransform: "uppercase",
+              letterSpacing: -0.5,
+            }}
           >
             {currentActivity.title}
           </Text>
-          <Text style={{ color: isDark ? '#fff' : '#121212', fontWeight: '900', fontSize: 14, lineHeight: 18, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+          <Text
+            style={{
+              color: isDark ? "#fff" : "#121212",
+              fontWeight: "900",
+              fontSize: 14,
+              lineHeight: 18,
+              fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+            }}
+          >
             {timeStr}
           </Text>
         </View>

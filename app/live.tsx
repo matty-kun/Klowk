@@ -1,10 +1,14 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
+import CategoryPillScroller from "@/components/CategoryPillScroller";
+import ScreenHeader from "@/components/ScreenHeader";
+import TimeInputTrio from "@/components/TimeInputTrio";
 import { useLanguage } from "@/context/LanguageContext";
 import { Category, useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Check, Clock, Tag, Target, Zap } from "lucide-react-native";
+import { Check, Clock, Tag, Target, Zap } from "lucide-react-native";
+
 import { useColorScheme } from "nativewind";
 import React, { useState } from "react";
 import {
@@ -76,17 +80,7 @@ export default function LiveSessionPage() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <View className="flex-row items-center mb-8">
-            <Pressable
-              onPress={() => router.back()}
-              className="w-12 h-12 items-center justify-center rounded-[16px] bg-gray-50 dark:bg-zinc-900 mr-4"
-            >
-              <ArrowLeft size={24} color={isDark ? "#fff" : "#121212"} />
-            </Pressable>
-            <Text className="text-[28px] font-black text-klowk-black dark:text-white">
-              {t("live_session")}
-            </Text>
-          </View>
+          <ScreenHeader title={t("live_session")} onBack={() => router.back()} />
 
           {/* Title Input */}
           <View className="mb-8">
@@ -118,47 +112,10 @@ export default function LiveSessionPage() {
                 {t("duration")}
               </Text>
             </View>
-            <View className="flex-row gap-2">
-              <View className="flex-1">
-                <TextInput
-                  value={hours}
-                  onChangeText={setHours}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
-                  className="bg-gray-50 dark:bg-zinc-900 py-4.5 rounded-[20px] text-base font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
-                />
-                <Text className="text-center mt-2 text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">
-                  Hrs
-                </Text>
-              </View>
-              <View className="flex-1">
-                <TextInput
-                  value={minutes}
-                  onChangeText={setMinutes}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
-                  className="bg-gray-50 dark:bg-zinc-900 py-4.5 rounded-[20px] text-base font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
-                />
-                <Text className="text-center mt-2 text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">
-                  Min
-                </Text>
-              </View>
-              <View className="flex-1">
-                <TextInput
-                  value={seconds}
-                  onChangeText={setSeconds}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
-                  className="bg-gray-50 dark:bg-zinc-900 py-4.5 rounded-[20px] text-base font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
-                />
-                <Text className="text-center mt-2 text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">
-                  Sec
-                </Text>
-              </View>
-            </View>
+            <TimeInputTrio
+              hours={hours} minutes={minutes} seconds={seconds}
+              onChangeHours={setHours} onChangeMinutes={setMinutes} onChangeSeconds={setSeconds}
+            />
           </View>
 
           {/* Goals Selection */}
@@ -254,35 +211,12 @@ export default function LiveSessionPage() {
                 {t("category_label")}
               </Text>
             </View>
-            <View className="flex-row flex-wrap gap-2.5">
-              {categories.map((cat: Category) => {
-                const isSelected = category === cat.id;
-                return (
-                  <Pressable
-                    key={cat.id}
-                    onPress={() => {
-                      setCategory(cat.id);
-                      impact(ImpactFeedbackStyle.Light);
-                    }}
-                    className={`px-4 py-2.5 rounded-xl flex-row items-center border ${isSelected ? "border-transparent" : "border-gray-50 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900"}`}
-                    style={{
-                      backgroundColor: isSelected ? cat.color : undefined,
-                    }}
-                  >
-                    <CategoryIcon
-                      name={cat.iconName}
-                      size={14}
-                      color={isSelected ? "#fff" : cat.color}
-                    />
-                    <Text
-                      className={`ml-2 text-xs font-bold ${isSelected ? "text-white" : "text-gray-500 dark:text-gray-400"}`}
-                    >
-                      {t(cat.id as any) || cat.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <CategoryPillScroller
+              categories={categories}
+              selectedId={category}
+              onSelect={setCategory}
+              layout="wrap"
+            />
           </View>
         </ScrollView>
 

@@ -1,4 +1,9 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
+import CategoryPillScroller from "@/components/CategoryPillScroller";
+import { computeStreak } from "@/utils/streak";
+import DatePickerModal from "@/components/DatePickerModal";
+import EmptyState from "@/components/EmptyState";
+import GoalCard from "@/components/GoalCard";
+import SectionHeader from "@/components/SectionHeader";
 import LogActionSheet from "@/components/LogActionSheet";
 import { useLanguage } from "@/context/LanguageContext";
 import {
@@ -11,11 +16,8 @@ import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import {
   Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Flame,
-  MoreHorizontal,
   Plus,
   Target,
   X
@@ -71,8 +73,6 @@ export default function GoalsScreen() {
   const [activeDateType, setActiveDateType] = useState<"start" | "end" | null>(
     null,
   );
-  const [viewedMonth, setViewedMonth] = useState(new Date());
-
   // Action Sheet State
   const [selectedActionGoalId, setSelectedActionGoalId] = useState<
     string | null
@@ -199,39 +199,21 @@ export default function GoalsScreen() {
     closeSheet();
   };
 
-  // Gamification Streak (Placeholder based on general activity)
-  const currentStreak = useMemo(() => {
-    if (activities.length === 0) return 0;
-    return 1; // Simplistic active streak
-  }, [activities]);
+  const currentStreak = useMemo(() => computeStreak(activities), [activities]);
 
-  // Calendar Helpers
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const now = Date.now();
+  const activeGoals = useMemo(
+    () => customGoals.filter((g) => g.endDate >= now),
+    [customGoals],
+  );
+  const pastGoals = useMemo(
+    () => customGoals.filter((g) => g.endDate < now).sort((a, b) => b.endDate - a.endDate),
+    [customGoals],
+  );
 
-    const daysArr = [];
-    for (let i = 0; i < firstDay; i++) daysArr.push(null);
-    for (let i = 1; i <= daysInMonth; i++)
-      daysArr.push(new Date(year, month, i));
-    return daysArr;
-  };
-  const calendarDays = getDaysInMonth(viewedMonth);
-  const calendarMonthName = viewedMonth.toLocaleString("default", {
-    month: "long",
-  });
-  const calendarYearName = viewedMonth.getFullYear();
-  const changeMonth = (offset: number) => {
-    const newMonth = new Date(
-      viewedMonth.setMonth(viewedMonth.getMonth() + offset),
-    );
-    setViewedMonth(new Date(newMonth));
-  };
 
   // Render Empty State
-  if (customGoals.length === 0) {
+  if (customGoals.length === 0 && pastGoals.length === 0) {
     return (
       <SafeAreaView
         className="flex-1 bg-white dark:bg-[#121212]"
@@ -243,29 +225,13 @@ export default function GoalsScreen() {
           </Text>
         </View>
 
-        <View className="flex-1 items-center justify-center px-10 pb-20">
-          <View className="w-24 h-24 bg-teal-500/10 rounded-full items-center justify-center mb-8">
-            <Target size={48} color="#14b8a6" strokeWidth={1.5} />
-          </View>
-          <Text className="text-2xl font-black text-[#121212] dark:text-white mb-3 text-center">
-            {t("no_goals_yet")}
-          </Text>
-          <Text className="text-[14px] font-bold text-gray-400 dark:text-zinc-500 text-center mb-10 leading-6">
-            {t("no_goals_desc")}
-          </Text>
-
-          <Pressable
-            onPress={() => {
-              impact(ImpactFeedbackStyle.Medium);
-              openSheet();
-            }}
-            className="w-full bg-[#FBBF24] py-4 rounded-[20px] items-center justify-center shadow-lg shadow-[#FBBF24]/30"
-          >
-            <Text className="text-white font-black text-[15px] tracking-wider uppercase">
-              {t("create_new_goal")}
-            </Text>
-          </Pressable>
-        </View>
+        <EmptyState
+          icon={<Target size={48} color="#14b8a6" strokeWidth={1.5} />}
+          iconBg="rgba(20,184,166,0.1)"
+          title={t("no_goals_yet")}
+          description={t("no_goals_desc")}
+          action={{ label: t("create_new_goal"), onPress: openSheet }}
+        />
 
         {renderAddGoalModal()}
       </SafeAreaView>
@@ -293,9 +259,7 @@ export default function GoalsScreen() {
 
         {/* The Streak */}
         <View className="mb-6">
-          <Text className="text-[10px] font-black tracking-widest uppercase text-gray-400 dark:text-zinc-500 mb-3 ml-1">
-            {t("activity")}
-          </Text>
+          <SectionHeader label={t("activity")} />
           <MotiView
             from={{ opacity: 0, translateY: 10 }}
             animate={{ opacity: 1, translateY: 0 }}
@@ -318,108 +282,84 @@ export default function GoalsScreen() {
           </MotiView>
         </View>
 
-        {/* Custom Goals List */}
-        <Text className="text-[10px] font-black tracking-widest uppercase text-gray-400 dark:text-zinc-500 mb-3 ml-1">
-          {t("active_objectives")}
-        </Text>
-        <View className="gap-4">
-          {customGoals.map((goal, idx) => {
-            const catData = categories.find(
-              (c: Category) => c.id === goal.categoryId,
-            );
-            if (!catData) return null;
+        {/* Active Goals List */}
+        {activeGoals.length > 0 && (
+          <>
+            <SectionHeader label={t("active_objectives")} />
+            <View className="gap-4">
+              {activeGoals.map((goal, idx) => {
+                const catData = categories.find((c: Category) => c.id === goal.categoryId);
+                if (!catData) return null;
+                const currentMins = activities
+                  .filter((a: Activity) =>
+                    a.category === goal.categoryId &&
+                    a.start_time >= goal.startDate &&
+                    a.start_time <= goal.endDate,
+                  )
+                  .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+                return (
+                  <GoalCard
+                    key={goal.id}
+                    goal={goal}
+                    catData={catData}
+                    currentMins={currentMins}
+                    index={idx}
+                    onPressMore={() => setSelectedActionGoalId(goal.id)}
+                  />
+                );
+              })}
+            </View>
+          </>
+        )}
 
-            // Calculate progress for this goal
-            const currentMins = activities
-              .filter(
-                (a: Activity) =>
-                  a.category === goal.categoryId &&
-                  a.start_time >= goal.startDate &&
-                  a.start_time <= goal.endDate,
-              )
-              .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
-
-            const pct =
-              Math.min(100, (currentMins / goal.targetMins) * 100) || 0;
-            const isCompleted = pct >= 100;
-
-            const daysRemaining = Math.max(
-              0,
-              Math.ceil((goal.endDate - Date.now()) / (1000 * 60 * 60 * 24)),
-            );
-
-            return (
-              <MotiView
-                key={goal.id}
-                from={{ opacity: 0, translateY: 10 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ delay: 200 + idx * 50 }}
-                className="bg-white dark:bg-teal-950/30 rounded-[32px] border border-teal-100 dark:border-teal-900/50 shadow-sm p-5"
-              >
-                <View className="flex-row items-center justify-between mb-4">
-                  <View className="flex-row items-center flex-1 pr-4">
+        {/* Past Goals */}
+        {pastGoals.length > 0 && (
+          <View className="mt-8">
+            <SectionHeader label="Past Goals" />
+            <View className="gap-3">
+              {pastGoals.map((goal) => {
+                const catData = categories.find((c: Category) => c.id === goal.categoryId);
+                const loggedMins = activities
+                  .filter((a: Activity) =>
+                    a.category === goal.categoryId &&
+                    a.start_time >= goal.startDate &&
+                    a.start_time <= goal.endDate,
+                  )
+                  .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+                const pct = Math.min(100, Math.round((loggedMins / goal.targetMins) * 100));
+                const achieved = loggedMins >= goal.targetMins;
+                const loggedHrs = (loggedMins / 60).toFixed(1);
+                const targetHrsVal = (goal.targetMins / 60).toFixed(1);
+                return (
+                  <View
+                    key={goal.id}
+                    className="bg-gray-50 dark:bg-zinc-900 rounded-[24px] p-4 flex-row items-center border border-gray-100 dark:border-zinc-800"
+                  >
                     <View
-                      style={{ backgroundColor: `${catData.color}15` }}
-                      className="w-12 h-12 rounded-[16px] items-center justify-center mr-4"
+                      style={{ backgroundColor: `${catData?.color || "#999"}20` }}
+                      className="w-10 h-10 rounded-[12px] items-center justify-center mr-3"
                     >
-                      <CategoryIcon
-                        name={catData.iconName}
-                        size={22}
-                        color={catData.color}
-                      />
+                      <Target size={18} color={catData?.color || "#999"} />
                     </View>
                     <View className="flex-1">
-                      <Text
-                        className="text-lg font-black text-[#121212] dark:text-white leading-tight mb-1"
-                        numberOfLines={1}
-                      >
+                      <Text className="font-black text-klowk-black dark:text-white text-sm" numberOfLines={1}>
                         {goal.name}
                       </Text>
-                      <View className="flex-row items-center">
-                        <Text className="text-[11px] font-bold tracking-widest uppercase text-gray-400 dark:text-zinc-500">
-                          {t(catData.id as any) || catData.label}
-                        </Text>
-                      </View>
+                      <Text className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 mt-0.5">
+                        {loggedHrs}h of {targetHrsVal}h · {new Date(goal.endDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                      </Text>
+                    </View>
+                    <View className={`px-2 py-1 rounded-full ${achieved ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-red-100 dark:bg-red-900/40"}`}>
+                      <Text className={`text-[10px] font-black ${achieved ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                        {achieved ? "✓ Done" : `${pct}%`}
+                      </Text>
                     </View>
                   </View>
-                  <View className="items-end">
-                    <Pressable
-                      hitSlop={15}
-                      style={{ marginBottom: 4 }}
-                      onPress={() => setSelectedActionGoalId(goal.id)}
-                    >
-                      <MoreHorizontal
-                        size={18}
-                        color={isDark ? "#52525b" : "#9ca3af"}
-                      />
-                    </Pressable>
-                    <Text className="text-xs font-black text-[#121212] dark:text-white">
-                      {formatHrs(currentMins)}{" "}
-                      <Text className="text-gray-400">
-                        / {formatHrs(goal.targetMins)}h
-                      </Text>
-                    </Text>
-                    <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase">
-                      {daysRemaining}{" "}
-                      {daysRemaining === 1 ? t("day_left") : t("days_left")}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Progress bar line */}
-                <View className="h-2 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <View
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: isCompleted ? "#10b981" : catData.color,
-                    }}
-                    className="h-full rounded-full"
-                  />
-                </View>
-              </MotiView>
-            );
-          })}
-        </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         <View style={{ height: 160 }} />
       </ScrollView>
@@ -576,70 +516,14 @@ export default function GoalsScreen() {
                   >
                     {t("category_label")}
                   </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={{ marginBottom: 24 }}
-                  >
-                    <View style={{ flexDirection: "row", gap: 10 }}>
-                      {categories.map((cat: Category) => (
-                        <Pressable
-                          key={cat.id}
-                          onPress={() => {
-                            setSelectedCatId(cat.id);
-                            impact(ImpactFeedbackStyle.Light);
-                          }}
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            paddingVertical: 10,
-                            paddingHorizontal: 16,
-                            borderRadius: 14,
-                            backgroundColor:
-                              selectedCatId === cat.id
-                                ? `${cat.color}20`
-                                : isDark
-                                  ? "#2c2c2e"
-                                  : "#f9fafb",
-                            borderWidth: 1.5,
-                            borderColor:
-                              selectedCatId === cat.id
-                                ? cat.color
-                                : "transparent",
-                          }}
-                        >
-                          <CategoryIcon
-                            name={cat.iconName}
-                            size={14}
-                            color={
-                              selectedCatId === cat.id
-                                ? cat.color
-                                : isDark
-                                  ? "#a1a1aa"
-                                  : "#9ca3af"
-                            }
-                          />
-                          <Text
-                            style={{
-                              marginLeft: 8,
-                              fontSize: 13,
-                              fontWeight: "700",
-                              color:
-                                selectedCatId === cat.id
-                                  ? isDark
-                                    ? "#fff"
-                                    : "#121212"
-                                  : isDark
-                                    ? "#a1a1aa"
-                                    : "#9ca3af",
-                            }}
-                          >
-                            {t(cat.id as any) || cat.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </ScrollView>
+                  <View style={{ marginBottom: 24 }}>
+                    <CategoryPillScroller
+                      categories={categories}
+                      selectedId={selectedCatId}
+                      onSelect={setSelectedCatId}
+                      layout="scroll"
+                    />
+                  </View>
 
                   {/* Hours Target Input */}
                   <Text
@@ -704,7 +588,6 @@ export default function GoalsScreen() {
                       <Pressable
                         onPress={() => {
                           setActiveDateType("start");
-                          setViewedMonth(startDate);
                           setShowDatePicker(true);
                           impact(ImpactFeedbackStyle.Light);
                         }}
@@ -756,7 +639,6 @@ export default function GoalsScreen() {
                       <Pressable
                         onPress={() => {
                           setActiveDateType("end");
-                          setViewedMonth(endDate);
                           setShowDatePicker(true);
                           impact(ImpactFeedbackStyle.Light);
                         }}
@@ -834,155 +716,15 @@ export default function GoalsScreen() {
           </Animated.View>
         </View>
 
-        {/* Custom Date Picker Modal Component */}
-        <Modal
+        <DatePickerModal
           visible={showDatePicker}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <Pressable
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.6)",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 24,
-            }}
-            onPress={() => setShowDatePicker(false)}
-          >
-            <Pressable
-              style={{
-                width: "100%",
-                backgroundColor: isDark ? "#1C1C1E" : "#fff",
-                padding: 24,
-                borderRadius: 32,
-              }}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginBottom: 24,
-                }}
-              >
-                <Pressable
-                  onPress={() => changeMonth(-1)}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6",
-                    borderRadius: 12,
-                  }}
-                >
-                  <ChevronLeft size={18} color="#FBBF24" />
-                </Pressable>
-                <View style={{ flex: 1, alignItems: "center" }}>
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      fontWeight: "900",
-                      fontSize: 18,
-                      color: isDark ? "#fff" : "#121212",
-                    }}
-                  >
-                    {calendarMonthName}
-                  </Text>
-                  <Text
-                    style={{
-                      textAlign: "center",
-                      fontSize: 10,
-                      fontWeight: "700",
-                      color: isDark ? "#71717a" : "#9ca3af",
-                      textTransform: "uppercase",
-                      letterSpacing: 2,
-                    }}
-                  >
-                    {calendarYearName}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => changeMonth(1)}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6",
-                    borderRadius: 12,
-                  }}
-                >
-                  <ChevronRight size={18} color="#FBBF24" />
-                </Pressable>
-              </View>
-              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                  <Text
-                    key={i}
-                    style={{
-                      width: "14.2%",
-                      textAlign: "center",
-                      fontSize: 9,
-                      fontWeight: "900",
-                      color: isDark ? "#71717a" : "#d1d5db",
-                      marginBottom: 16,
-                    }}
-                  >
-                    {d}
-                  </Text>
-                ))}
-                {calendarDays.map((d, i) => {
-                  const targetCompareDate =
-                    activeDateType === "start" ? startDate : endDate;
-                  const isSelected =
-                    d && d.toDateString() === targetCompareDate.toDateString();
-                  const isToday =
-                    d && d.toDateString() === new Date().toDateString();
-
-                  return (
-                    <Pressable
-                      key={i}
-                      onPress={() => {
-                        if (d) {
-                          if (activeDateType === "start") setStartDate(d);
-                          else setEndDate(d);
-                          setShowDatePicker(false);
-                        }
-                      }}
-                      style={{
-                        width: "14.2%",
-                        aspectRatio: 1,
-                        borderRadius: 12,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginBottom: 4,
-                        backgroundColor: isSelected ? "#FBBF24" : "transparent",
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontWeight: "900",
-                          color: isSelected
-                            ? "#fff"
-                            : isToday
-                              ? "#FBBF24"
-                              : isDark
-                                ? "#a1a1aa"
-                                : "#121212",
-                        }}
-                      >
-                        {d ? d.getDate() : ""}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
+          selected={activeDateType === "start" ? startDate : endDate}
+          onSelect={(d) => {
+            if (activeDateType === "start") setStartDate(d);
+            else setEndDate(d);
+          }}
+          onClose={() => setShowDatePicker(false)}
+        />
       </Modal>
     );
   }

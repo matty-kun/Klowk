@@ -1,15 +1,15 @@
 import { isGeminiNanoAvailable, initGeminiNano, askGeminiNano } from "@/utils/geminiNano";
 import { askGeminiAI } from "@/utils/geminiAI";
+import { ChatBubble, TypingBubble } from "@/components/ChatBubble";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { ArrowLeft, CircleHelp, Send } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     Animated,
     Dimensions,
@@ -21,6 +21,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -32,10 +33,17 @@ interface Message {
   timestamp: Date;
 }
 
+const quickPrompts = [
+  "Read 1h this morning",
+  "How much did I focus today?",
+  "How much did I study yesterday?",
+  "Am I on track with my goals this week?",
+];
+
 export default function ChatScreen() {
   const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
-  const { activities, customGoals, addManualActivity } = useTracking();
+  const { activities, customGoals, categories, addManualActivity } = useTracking();
   const { userName } = useOnboarding();
   const isDark = colorScheme === "dark";
 
@@ -50,7 +58,15 @@ export default function ChatScreen() {
     },
   ]);
   const [inputText, setInputText] = useState("");
+  const [inputDisplay, setInputDisplay] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+
+  const handleInputChange = useCallback((text: string) => {
+    setInputDisplay(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setInputText(text), 150);
+  }, []);
   const [nanoReady, setNanoReady] = useState(false);
 
   useEffect(() => {
@@ -63,12 +79,6 @@ export default function ChatScreen() {
   }, []);
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const quickPrompts = [
-    "Read 1h this morning",
-    "How much did I focus today?",
-    "How much did I study yesterday?",
-    "Am I on track with my goals this week?",
-  ];
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -78,7 +88,7 @@ export default function ChatScreen() {
     }).start();
   }, []);
 
-  const parseLogFromInput = (rawText: string) => {
+  const parseLogFromInput = useCallback((rawText: string) => {
     const text = rawText.trim();
     const input = text.toLowerCase();
 
@@ -162,9 +172,192 @@ export default function ChatScreen() {
     }
 
     return { title, category, totalSeconds, customDate };
-  };
+  }, []);
 
-  const handleSend = async () => {
+  const getKlowkResponse = useCallback((text: string) => {
+    const input = text.toLowerCase().trim();
+
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfYesterday = new Date(startOfToday);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    const endOfYesterday = new Date(startOfToday.getTime() - 1);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    const isLoggingIntent =
+      /(worked|studied|focused|focus|logged|track|spent)\b/.test(input) &&
+      /(\d+(\.\d+)?\s?(h|hr|hrs|hour|hours|m|min|mins|minute|minutes))/.test(
+        input,
+      );
+
+    if (isLoggingIntent) {
+      return "Got it, that looks like a time log entry. You can use Flow State for a running timer or Manual Log to save it exactly.";
+    }
+
+    const isHistoryQuery =
+      /(how much|total|history|did i|spent|time|hours|mins|minutes|today|yesterday|week|month|category)/.test(
+        input,
+      );
+
+    if (isHistoryQuery) {
+      let start = startOfToday.getTime();
+      let end = now.getTime();
+      let periodLabel = "today";
+
+      if (input.includes("yesterday")) {
+        start = startOfYesterday.getTime();
+        end = endOfYesterday.getTime();
+        periodLabel = "yesterday";
+      } else if (input.includes("week")) {
+        start = startOfWeek.getTime();
+        end = endOfWeek.getTime();
+        periodLabel = "this week";
+      } else if (input.includes("month")) {
+        start = startOfMonth.getTime();
+        end = endOfMonth.getTime();
+        periodLabel = "this month";
+      }
+
+      const categoryMatch = customGoals
+        ?.map((g) => g.categoryId)
+        .find((c) => input.includes(c.toLowerCase()));
+
+      const filtered = activities.filter((a) => {
+        const inWindow = a.start_time >= start && a.start_time <= end;
+        if (!inWindow) return false;
+        if (categoryMatch) return a.category === categoryMatch;
+        return true;
+      });
+
+      const totalSecs = filtered.reduce((sum, a) => sum + (a.duration || 0), 0);
+      const hours = Math.floor(totalSecs / 3600);
+      const mins = Math.floor((totalSecs % 3600) / 60);
+
+      if (categoryMatch) {
+        return `For ${periodLabel}, you logged ${hours}h ${mins}m in ${categoryMatch}.`;
+      }
+
+      // Build per-category breakdown
+      const breakdown = categories
+        .map((cat) => {
+          const secs = filtered
+            .filter((a) => a.category === cat.id)
+            .reduce((sum, a) => sum + (a.duration || 0), 0);
+          return { label: cat.label, secs };
+        })
+        .filter((c) => c.secs > 0)
+        .sort((a, b) => b.secs - a.secs);
+
+      if (breakdown.length === 0) {
+        return `You haven't logged anything ${periodLabel === "today" ? "today" : `for ${periodLabel}`} yet.`;
+      }
+
+      const breakdownLines = breakdown
+        .map((c) => `  · ${c.label}: ${Math.floor(c.secs / 3600)}h ${Math.floor((c.secs % 3600) / 60)}m`)
+        .join("\n");
+
+      return `For ${periodLabel}, you logged ${hours}h ${mins}m total:\n\n${breakdownLines}`;
+    }
+
+    const isForecastIntent =
+      /(forecast|predict|goal|goals|will i|on track|target)/.test(input);
+    if (isForecastIntent) {
+      const activeGoals = (customGoals || []).filter(
+        (g) => g.endDate >= Date.now() && g.startDate <= Date.now(),
+      );
+
+      if (activeGoals.length === 0) {
+        return "You don't have any active goals right now. Head over to the Goals tab and create one — then I can give you a proper forecast!";
+      }
+
+      const DAY_MS = 1000 * 60 * 60 * 24;
+      const nowMs = Date.now();
+
+      const lines = activeGoals.slice(0, 5).map((goal) => {
+        const goalActivities = activities.filter(
+          (a) =>
+            a.category === goal.categoryId &&
+            a.start_time >= goal.startDate &&
+            a.start_time <= Math.min(goal.endDate, nowMs),
+        );
+        const loggedMins = Math.floor(
+          goalActivities.reduce((sum, a) => sum + (a.duration || 0), 0) / 60,
+        );
+
+        const totalDays = Math.max(
+          1,
+          Math.ceil((goal.endDate - goal.startDate) / DAY_MS),
+        );
+        const elapsedDays = Math.max(
+          1,
+          Math.min(totalDays, Math.ceil((nowMs - goal.startDate) / DAY_MS)),
+        );
+        const daysLeft = Math.max(0, totalDays - elapsedDays);
+        const expectedByNow = Math.floor(
+          (goal.targetMins * elapsedDays) / totalDays,
+        );
+        const projectedTotal = Math.floor((loggedMins / elapsedDays) * totalDays);
+        const pct = Math.min(100, Math.round((loggedMins / goal.targetMins) * 100));
+
+        const loggedHrs = (loggedMins / 60).toFixed(1);
+        const targetHrs = (goal.targetMins / 60).toFixed(1);
+        const projectedHrs = (projectedTotal / 60).toFixed(1);
+
+        let status = "";
+        let advice = "";
+        if (pct >= 100) {
+          status = "✅ Completed";
+          advice = "You've already hit this one!";
+        } else if (loggedMins >= expectedByNow) {
+          const ahead = loggedMins - expectedByNow;
+          status = "🟢 On track";
+          advice = `You're ${Math.round(ahead / 60 * 10) / 10}h ahead of pace. Keep it up!`;
+        } else {
+          const behind = expectedByNow - loggedMins;
+          const dailyCatchUp = daysLeft > 0 ? Math.ceil(behind / daysLeft) : behind;
+          status = "🔴 Behind";
+          advice = `You're ${Math.round(behind / 60 * 10) / 10}h behind. Log about ${dailyCatchUp}m/day for the next ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to catch up.`;
+        }
+
+        return `${goal.name}\n  ${status} — ${loggedHrs}h of ${targetHrs}h logged (${pct}%)\n  Projected: ${projectedHrs}h by end\n  ${advice}`;
+      });
+
+      const allOnTrack = lines.every((l) => l.includes("🟢") || l.includes("✅"));
+      const summary = allOnTrack
+        ? "Looking good — you're on track with all your goals! 🐌💨"
+        : "Here's where things stand with your goals this week:";
+
+      return `${summary}\n\n${lines.join("\n\n")}`;
+    }
+
+    if (/(privacy|local|offline|cloud|data)/.test(input)) {
+      return "Flow analyzes your activity data locally on your device. Nothing needs to leave your phone for these basic insights.";
+    }
+
+    if (input.includes("hello") || input.includes("hi")) {
+      return "Hey! I can help you log time, check your history, and see if you are on track with goals.";
+    }
+
+    return 'Try something like: "Read 1h this morning", "How much did I focus today?", or "Am I on track with goals this week?"';
+  }, [activities, customGoals, categories]);
+
+  const handleSend = useCallback(async () => {
     if (inputText.trim() === "") return;
 
     const rawInput = inputText;
@@ -177,6 +370,8 @@ export default function ChatScreen() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
+    setInputDisplay("");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     impact(ImpactFeedbackStyle.Light);
 
     // Simulate Flow typing
@@ -263,172 +458,13 @@ export default function ChatScreen() {
     setMessages((prev) => [...prev, klowkResponse]);
     setIsTyping(false);
     notification(NotificationFeedbackType.Success);
-  };
+  }, [inputText, activities, customGoals, userName, nanoReady, parseLogFromInput, getKlowkResponse]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleQuickPrompt = (prompt: string) => {
+  const handleQuickPrompt = useCallback((prompt: string) => {
     impact(ImpactFeedbackStyle.Light);
+    setInputDisplay(prompt);
     setInputText(prompt);
-  };
-
-  const getKlowkResponse = (text: string) => {
-    const input = text.toLowerCase().trim();
-
-    const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
-    const startOfYesterday = new Date(startOfToday);
-    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-    const endOfYesterday = new Date(startOfToday.getTime() - 1);
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
-    );
-
-    const isLoggingIntent =
-      /(worked|studied|focused|focus|logged|track|spent)\b/.test(input) &&
-      /(\d+(\.\d+)?\s?(h|hr|hrs|hour|hours|m|min|mins|minute|minutes))/.test(
-        input,
-      );
-
-    if (isLoggingIntent) {
-      return "Got it, that looks like a time log entry. You can use Flow State for a running timer or Manual Log to save it exactly.";
-    }
-
-    const isHistoryQuery =
-      /(how much|total|history|did i|spent|time|hours|mins|minutes|today|yesterday|week|month|category)/.test(
-        input,
-      );
-
-    if (isHistoryQuery) {
-      let start = startOfToday.getTime();
-      let end = now.getTime();
-      let periodLabel = "today";
-
-      if (input.includes("yesterday")) {
-        start = startOfYesterday.getTime();
-        end = endOfYesterday.getTime();
-        periodLabel = "yesterday";
-      } else if (input.includes("week")) {
-        start = startOfWeek.getTime();
-        end = endOfWeek.getTime();
-        periodLabel = "this week";
-      } else if (input.includes("month")) {
-        start = startOfMonth.getTime();
-        end = endOfMonth.getTime();
-        periodLabel = "this month";
-      }
-
-      const categoryMatch = customGoals
-        ?.map((g) => g.categoryId)
-        .find((c) => input.includes(c.toLowerCase()));
-
-      const filtered = activities.filter((a) => {
-        const inWindow = a.start_time >= start && a.start_time <= end;
-        if (!inWindow) return false;
-        if (categoryMatch) return a.category === categoryMatch;
-        return true;
-      });
-
-      const totalSecs = filtered.reduce((sum, a) => sum + (a.duration || 0), 0);
-      const hours = Math.floor(totalSecs / 3600);
-      const mins = Math.floor((totalSecs % 3600) / 60);
-
-      return `For ${periodLabel}, you logged ${hours}h ${mins}m.${categoryMatch ? ` (category: ${categoryMatch})` : ""}`;
-    }
-
-    const isForecastIntent =
-      /(forecast|predict|goal|goals|will i|on track|target)/.test(input);
-    if (isForecastIntent) {
-      const activeGoals = (customGoals || []).filter(
-        (g) => g.endDate >= Date.now() && g.startDate <= Date.now(),
-      );
-
-      if (activeGoals.length === 0) {
-        return "You don't have any active goals right now. Head over to the Goals tab and create one — then I can give you a proper forecast!";
-      }
-
-      const DAY_MS = 1000 * 60 * 60 * 24;
-      const nowMs = Date.now();
-
-      const lines = activeGoals.slice(0, 5).map((goal) => {
-        const goalActivities = activities.filter(
-          (a) =>
-            a.category === goal.categoryId &&
-            a.start_time >= goal.startDate &&
-            a.start_time <= Math.min(goal.endDate, nowMs),
-        );
-        const loggedMins = Math.floor(
-          goalActivities.reduce((sum, a) => sum + (a.duration || 0), 0) / 60,
-        );
-
-        const totalDays = Math.max(
-          1,
-          Math.ceil((goal.endDate - goal.startDate) / DAY_MS),
-        );
-        const elapsedDays = Math.max(
-          1,
-          Math.min(totalDays, Math.ceil((nowMs - goal.startDate) / DAY_MS)),
-        );
-        const daysLeft = Math.max(0, totalDays - elapsedDays);
-        const expectedByNow = Math.floor(
-          (goal.targetMins * elapsedDays) / totalDays,
-        );
-        const projectedTotal = Math.floor((loggedMins / elapsedDays) * totalDays);
-        const pct = Math.min(100, Math.round((loggedMins / goal.targetMins) * 100));
-
-        const loggedHrs = (loggedMins / 60).toFixed(1);
-        const targetHrs = (goal.targetMins / 60).toFixed(1);
-        const projectedHrs = (projectedTotal / 60).toFixed(1);
-
-        let status = "";
-        let advice = "";
-        if (pct >= 100) {
-          status = "✅ Completed";
-          advice = "You've already hit this one!";
-        } else if (loggedMins >= expectedByNow) {
-          const ahead = loggedMins - expectedByNow;
-          status = "🟢 On track";
-          advice = `You're ${Math.round(ahead / 60 * 10) / 10}h ahead of pace. Keep it up!`;
-        } else {
-          const behind = expectedByNow - loggedMins;
-          const dailyCatchUp = daysLeft > 0 ? Math.ceil(behind / daysLeft) : behind;
-          status = "🔴 Behind";
-          advice = `You're ${Math.round(behind / 60 * 10) / 10}h behind. Log about ${dailyCatchUp}m/day for the next ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to catch up.`;
-        }
-
-        return `${goal.name}\n  ${status} — ${loggedHrs}h of ${targetHrs}h logged (${pct}%)\n  Projected: ${projectedHrs}h by end\n  ${advice}`;
-      });
-
-      const allOnTrack = lines.every((l) => l.includes("🟢") || l.includes("✅"));
-      const summary = allOnTrack
-        ? "Looking good — you're on track with all your goals! 🐌💨"
-        : "Here's where things stand with your goals this week:";
-
-      return `${summary}\n\n${lines.join("\n\n")}`;
-    }
-
-    if (/(privacy|local|offline|cloud|data)/.test(input)) {
-      return "Flow analyzes your activity data locally on your device. Nothing needs to leave your phone for these basic insights.";
-    }
-
-    if (input.includes("hello") || input.includes("hi")) {
-      return "Hey! I can help you log time, check your history, and see if you are on track with goals.";
-    }
-
-    return 'Try something like: "Read 1h this morning", "How much did I focus today?", or "Am I on track with goals this week?"';
-  };
+  }, []);
 
   return (
     <SafeAreaView
@@ -475,53 +511,29 @@ export default function ChatScreen() {
               scrollViewRef.current?.scrollToEnd({ animated: true })
             }
           >
-            {messages.map((msg, index) => (
-              <Animated.View
-                key={msg.id}
-                style={{ opacity: fadeAnim }}
-                className={`mb-6 flex-row ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {msg.sender === "flow" && (
-                  <Image
-                    source={require("../assets/images/flow portrait.png")}
-                    style={{ width: 32, height: 32, borderRadius: 10, marginRight: 12, marginTop: -4 }}
-                    contentFit="cover"
-                  />
-                )}
-
-                <View
-                  className={`max-w-[80%] p-4 rounded-[24px] ${
-                    msg.sender === "user"
-                      ? "bg-klowk-black dark:bg-zinc-800 rounded-tr-none"
-                      : "bg-gray-50 dark:bg-zinc-900 rounded-tl-none"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-semibold leading-5 ${msg.sender === "user" ? "text-white" : "text-klowk-black dark:text-white"}`}
-                  >
-                    {msg.text}
-                  </Text>
-                </View>
-              </Animated.View>
+            {messages.map((msg) => (
+              <ChatBubble key={msg.id} message={msg} fadeAnim={fadeAnim} />
             ))}
 
-            {isTyping && (
-              <View className="mb-6 flex-row justify-start">
-                <Image
-                  source={require("../assets/images/flow portrait.png")}
-                  style={{ width: 32, height: 32, borderRadius: 10, marginRight: 12 }}
-                  contentFit="cover"
-                />
-                <View className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-[24px] rounded-tl-none">
-                  <Text className="text-gray-400 dark:text-zinc-600 font-black">
-                    ...
-                  </Text>
-                </View>
-              </View>
-            )}
+            {isTyping && <TypingBubble />}
 
             <View className="h-10" />
           </ScrollView>
+
+          {/* Quick Prompts */}
+          {messages.length === 1 && (
+            <View className="px-6 pb-2 gap-2 items-end">
+              {quickPrompts.map((prompt) => (
+                <Pressable
+                  key={prompt}
+                  onPress={() => handleQuickPrompt(prompt)}
+                  className="px-4 py-3 rounded-2xl bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 self-end"
+                >
+                  <Text className="text-xs font-bold text-klowk-black dark:text-white">{prompt}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           {/* Input Bar */}
           <View className="p-6 border-t border-gray-50 dark:border-zinc-800 pb-10 bg-white dark:bg-klowk-black">
@@ -530,11 +542,11 @@ export default function ChatScreen() {
                 className="flex-1 text-sm font-bold text-klowk-black dark:text-white"
                 placeholder={t("ask_anything")}
                 placeholderTextColor={isDark ? "#52525b" : "#9ca3af"}
-                value={inputText}
-                onChangeText={setInputText}
+                value={inputDisplay}
+                onChangeText={handleInputChange}
                 multiline
               />
-              {inputText.trim().length > 0 && (
+              {inputDisplay.trim().length > 0 && (
                 <Pressable
                   onPress={handleSend}
                   className="w-10 h-10 rounded-full bg-amber-400 items-center justify-center ml-2"

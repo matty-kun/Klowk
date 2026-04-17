@@ -1,5 +1,7 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import LogActionSheet from "@/components/LogActionSheet";
+import ProgressBar from "@/components/ProgressBar";
+import ToggleBar from "@/components/ToggleBar";
 import { Text } from "@/components/Themed";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
@@ -460,7 +462,6 @@ export default React.memo(function ReportsScreen() {
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">(
     "today",
   );
-  const [toggleWidth, setToggleWidth] = useState(0);
 
   // New Category State
   const [newCatName, setNewCatName] = useState("");
@@ -736,56 +737,7 @@ export default React.memo(function ReportsScreen() {
             <Text className="text-4xl font-extrabold text-klowk-black dark:text-white">
               {t("data")}
             </Text>
-            <View
-              onLayout={(e) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0) setToggleWidth(w);
-              }}
-              className="bg-gray-50 dark:bg-zinc-900 rounded-[16px] p-1 flex-row relative overflow-hidden"
-            >
-              <MotiView
-                animate={{
-                  translateX:
-                    (timeRange === "today" ? 0 : timeRange === "week" ? 1 : 2) *
-                    ((toggleWidth - 8) / 3),
-                }}
-                transition={{ type: "spring", damping: 20, stiffness: 180 }}
-                style={{
-                  position: "absolute",
-                  top: 4,
-                  bottom: 4,
-                  left: 4,
-                  width: (toggleWidth - 8) / 3 || undefined,
-                  backgroundColor: isDark ? "#3f3f46" : "#fff",
-                  borderRadius: 12,
-                }}
-              />
-              {(["today", "week", "month"] as const).map((range) => {
-                const isActive = timeRange === range;
-                return (
-                  <Pressable
-                    key={range}
-                    onPress={() => {
-                      impact(ImpactFeedbackStyle.Light);
-                      setTimeRange(range);
-                    }}
-                    className="px-3 py-2 rounded-[12px] items-center z-10"
-                  >
-                    <Text
-                      className={`text-[9px] font-black uppercase tracking-wider ${isActive ? "text-amber-400" : "text-gray-400 dark:text-zinc-500"}`}
-                    >
-                      {t(
-                        range === "week"
-                          ? "this_week"
-                          : range === "month"
-                            ? "this_month"
-                            : "today",
-                      )}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <ToggleBar value={timeRange} onChange={setTimeRange} />
           </View>
 
           <View className="relative items-center justify-center -mt-8">
@@ -940,15 +892,12 @@ export default React.memo(function ReportsScreen() {
                         </Text>
                       </View>
                     </View>
-                    <View className="h-1.5 w-full bg-gray-50 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <View
-                        style={{
-                          width: `${Math.max(2, percentage)}%`,
-                          backgroundColor: stat.color,
-                        }}
-                        className="h-full rounded-full"
-                      />
-                    </View>
+                    <ProgressBar
+                      progress={Math.max(0.02, percentage / 100)}
+                      color={stat.color}
+                      trackColor={isDark ? "#27272a" : "#f9fafb"}
+                      height={6}
+                    />
                   </View>
                   <View className="ml-4">
                     <ChevronRight size={18} color="#e5e7eb" />

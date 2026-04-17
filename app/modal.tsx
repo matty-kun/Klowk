@@ -1,4 +1,9 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
+import CategoryPillScroller from "@/components/CategoryPillScroller";
+import DatePickerModal from "@/components/DatePickerModal";
+import FormField from "@/components/FormField";
+import ScreenHeader from "@/components/ScreenHeader";
+import TimeInputTrio from "@/components/TimeInputTrio";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
@@ -6,11 +11,8 @@ import { impact, notification } from "@/utils/haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
     AlignLeft,
-    ArrowLeft,
     Calendar as CalendarIcon,
     Check,
-    ChevronLeft,
-    ChevronRight,
     Clock,
     Tag,
     Target,
@@ -157,20 +159,10 @@ export default function EntryModal() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header Area */}
-          <View className="flex-row items-center mb-8">
-            <Pressable
-              onPress={() => router.back()}
-              className="w-12 h-12 items-center justify-center rounded-[16px] bg-gray-50 dark:bg-zinc-900 mr-4"
-            >
-              <ArrowLeft
-                size={24}
-                color={colorScheme === "dark" ? "#fff" : "#121212"}
-              />
-            </Pressable>
-            <Text className="text-[28px] font-black text-klowk-black dark:text-white">
-              {editId ? t("edit_log") : t("new_log")}
-            </Text>
-          </View>
+          <ScreenHeader
+            title={editId ? t("edit_log") : t("new_log")}
+            onBack={() => router.back()}
+          />
 
           {/* Form Fields */}
           <View className="mb-8">
@@ -179,13 +171,11 @@ export default function EntryModal() {
             </Text>
 
             {/* Title */}
-            <View className="mb-5">
-              <View className="flex-row items-center mb-2">
-                <Zap size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {t("what_did_you_do")}
-                </Text>
-              </View>
+            <FormField
+              icon={<Zap size={14} color="#9ca3af" />}
+              label={t("what_did_you_do")}
+              className="mb-5"
+            >
               <View className="bg-gray-50 dark:bg-zinc-900 rounded-[20px] border border-gray-100 dark:border-zinc-800">
                 <TextInput
                   value={title}
@@ -200,64 +190,19 @@ export default function EntryModal() {
                   className="p-4 text-base font-bold text-klowk-black dark:text-white"
                 />
               </View>
-            </View>
+            </FormField>
 
             {/* Duration Row */}
-            <View className="flex-row gap-2 mb-5">
-              <View className="flex-1">
-                <View className="flex-row items-center mb-2">
-                  <Clock size={12} color="#9ca3af" />
-                  <Text className="ml-1 text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">
-                    Hrs
-                  </Text>
-                </View>
-                <TextInput
-                  value={hours}
-                  onChangeText={setHours}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor={
-                    colorScheme === "dark" ? "#3f3f46" : "#d1d5db"
-                  }
-                  className="bg-gray-50 dark:bg-zinc-900 h-[54px] rounded-2xl text-sm font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
-                />
-              </View>
-              <View className="flex-1">
-                <View className="flex-row items-center mb-2">
-                  <Clock size={12} color="#9ca3af" />
-                  <Text className="ml-1 text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">
-                    Min
-                  </Text>
-                </View>
-                <TextInput
-                  value={minutes}
-                  onChangeText={setMinutes}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor={
-                    colorScheme === "dark" ? "#3f3f46" : "#d1d5db"
-                  }
-                  className="bg-gray-50 dark:bg-zinc-900 h-[54px] rounded-2xl text-sm font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
-                />
-              </View>
-              <View className="flex-1">
-                <View className="flex-row items-center mb-2">
-                  <Clock size={12} color="#9ca3af" />
-                  <Text className="ml-1 text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">
-                    Sec
-                  </Text>
-                </View>
-                <TextInput
-                  value={seconds}
-                  onChangeText={setSeconds}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor={
-                    colorScheme === "dark" ? "#3f3f46" : "#d1d5db"
-                  }
-                  className="bg-gray-50 dark:bg-zinc-900 h-[54px] rounded-2xl text-sm font-black text-klowk-black dark:text-white text-center border border-gray-100 dark:border-zinc-800"
-                />
-              </View>
+            <View className="mb-5">
+              <TimeInputTrio
+                hours={hours} minutes={minutes} seconds={seconds}
+                onChangeHours={setHours} onChangeMinutes={setMinutes} onChangeSeconds={setSeconds}
+              />
+            </View>
+
+            {/* Date Picker */}
+            <View className="mb-5">
+              <View className="flex-row gap-2">
               <View className="flex-[1.2]">
                 <View className="flex-row items-center mb-2">
                   <CalendarIcon size={12} color="#9ca3af" />
@@ -266,93 +211,30 @@ export default function EntryModal() {
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => {
-                    impact(ImpactFeedbackStyle.Light);
-                    setShowDatePicker(true);
-                  }}
+                  onPress={() => { impact(ImpactFeedbackStyle.Light); setShowDatePicker(true); }}
                   className="bg-gray-50 dark:bg-zinc-900 h-[54px] rounded-2xl border border-gray-100 dark:border-zinc-800 items-center justify-center"
                 >
                   <Text className="text-xs font-bold text-klowk-black dark:text-white">
-                    {date.toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                   </Text>
                 </Pressable>
               </View>
+              </View>
             </View>
 
-            <Modal visible={showDatePicker} transparent animationType="fade">
-              <Pressable
-                className="flex-1 bg-black/40 items-center justify-center p-6"
-                onPress={() => setShowDatePicker(false)}
-              >
-                <Pressable
-                  className="w-full bg-white dark:bg-zinc-900 p-6 rounded-[32px]"
-                  onPress={(e) => e.stopPropagation()}
-                >
-                  <View className="flex-row items-center mb-6">
-                    <Pressable
-                      onPress={() => changeMonth(-1)}
-                      className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-800 rounded-xl"
-                    >
-                      <ChevronLeft size={18} color="#FBBF24" />
-                    </Pressable>
-                    <View className="flex-1 items-center">
-                      <Text className="text-center font-black text-lg text-klowk-black dark:text-white">
-                        {monthName}
-                      </Text>
-                      <Text className="text-center text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                        {yearName}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => changeMonth(1)}
-                      className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-800 rounded-xl"
-                    >
-                      <ChevronRight size={18} color="#FBBF24" />
-                    </Pressable>
-                  </View>
-                  <View className="flex-row flex-wrap">
-                    {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                      <Text
-                        key={i}
-                        className="w-[14.2%] text-center text-[9px] font-black text-gray-300 dark:text-zinc-700 mb-4"
-                      >
-                        {d}
-                      </Text>
-                    ))}
-                    {days.map((d, i) => (
-                      <Pressable
-                        key={i}
-                        onPress={() => {
-                          if (d) {
-                            setDate(d);
-                            setShowDatePicker(false);
-                          }
-                        }}
-                        className={`w-[14.2%] aspect-square rounded-xl items-center justify-center mb-1 ${d?.toDateString() === date.toDateString() ? "bg-amber-400" : ""}`}
-                      >
-                        <Text
-                          className={`font-black ${d?.toDateString() === date.toDateString() ? "text-white" : d?.toDateString() === new Date().toDateString() ? "text-amber-400" : "text-klowk-black dark:text-zinc-400"}`}
-                        >
-                          {d ? d.getDate() : ""}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </Pressable>
-              </Pressable>
-            </Modal>
+            <DatePickerModal
+              visible={showDatePicker}
+              selected={date}
+              onSelect={setDate}
+              onClose={() => setShowDatePicker(false)}
+            />
 
             {/* Description */}
-            <View className="mb-6">
-              <View className="flex-row items-center mb-2">
-                <AlignLeft size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {t("description_optional")}
-                </Text>
-              </View>
+            <FormField
+              icon={<AlignLeft size={14} color="#9ca3af" />}
+              label={t("description_optional")}
+              className="mb-6"
+            >
               <TextInput
                 value={description}
                 onChangeText={setDescription}
@@ -365,17 +247,15 @@ export default function EntryModal() {
                 className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-[20px] border border-gray-100 dark:border-zinc-800 h-[100px] text-left text-sm font-bold text-klowk-black dark:text-white"
                 style={{ textAlignVertical: "top" }}
               />
-            </View>
+            </FormField>
 
             {/* Goals Selection */}
-            <View className="mb-8">
-              <View className="flex-row items-center mb-4">
-                <Target size={14} color="#FBBF24" />
-                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {t("active_goals")}
-                </Text>
-              </View>
-
+            <FormField
+              icon={<Target size={14} color="#FBBF24" />}
+              label={t("active_goals")}
+              className="mb-8"
+              labelClassName="mb-4"
+            >
               {customGoals.length > 0 ? (
                 <ScrollView
                   horizontal
@@ -454,46 +334,22 @@ export default function EntryModal() {
                   </Text>
                 </View>
               )}
-            </View>
+            </FormField>
 
             {/* Category */}
-            <View className="mb-8">
-              <View className="flex-row items-center mb-3">
-                <Tag size={14} color="#9ca3af" />
-                <Text className="ml-2 text-xs font-bold text-gray-500 dark:text-gray-400">
-                  {t("category_label")}
-                </Text>
-              </View>
-              <View className="flex-row flex-wrap gap-2">
-                {categories.map((cat: Category) => {
-                  const isSelected = category === cat.id;
-                  return (
-                    <Pressable
-                      key={cat.id}
-                      onPress={() => {
-                        impact(ImpactFeedbackStyle.Light);
-                        setCategory(cat.id);
-                      }}
-                      className={`px-4 py-2.5 rounded-xl flex-row items-center border ${isSelected ? "border-transparent" : "border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900"}`}
-                      style={{
-                        backgroundColor: isSelected ? cat.color : undefined,
-                      }}
-                    >
-                      <CategoryIcon
-                        name={cat.iconName}
-                        size={12}
-                        color={isSelected ? "#fff" : cat.color}
-                      />
-                      <Text
-                        className={`ml-2 text-xs font-bold ${isSelected ? "text-white" : "text-gray-500 dark:text-gray-400"}`}
-                      >
-                        {t(cat.id as any) || cat.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+            <FormField
+              icon={<Tag size={14} color="#9ca3af" />}
+              label={t("category_label")}
+              className="mb-8"
+              labelClassName="mb-3"
+            >
+              <CategoryPillScroller
+                categories={categories}
+                selectedId={category}
+                onSelect={setCategory}
+                layout="wrap"
+              />
+            </FormField>
           </View>
         </ScrollView>
 

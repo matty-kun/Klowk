@@ -1,9 +1,13 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
+import LogCard from "@/components/LogCard";
+import ProgressBar from "@/components/ProgressBar";
+import ToggleBar from "@/components/ToggleBar";
 import LogActionSheet from "@/components/LogActionSheet";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { getForecast } from "@/utils/forecast";
+import { computeStreak } from "@/utils/streak";
 import { impact } from "@/utils/haptics";
 import {
     formatDate,
@@ -20,6 +24,7 @@ import {
     ArrowUp,
     ChevronRight,
     ClipboardEdit,
+    Flame,
     History,
     MessageCircle,
     MoreHorizontal,
@@ -29,7 +34,7 @@ import {
 } from "lucide-react-native";
 import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
     Dimensions,
     Pressable,
@@ -60,15 +65,9 @@ export default React.memo(function TabOneScreen() {
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">(
     "today",
   );
-  const [toggleWidth, setToggleWidth] = useState(0);
-
-  const handleRangeChange = (r: "today" | "week" | "month") => {
-    setTimeRange(r);
-  };
-
   const now = new Date();
 
-  const getPeriodTotal = (
+  const getPeriodTotal = useCallback((
     range: "today" | "week" | "month",
     offset: number = 0,
   ) => {
@@ -100,7 +99,7 @@ export default React.memo(function TabOneScreen() {
         return t >= startOfRange.getTime() && t <= endOfRange.getTime();
       })
       .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
-  };
+  }, [activities]);
 
   const rangeMinsTotal = React.useMemo(
     () => getPeriodTotal(timeRange, 0),
@@ -193,6 +192,8 @@ export default React.memo(function TabOneScreen() {
     [activities, customGoals],
   );
 
+  const streak = React.useMemo(() => computeStreak(activities), [activities]);
+
   return (
     <SafeAreaView
       className="flex-1 bg-white dark:bg-klowk-black"
@@ -251,9 +252,17 @@ export default React.memo(function TabOneScreen() {
 
         {/* Greeting Section */}
         <View className="px-6 mb-8 mt-3">
-          <Text className="text-gray-400 dark:text-gray-500 font-bold uppercase text-[10px] tracking-[1.5px] mb-1">
-            {dayOfWeek}, {dayOfMonth}
-          </Text>
+          <View className="flex-row items-center justify-between mb-1">
+            <Text className="text-gray-400 dark:text-gray-500 font-bold uppercase text-[10px] tracking-[1.5px]">
+              {dayOfWeek}, {dayOfMonth}
+            </Text>
+            {streak > 0 && (
+              <View className="flex-row items-center bg-amber-400 rounded-full px-2 py-1 gap-1">
+                <Flame size={10} color="#fff" fill="#fff" />
+                <Text className="text-white font-black text-[10px]">{streak}d</Text>
+              </View>
+            )}
+          </View>
           <Text className="text-[26px] font-black text-klowk-black dark:text-white mb-10">
             {t(greetingKey as any)}{" "}
             <Text className="text-amber-400">{userName || "User"}!</Text>
@@ -616,61 +625,7 @@ export default React.memo(function TabOneScreen() {
                 </View>
 
                 {/* THE TOGGLE */}
-                <View
-                  onLayout={(e) => {
-                    const w = e.nativeEvent.layout.width;
-                    if (w > 0) setToggleWidth(w);
-                  }}
-                  className="flex-row bg-gray-50 dark:bg-zinc-800 p-1 rounded-[16px] relative overflow-hidden"
-                >
-                  <MotiView
-                    animate={{
-                      translateX:
-                        (timeRange === "today"
-                          ? 0
-                          : timeRange === "week"
-                            ? 1
-                            : 2) *
-                        ((toggleWidth - 8) / 3),
-                    }}
-                    transition={{ type: "spring", damping: 20, stiffness: 150 }}
-                    style={{
-                      position: "absolute",
-                      top: 4,
-                      bottom: 4,
-                      left: 4,
-                      width: (toggleWidth - 8) / 3 || "31.5%",
-                      backgroundColor:
-                        colorScheme === "dark" ? "#3f3f46" : "#fff",
-                      borderRadius: 12,
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 4,
-                      elevation: 2,
-                    }}
-                  />
-                  {(["today", "week", "month"] as const).map((r) => (
-                    <TouchableOpacity
-                      key={r}
-                      activeOpacity={0.7}
-                      onPress={() => handleRangeChange(r)}
-                      className="flex-1 items-center py-2 z-10"
-                    >
-                      <Text
-                        className={`text-[7px] font-black uppercase ${timeRange === r ? "text-amber-400" : "text-gray-400 dark:text-zinc-500"}`}
-                      >
-                        {t(
-                          r === "week"
-                            ? "this_week"
-                            : r === "month"
-                              ? "this_month"
-                              : "today",
-                        )}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <ToggleBar value={timeRange} onChange={setTimeRange} style={{ width: "100%" }} />
               </MotiView>
             </View>
 
@@ -984,28 +939,13 @@ export default React.memo(function TabOneScreen() {
                                 {goal.name}
                               </Text>
                               {/* Progress bar */}
-                              <View
-                                style={{
-                                  height: 4,
-                                  borderRadius: 4,
-                                  backgroundColor: isDark
-                                    ? "#134e4a"
-                                    : "#ccfbf1",
-                                  marginBottom: 4,
-                                  overflow: "hidden",
-                                }}
-                              >
-                                <View
-                                  style={{
-                                    height: 4,
-                                    borderRadius: 4,
-                                    width: `${progress * 100}%`,
-                                    backgroundColor: isComplete
-                                      ? "#22c55e"
-                                      : "#14b8a6",
-                                  }}
-                                />
-                              </View>
+                              <ProgressBar
+                                progress={progress}
+                                color={isComplete ? "#22c55e" : "#14b8a6"}
+                                trackColor={isDark ? "#134e4a" : "#ccfbf1"}
+                                height={4}
+                                className="mb-1"
+                              />
                               <View
                                 style={{
                                   flexDirection: "row",
@@ -1090,61 +1030,16 @@ export default React.memo(function TabOneScreen() {
 
             <View className="px-6 mb-28">
               {activities.slice(0, 5).map((log: Activity) => {
-                const category = categories.find((c) => c.id === log.category);
-                const catColor = category?.color || "#6b7280";
-
+                const cat = categories.find((c) => c.id === log.category);
                 return (
-                  <View
+                  <LogCard
                     key={log.id}
-                    className="bg-white dark:bg-zinc-900 rounded-[24px] p-4 mb-3 flex-row items-center border border-gray-50 dark:border-zinc-800 shadow-sm"
-                  >
-                    <View
-                      style={{ backgroundColor: `${catColor}15` }}
-                      className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
-                    >
-                      <CategoryIcon
-                        name={category?.iconName || "tag"}
-                        size={18}
-                        color={catColor}
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <Text
-                        className="font-bold text-klowk-black dark:text-white"
-                        numberOfLines={1}
-                      >
-                        {log.title || t("untitled_session")}
-                      </Text>
-                      <View className="flex-row items-center">
-                        <Text
-                          style={{ color: catColor }}
-                          className="text-[10px] font-black uppercase mr-2"
-                        >
-                          {category?.label || t("personal")}
-                        </Text>
-                        <Text className="text-[8px] text-gray-400 dark:text-gray-500 font-bold uppercase">
-                          {formatDate(log.start_time)} •{" "}
-                          {formatTimestamp(log.start_time)}
-                        </Text>
-                      </View>
-                    </View>
-                    <View className="items-end ml-4">
-                      <Text className="font-black text-klowk-black dark:text-white mb-1">
-                        {formatLogDuration(
-                          log.start_time,
-                          log.end_time,
-                          log.duration,
-                        )}
-                      </Text>
-                      <Pressable
-                        hitSlop={10}
-                        onPress={() => setSelectedActionLogId(log.id)}
-                        className="p-1"
-                      >
-                        <MoreHorizontal size={16} color="#9ca3af" />
-                      </Pressable>
-                    </View>
-                  </View>
+                    log={log}
+                    categoryColor={cat?.color || "#6b7280"}
+                    categoryLabel={cat?.label || t("personal")}
+                    categoryIconName={cat?.iconName || "tag"}
+                    onPressMore={() => setSelectedActionLogId(log.id)}
+                  />
                 );
               })}
             </View>

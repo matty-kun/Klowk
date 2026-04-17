@@ -111,7 +111,7 @@ export const translations = {
     create_category: "Create Category",
 
     // ActionSheet widget
-    start_live_session: "Start flow state",
+    start_live_session: "Enter flow state",
     talk_to_klowk: "Talk to Flow",
     log_manually: "Log manually",
 
@@ -133,7 +133,7 @@ export const translations = {
     how_did_it_go: "How did it go?",
     save_changes: "Save Changes",
     save_entry: "Save Entry",
-    launch_session: "Launch Session",
+    launch_session: "Save",
 
     // Tab labels
     home: "Home",
@@ -258,7 +258,7 @@ export const translations = {
     create_category: "Gumawa ng Kategorya",
 
     // ActionSheet widget
-    start_live_session: "Magsimula ng flow state",
+    start_live_session: "Pumasok sa flow state",
     talk_to_klowk: "Makipag-usap kay Flow",
     log_manually: "Mag-log nang manu-mano",
 
@@ -280,7 +280,7 @@ export const translations = {
     how_did_it_go: "Kumusta ang naging resulta?",
     save_changes: "I-save ang Pagbabago",
     save_entry: "I-save ang Entry",
-    launch_session: "Simulan ang Sesyon",
+    launch_session: "I-save",
 
     // Tab labels
     home: "Tahanan",

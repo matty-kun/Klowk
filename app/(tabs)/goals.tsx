@@ -26,7 +26,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
-  KeyboardAvoidingView,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -80,6 +80,31 @@ export default function GoalsScreen() {
 
   const sheetSlide = useRef(new Animated.Value(800)).current;
   const sheetBackdrop = useRef(new Animated.Value(0)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        Animated.timing(keyboardOffset, {
+          toValue: e.endCoordinates.height,
+          duration: Platform.OS === "ios" ? e.duration : 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      (e) => {
+        Animated.timing(keyboardOffset, {
+          toValue: 0,
+          duration: Platform.OS === "ios" ? e.duration : 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    return () => { show.remove(); hide.remove(); };
+  }, [keyboardOffset]);
 
   // Auto-select first category if available
   useEffect(() => {
@@ -329,7 +354,7 @@ export default function GoalsScreen() {
                 from={{ opacity: 0, translateY: 10 }}
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ delay: 200 + idx * 50 }}
-                className="bg-teal-50 dark:bg-teal-950/30 rounded-[32px] border border-teal-100 dark:border-teal-900/50 shadow-sm p-5"
+                className="bg-white dark:bg-teal-950/30 rounded-[32px] border border-teal-100 dark:border-teal-900/50 shadow-sm p-5"
               >
                 <View className="flex-row items-center justify-between mb-4">
                   <View className="flex-row items-center flex-1 pr-4">
@@ -442,10 +467,7 @@ export default function GoalsScreen() {
         animationType="none"
         onRequestClose={closeSheet}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ flex: 1 }}
-        >
+        <View style={{ flex: 1 }}>
           <Animated.View
             style={{
               flex: 1,
@@ -455,6 +477,7 @@ export default function GoalsScreen() {
             }}
           >
             <Pressable style={{ flex: 1 }} onPress={closeSheet} />
+            <Animated.View style={{ marginBottom: keyboardOffset }}>
             <Animated.View style={{ transform: [{ translateY: sheetSlide }] }}>
               <Pressable
                 onPress={(e) => e.stopPropagation()}
@@ -564,7 +587,7 @@ export default function GoalsScreen() {
                           key={cat.id}
                           onPress={() => {
                             setSelectedCatId(cat.id);
-                            Haptics.selectionAsync();
+                            impact(ImpactFeedbackStyle.Light);
                           }}
                           style={{
                             flexDirection: "row",
@@ -683,9 +706,7 @@ export default function GoalsScreen() {
                           setActiveDateType("start");
                           setViewedMonth(startDate);
                           setShowDatePicker(true);
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
+                          impact(ImpactFeedbackStyle.Light);
                         }}
                         style={{
                           backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
@@ -737,9 +758,7 @@ export default function GoalsScreen() {
                           setActiveDateType("end");
                           setViewedMonth(endDate);
                           setShowDatePicker(true);
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
+                          impact(ImpactFeedbackStyle.Light);
                         }}
                         style={{
                           backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
@@ -811,8 +830,9 @@ export default function GoalsScreen() {
                 </ScrollView>
               </Pressable>
             </Animated.View>
+            </Animated.View>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Custom Date Picker Modal Component */}
         <Modal

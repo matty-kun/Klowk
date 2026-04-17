@@ -52,18 +52,18 @@ const getRangeBounds = (range: ForecastRange, now: Date) => {
 
 const buildMessage = (status: ForecastStatus) => {
   if (status === "on_track") {
-    return "You're flying high! At this rate, we'll reach our mountain peak. Keep that wingspan wide!";
+    return "Slow and steady wins the race! We're right on trail — keep leaving that silver streak!";
   }
   if (status === "behind") {
-    return "The clouds are getting thick. If we want to hit our goal, we need an updraft. Try one more Deep Work hour.";
+    return "The path is getting long. Even a snail like me gets there with consistent steps. Try one more focused hour.";
   }
   if (status === "burnout") {
-    return "Even Flow needs to rest sometimes. You've been in the air too long, log some recovery time.";
+    return "Even snails tuck in sometimes. You've been crawling hard — pull back into your shell and rest a bit.";
   }
   if (status === "at_risk") {
-    return "Solid rhythm, but we're drifting a bit. A short 30-minute burst keeps the dream alive.";
+    return "Good pace, but the finish line is still far. One small push keeps us on the trail.";
   }
-  return "Set a goal and I will forecast your flight path with you.";
+  return "Set a goal and I'll map out our trail together.";
 };
 
 export const getForecast = ({

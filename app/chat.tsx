@@ -322,45 +322,72 @@ export default function ChatScreen() {
     const isForecastIntent =
       /(forecast|predict|goal|goals|will i|on track|target)/.test(input);
     if (isForecastIntent) {
-      const weekActivities = activities.filter(
-        (a) =>
-          a.start_time >= startOfWeek.getTime() &&
-          a.start_time <= endOfWeek.getTime(),
-      );
-      const weekSeconds = weekActivities.reduce(
-        (sum, a) => sum + (a.duration || 0),
-        0,
-      );
-      const weekMins = Math.floor(weekSeconds / 60);
-
       const activeGoals = (customGoals || []).filter(
         (g) => g.endDate >= Date.now() && g.startDate <= Date.now(),
       );
 
       if (activeGoals.length === 0) {
-        return "You don't have active goals right now. Create one first and I can forecast if you're on track this week.";
+        return "You don't have any active goals right now. Head over to the Goals tab and create one — then I can give you a proper forecast!";
       }
 
-      const goalPredictions = activeGoals.slice(0, 3).map((goal) => {
-        const goalDurationDays = Math.max(
+      const DAY_MS = 1000 * 60 * 60 * 24;
+      const nowMs = Date.now();
+
+      const lines = activeGoals.slice(0, 5).map((goal) => {
+        const goalActivities = activities.filter(
+          (a) =>
+            a.category === goal.categoryId &&
+            a.start_time >= goal.startDate &&
+            a.start_time <= Math.min(goal.endDate, nowMs),
+        );
+        const loggedMins = Math.floor(
+          goalActivities.reduce((sum, a) => sum + (a.duration || 0), 0) / 60,
+        );
+
+        const totalDays = Math.max(
           1,
-          Math.ceil((goal.endDate - goal.startDate) / (1000 * 60 * 60 * 24)),
+          Math.ceil((goal.endDate - goal.startDate) / DAY_MS),
         );
-        const elapsedDays = Math.min(
-          goalDurationDays,
-          Math.max(
-            1,
-            Math.ceil((Date.now() - goal.startDate) / (1000 * 60 * 60 * 24)),
-          ),
+        const elapsedDays = Math.max(
+          1,
+          Math.min(totalDays, Math.ceil((nowMs - goal.startDate) / DAY_MS)),
         );
+        const daysLeft = Math.max(0, totalDays - elapsedDays);
         const expectedByNow = Math.floor(
-          (goal.targetMins * elapsedDays) / goalDurationDays,
+          (goal.targetMins * elapsedDays) / totalDays,
         );
-        const onTrack = weekMins >= expectedByNow;
-        return `- ${goal.name}: ${onTrack ? "on track" : "behind pace"} (week: ${weekMins}m, expected by now: ${expectedByNow}m)`;
+        const projectedTotal = Math.floor((loggedMins / elapsedDays) * totalDays);
+        const pct = Math.min(100, Math.round((loggedMins / goal.targetMins) * 100));
+
+        const loggedHrs = (loggedMins / 60).toFixed(1);
+        const targetHrs = (goal.targetMins / 60).toFixed(1);
+        const projectedHrs = (projectedTotal / 60).toFixed(1);
+
+        let status = "";
+        let advice = "";
+        if (pct >= 100) {
+          status = "✅ Completed";
+          advice = "You've already hit this one!";
+        } else if (loggedMins >= expectedByNow) {
+          const ahead = loggedMins - expectedByNow;
+          status = "🟢 On track";
+          advice = `You're ${Math.round(ahead / 60 * 10) / 10}h ahead of pace. Keep it up!`;
+        } else {
+          const behind = expectedByNow - loggedMins;
+          const dailyCatchUp = daysLeft > 0 ? Math.ceil(behind / daysLeft) : behind;
+          status = "🔴 Behind";
+          advice = `You're ${Math.round(behind / 60 * 10) / 10}h behind. Log about ${dailyCatchUp}m/day for the next ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to catch up.`;
+        }
+
+        return `${goal.name}\n  ${status} — ${loggedHrs}h of ${targetHrs}h logged (${pct}%)\n  Projected: ${projectedHrs}h by end\n  ${advice}`;
       });
 
-      return `Here's your goal forecast for this week:\n${goalPredictions.join("\n")}`;
+      const allOnTrack = lines.every((l) => l.includes("🟢") || l.includes("✅"));
+      const summary = allOnTrack
+        ? "Looking good — you're on track with all your goals! 🐌💨"
+        : "Here's where things stand with your goals this week:";
+
+      return `${summary}\n\n${lines.join("\n\n")}`;
     }
 
     if (/(privacy|local|offline|cloud|data)/.test(input)) {
@@ -426,13 +453,11 @@ export default function ChatScreen() {
                 className={`mb-6 flex-row ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.sender === "flow" && (
-                  <View className="w-8 h-8 rounded-xl mr-3 overflow-hidden -mt-1">
-                    <Image
-                      source={require("../assets/images/flow portrait.png")}
-                      style={{ width: 32, height: 32 }}
-                      contentFit="cover"
-                    />
-                  </View>
+                  <Image
+                    source={require("../assets/images/flow portrait.png")}
+                    style={{ width: 32, height: 32, borderRadius: 10, marginRight: 12, marginTop: -4 }}
+                    contentFit="cover"
+                  />
                 )}
 
                 <View
@@ -453,13 +478,11 @@ export default function ChatScreen() {
 
             {isTyping && (
               <View className="mb-6 flex-row justify-start">
-                <View className="w-8 h-8 rounded-xl mr-3 overflow-hidden">
-                  <Image
-                    source={require("../assets/images/flow portrait.png")}
-                    style={{ width: 32, height: 32 }}
-                    contentFit="cover"
-                  />
-                </View>
+                <Image
+                  source={require("../assets/images/flow portrait.png")}
+                  style={{ width: 32, height: 32, borderRadius: 10, marginRight: 12 }}
+                  contentFit="cover"
+                />
                 <View className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-[24px] rounded-tl-none">
                   <Text className="text-gray-400 dark:text-zinc-600 font-black">
                     ...
@@ -470,21 +493,6 @@ export default function ChatScreen() {
 
             <View className="h-10" />
           </ScrollView>
-
-          {/* Quick prompts — vertical stack, aligned right, above input */}
-          <View className="items-end px-6 pt-1 gap-2 bg-white dark:bg-klowk-black">
-            {quickPrompts.map((prompt) => (
-              <Pressable
-                key={prompt}
-                onPress={() => handleQuickPrompt(prompt)}
-                className="px-4 py-2 rounded-full bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800"
-              >
-                <Text className="text-[11px] font-bold text-klowk-black dark:text-white">
-                  {prompt}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
 
           {/* Input Bar */}
           <View className="p-6 border-t border-gray-50 dark:border-zinc-800 pb-10 bg-white dark:bg-klowk-black">

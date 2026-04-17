@@ -1,4 +1,5 @@
 import { isGeminiNanoAvailable, initGeminiNano, askGeminiNano } from "@/utils/geminiNano";
+import { askGeminiAI } from "@/utils/geminiAI";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { useTracking } from "@/context/TrackingContext";
@@ -223,8 +224,36 @@ export default function ChatScreen() {
       }
     }
 
-    const nanoResponse = nanoReady ? await askGeminiNano(rawInput) : null;
-    const responseText = nanoResponse ?? getKlowkResponse(rawInput);
+    // Build context for Gemini AI
+    const nowMs = Date.now();
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(); startOfWeek.setDate(new Date().getDate() - new Date().getDay()); startOfWeek.setHours(0, 0, 0, 0);
+    const totalFocusToday = activities
+      .filter((a) => a.start_time >= startOfToday.getTime())
+      .reduce((s, a) => s + (a.duration || 0), 0);
+    const totalFocusWeek = activities
+      .filter((a) => a.start_time >= startOfWeek.getTime())
+      .reduce((s, a) => s + (a.duration || 0), 0);
+    const activeGoals = (customGoals || [])
+      .filter((g) => g.endDate >= nowMs && g.startDate <= nowMs)
+      .map((g) => ({
+        name: g.name,
+        targetMins: g.targetMins,
+        endDate: g.endDate,
+        loggedMins: Math.floor(
+          activities
+            .filter((a) => a.category === g.categoryId && a.start_time >= g.startDate && a.start_time <= nowMs)
+            .reduce((s, a) => s + (a.duration || 0), 0) / 60
+        ),
+      }));
+
+    const geminiResponse = await askGeminiAI(rawInput, {
+      userName: userName || undefined,
+      goals: activeGoals,
+      totalFocusToday,
+      totalFocusWeek,
+    });
+    const responseText = geminiResponse ?? (nanoReady ? await askGeminiNano(rawInput) : null) ?? getKlowkResponse(rawInput);
     const klowkResponse: Message = {
       id: (Date.now() + 1).toString(),
       text: responseText,

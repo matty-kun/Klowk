@@ -5,7 +5,7 @@ import {
     ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { SQLiteProvider, type SQLiteDatabase } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
@@ -48,6 +48,7 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
 import FloatingTimer from "@/components/FloatingTimer";
 import { LanguageProvider } from "@/context/LanguageContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadHapticsPreference } from "@/utils/haptics";
 import { OnboardingProvider, useOnboarding } from "@/context/OnboardingContext";
 import { TrackingProvider } from "@/context/TrackingContext";
@@ -103,9 +104,25 @@ export default function RootLayout() {
   );
 }
 
+const COLOR_SCHEME_KEY = "klowk_color_scheme";
+
 function RootLayoutNav() {
-  const { colorScheme } = useColorScheme();
+  const { colorScheme, setColorScheme } = useColorScheme();
   const { isOnboarded } = useOnboarding();
+  const router = useRouter();
+
+  // Restore saved color scheme on launch
+  useEffect(() => {
+    AsyncStorage.getItem(COLOR_SCHEME_KEY).then((saved) => {
+      if (saved === "dark" || saved === "light") setColorScheme(saved);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isOnboarded) {
+      router.replace("/onboarding/handshake");
+    }
+  }, [isOnboarded]);
 
   const AppDarkTheme = {
     ...DarkTheme,

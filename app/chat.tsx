@@ -426,7 +426,7 @@ export default function ChatScreen() {
                 className={`mb-6 flex-row ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.sender === "flow" && (
-                  <View className="w-8 h-8 rounded-xl mr-3 overflow-hidden">
+                  <View className="w-8 h-8 rounded-xl mr-3 overflow-hidden -mt-1">
                     <Image
                       source={require("../assets/images/flow portrait.png")}
                       style={{ width: 32, height: 32 }}
@@ -472,7 +472,7 @@ export default function ChatScreen() {
           </ScrollView>
 
           {/* Quick prompts — vertical stack, aligned right, above input */}
-          <View className="items-end px-6 pt-3 gap-2 bg-white dark:bg-klowk-black">
+          <View className="items-end px-6 pt-1 gap-2 bg-white dark:bg-klowk-black">
             {quickPrompts.map((prompt) => (
               <Pressable
                 key={prompt}

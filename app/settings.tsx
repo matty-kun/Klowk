@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLanguage } from "@/context/LanguageContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
@@ -252,6 +253,7 @@ export default function SettingsScreen() {
                     impact(ImpactFeedbackStyle.Light);
                     setLocalIsDark(false);
                     setTimeout(() => setColorScheme("light"), 200);
+                    AsyncStorage.setItem("klowk_color_scheme", "light");
                   }}
                   className="flex-1 py-3 items-center z-10"
                 >
@@ -267,6 +269,7 @@ export default function SettingsScreen() {
                     impact(ImpactFeedbackStyle.Light);
                     setLocalIsDark(true);
                     setTimeout(() => setColorScheme("dark"), 200);
+                    AsyncStorage.setItem("klowk_color_scheme", "dark");
                   }}
                   className="flex-1 py-3 items-center z-10"
                 >

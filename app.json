@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Flow",
-    "slug": "klowk",
+    "slug": "flow",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "klowk",
+    "scheme": "flow",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -24,7 +24,7 @@
       "minSdkVersion": 31,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.klowk"
+      "package": "io.flow.app"
     },
     "web": {
       "bundler": "metro",

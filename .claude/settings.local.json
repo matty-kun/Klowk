@@ -4,7 +4,13 @@
       "Bash(npx expo *)",
       "Bash(node -e \"const j=require\\('./assets/images/Klowk Waving.json'\\); j.layers?.forEach\\(\\(l,i\\)=>{ if\\(l.ty===1\\) console.log\\('SOLID layer',i,l.nm,l.sc\\) }\\)\")",
       "Bash(node -e ' *)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(./gradlew bundleRelease --info)",
+      "Bash(xargs grep *)",
+      "Bash(node --no-warnings --eval \"require\\('expo/bin/autolinking'\\)\" expo-modules-autolinking resolve --platform android --json)",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(p['name'], p.get\\('sourceDir',''\\)\\) for p in data.get\\('modules',[]\\)]\")",
+      "Bash(node --no-warnings --eval \"require\\('expo/bin/autolinking'\\)\" expo-modules-autolinking react-native-config --platform android --json)",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); deps=data.get\\('dependencies',{}\\); [print\\(k, v.get\\('root',''\\)\\) for k,v in list\\(deps.items\\(\\)\\)[:5]]\")"
     ]
   }
 }

@@ -1,191 +1,110 @@
-import { useLanguage } from "@/context/LanguageContext";
-import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
-import { ClipboardEdit, MessageCircle, Timer } from "lucide-react-native";
-import { Image } from "expo-image";
+import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { useColorScheme } from "nativewind";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { Animated, Easing, Modal, Pressable, Text, View } from "react-native";
 
-type ActionWidgetProps = {
-  visible: boolean;
-  onClose: () => void;
-  onTalkToKala: () => void;
-  onLogManually: () => void;
-  onStartLiveSession: () => void;
+export type ActionSheetAction = {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+  icon?: React.ReactNode;
 };
 
-export default function ActionWidget({
-  visible,
-  onClose,
-  onTalkToKala,
-  onLogManually,
-  onStartLiveSession,
-}: ActionWidgetProps) {
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  title?: string;
+  actions: ActionSheetAction[];
+};
+
+export default function ActionSheet({ visible, onClose, title, actions = [] }: Props) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
-  const { t } = useLanguage();
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const [mounted, setMounted] = useState(visible);
-  const isMounted = useRef(true);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  const [showModal, setShowModal] = React.useState(visible);
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      setMounted(true);
+      setShowModal(true);
       Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 200,
-          friction: 15,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0,
-          duration: 150,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 120,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        if (isMounted.current) setMounted(false);
-      });
+        Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 300, duration: 200, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+      ]).start(() => setShowModal(false));
     }
   }, [visible]);
 
-  const handleStartLive = () => {
-    impact(ImpactFeedbackStyle.Light);
-    onClose();
-    onStartLiveSession();
-  };
-
-  const handleLogManually = () => {
-    impact(ImpactFeedbackStyle.Light);
-    onClose();
-    onLogManually();
-  };
-
-  const handleTalkToKala = () => {
-    impact(ImpactFeedbackStyle.Light);
-    onClose();
-    onTalkToKala();
-  };
-
-  if (!mounted) return null;
-
   return (
-    <Modal
-      visible={mounted}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      <View className="flex-1">
-        <Pressable
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          onPress={onClose}
-        />
+    <Modal visible={showModal} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end", opacity: backdropAnim }}>
+        <Pressable style={{ flex: 1 }} onPress={() => { impact(ImpactFeedbackStyle.Light); onClose(); }} />
+        <Animated.View style={{ transform: [{ translateY: slideAnim }] }}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-zinc-900 rounded-t-[32px] px-6 pt-4 pb-10"
+          >
+            <View className="self-center w-10 h-1 bg-gray-200 dark:bg-zinc-800 rounded-full mb-6" />
 
-        <Animated.View
-          pointerEvents="box-none"
-          style={{
-            position: "absolute",
-            bottom: 100,
-            right: 20,
-            opacity: opacityAnim,
-            transform: [
-              { scale: scaleAnim },
-              {
-                translateY: scaleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
-            zIndex: 10000,
-          }}
-        >
-          <View className="bg-white dark:bg-zinc-900 rounded-[28px] p-2.5 border border-black/5 dark:border-white/5 shadow-2xl min-w-[240px]">
-            {/* Start Flow State */}
-            <Pressable onPress={handleStartLive}>
-              {({ pressed }) => (
-                <View
-                  className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-orange-50 dark:bg-orange-950/20" : ""}`}
+            {title && (
+              <Text className="text-xl font-black text-klowk-black dark:text-white italic mb-5">
+                {title}
+              </Text>
+            )}
+
+            {actions.map((action, i) => (
+              <React.Fragment key={action.label}>
+                {i > 0 && <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-1" />}
+                <Pressable
+                  onPress={() => {
+                    if (action.destructive) notification(NotificationFeedbackType.Warning);
+                    else impact(ImpactFeedbackStyle.Medium);
+                    onClose();
+                    action.onPress();
+                  }}
                 >
-                  <View className="w-9 h-9 bg-orange-100 dark:bg-orange-500/20 rounded-xl items-center justify-center mr-4">
-                    <Timer size={20} color="#FBBF24" strokeWidth={2.5} />
-                  </View>
-                  <Text className="text-base font-black text-klowk-black dark:text-white">
-                    {t("start_live_session")}
-                  </Text>
+                  {({ pressed }) => (
+                    <View
+                      className={`flex-row items-center justify-center py-3.5 px-1 rounded-2xl ${
+                        pressed
+                          ? action.destructive
+                            ? "bg-red-50 dark:bg-red-900/10"
+                            : "bg-gray-50 dark:bg-zinc-800"
+                          : ""
+                      }`}
+                    >
+                      {action.icon && <View style={{ marginRight: 16 }}>{action.icon}</View>}
+                      <Text
+                        className={`text-base font-bold ${
+                          action.destructive
+                            ? "text-red-500"
+                            : "text-klowk-black dark:text-white"
+                        }`}
+                      >
+                        {action.label}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              </React.Fragment>
+            ))}
+
+            <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-2" />
+            <Pressable onPress={() => { impact(ImpactFeedbackStyle.Light); onClose(); }}>
+              {({ pressed }) => (
+                <View className={`items-center justify-center py-3.5 rounded-2xl ${pressed ? "bg-gray-50 dark:bg-zinc-800" : ""}`}>
+                  <Text className="text-base font-bold text-gray-400 dark:text-zinc-600">Cancel</Text>
                 </View>
               )}
             </Pressable>
-
-            {/* Divider */}
-            <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 mx-3 my-1" />
-
-            {/* Talk to Flow */}
-            <Pressable onPress={handleTalkToKala}>
-              {({ pressed }) => (
-                <View
-                  className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-gray-50 dark:bg-zinc-800" : ""}`}
-                >
-                  <View className="w-9 h-9 bg-gray-50 dark:bg-zinc-800 rounded-xl items-center justify-center mr-4">
-                    <MessageCircle
-                      size={20}
-                      color={isDark ? "#9ca3af" : "#4b5563"}
-                      strokeWidth={2}
-                    />
-                  </View>
-                  <Text className="text-base font-bold text-klowk-black dark:text-white">
-                    {t("talk_to_klowk")}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-
-            {/* Log manually */}
-            <Pressable onPress={handleLogManually}>
-              {({ pressed }) => (
-                <View
-                  className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-gray-50 dark:bg-zinc-800" : ""}`}
-                >
-                  <View className="w-9 h-9 bg-gray-50 dark:bg-zinc-800 rounded-xl items-center justify-center mr-4">
-                    <ClipboardEdit
-                      size={20}
-                      color={isDark ? "#9ca3af" : "#4b5563"}
-                      strokeWidth={2}
-                    />
-                  </View>
-                  <Text className="text-base font-bold text-klowk-black dark:text-white">
-                    {t("log_manually")}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
+          </Pressable>
         </Animated.View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

@@ -1,5 +1,5 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
-import LogActionSheet from "@/components/LogActionSheet";
+import ActionSheet from "@/components/ActionSheet";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { impact } from "@/utils/haptics";
@@ -9,9 +9,12 @@ import { router } from "expo-router";
 import {
     ArrowLeft,
     Check,
+    Copy,
+    Edit2,
     MoreHorizontal,
     Search,
     SlidersHorizontal,
+    Trash2,
     X,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -511,24 +514,33 @@ export default React.memo(function LogsScreen() {
         </>
       )}
 
-      <LogActionSheet
+      <ActionSheet
         visible={selectedActionLogId !== null}
         onClose={() => setSelectedActionLogId(null)}
-        onEdit={() => {
-          if (selectedActionLogId) {
-            router.push({
-              pathname: "/modal",
-              params: { editId: selectedActionLogId },
-            });
-            setSelectedActionLogId(null);
-          }
-        }}
-        onDuplicate={() =>
-          selectedActionLogId && duplicateActivity(selectedActionLogId)
-        }
-        onDelete={() =>
-          selectedActionLogId && deleteActivity(selectedActionLogId)
-        }
+        title="Log Actions"
+        actions={[
+          {
+            label: "Edit details",
+            icon: <Edit2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              if (selectedActionLogId) {
+                router.push({ pathname: "/logmanual", params: { editId: selectedActionLogId } });
+                setSelectedActionLogId(null);
+              }
+            },
+          },
+          {
+            label: "Duplicate activity",
+            icon: <Copy size={20} color={isDark ? "#9ca3af" : "#4b5563"} />,
+            onPress: () => selectedActionLogId && duplicateActivity(selectedActionLogId),
+          },
+          {
+            label: "Delete forever",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => selectedActionLogId && deleteActivity(selectedActionLogId),
+          },
+        ]}
       />
     </SafeAreaView>
   );

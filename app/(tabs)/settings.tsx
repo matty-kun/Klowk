@@ -7,14 +7,31 @@ import {
     Shield,
     User,
 } from "lucide-react-native";
-import React from "react";
-import { Pressable, ScrollView } from "react-native";
+import * as Notifications from "expo-notifications";
+import React, { useEffect, useState } from "react";
+import { Pressable, ScrollView, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  useEffect(() => {
+    Notifications.getPermissionsAsync().then(({ status }) => {
+      setNotificationsEnabled(status === "granted");
+    });
+  }, []);
+
+  const handleNotificationToggle = async (value: boolean) => {
+    if (value) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      setNotificationsEnabled(status === "granted");
+    } else {
+      setNotificationsEnabled(false);
+    }
+  };
+
   const sections = [
     { icon: User, label: "Profile" },
-    { icon: Bell, label: "Notifications" },
     { icon: Shield, label: "Privacy & Security" },
     { icon: CircleHelp, label: "Help & Support" },
     { icon: LogOut, label: "Sign Out", color: "#ef4444" },
@@ -48,6 +65,26 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Notifications Row */}
+        <View className="bg-white rounded-[32px] border border-gray-50 shadow-sm overflow-hidden mb-4">
+          <View className="flex-row items-center justify-between p-5">
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 items-center justify-center mr-4 rounded-xl bg-gray-50">
+                <Bell size={20} color="#121212" />
+              </View>
+              <Text className="text-base font-bold text-klowk-black">
+                Notifications
+              </Text>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleNotificationToggle}
+              trackColor={{ false: "#e5e7eb", true: "#FBBF24" }}
+              thumbColor="#fff"
+            />
+          </View>
+        </View>
+
         {/* Settings List */}
         <View className="bg-white rounded-[32px] border border-gray-50 shadow-sm overflow-hidden">
           {sections.map((item, i) => (
@@ -71,7 +108,6 @@ export default function SettingsScreen() {
             </Pressable>
           ))}
         </View>
-
 
         {/* Bottom Spacer */}
         <View className="h-32 bg-transparent" />

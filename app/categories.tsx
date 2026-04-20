@@ -1,69 +1,27 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
-import LogActionSheet from "@/components/LogActionSheet";
+import ActionSheet from "@/components/ActionSheet";
+import EditCategorySheet from "@/components/EditCategorySheet";
+import NewCategorySheet from "@/components/NewCategorySheet";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
-import { impact, notification } from "@/utils/haptics";
+import { impact } from "@/utils/haptics";
 import { formatDate, formatTimestamp } from "@/utils/time";
-import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
+import { ImpactFeedbackStyle } from "expo-haptics";
 import { router } from "expo-router";
-import { ArrowLeft, Check, MoreHorizontal, Plus, X } from "lucide-react-native";
+import { ArrowLeft, Copy, Edit2, MoreHorizontal, Plus, Trash2 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    Alert,
     Animated,
     Dimensions,
-    Easing,
-    Modal,
     Pressable,
     ScrollView,
     Text,
-    TextInput,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width, height: screenHeight } = Dimensions.get("window");
-
-const ICONS = [
-  "briefcase",
-  "heart",
-  "book-open",
-  "dumbbell",
-  "coffee",
-  "music",
-  "gamepad",
-  "camera",
-  "plane",
-  "home",
-  "wallet",
-  "star",
-  "flame",
-  "brain",
-  "palette",
-];
-const COLORS = [
-  // Warm
-  "#FBBF24",
-  "#f97316",
-  "#ef4444",
-  "#f43f5e",
-  "#ec4899",
-  // Purple / Blue
-  "#a855f7",
-  "#6366f1",
-  "#3b82f6",
-  "#0ea5e9",
-  "#06b6d4",
-  // Green / Teal
-  "#14b8a6",
-  "#10b981",
-  "#22c55e",
-  "#84cc16",
-  // Neutral
-  "#78716c",
-  "#6b7280",
-  "#ffffff",
-  "#e5e7eb",
-];
+const { width } = Dimensions.get("window");
 
 export default function CategoriesScreen() {
   const { colorScheme } = useColorScheme();
@@ -72,31 +30,26 @@ export default function CategoriesScreen() {
     activities,
     categories,
     deleteActivity,
+    deleteCategory,
     duplicateActivity,
-    addCategory,
   } = useTracking();
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(
-    null,
-  );
+  const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
-  const [newCatIcon, setNewCatIcon] = useState("briefcase");
-  const [newCatColor, setNewCatColor] = useState("#FBBF24");
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [actionCategoryId, setActionCategoryId] = useState<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(width)).current;
-  const sheetSlide = useRef(new Animated.Value(150)).current;
-  const sheetBackdrop = useRef(new Animated.Value(0)).current;
 
   const categoryStats = useMemo(() => {
     return categories.map((cat: Category) => {
       const logs = activities.filter((a: Activity) => a.category === cat.id);
-      const totalMins = logs.reduce(
+      const totalSecs = logs.reduce(
         (sum: number, a: Activity) => sum + (a.duration || 0),
         0,
       );
+      const totalMins = Math.floor(totalSecs / 60);
       return { ...cat, totalMins, sessionCount: logs.length };
     });
   }, [activities, categories]);
@@ -133,61 +86,6 @@ export default function CategoriesScreen() {
     return hrs > 0
       ? `${hrs}h ${mins > 0 ? mins + "m" : ""}`.trim()
       : `${mins}m`;
-  };
-
-  const openSheet = () => {
-    sheetBackdrop.setValue(0);
-    sheetSlide.setValue(150);
-    setShowAddModal(true);
-    setShowAddCategory(true);
-    setTimeout(() => startSheetAnimation(), 10);
-  };
-
-  const startSheetAnimation = () => {
-    Animated.parallel([
-      Animated.timing(sheetBackdrop, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetSlide, {
-        toValue: 0,
-        duration: 380,
-        easing: Easing.out(Easing.exp),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const closeSheet = () => {
-    Animated.parallel([
-      Animated.timing(sheetBackdrop, {
-        toValue: 0,
-        duration: 260,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetSlide, {
-        toValue: 150,
-        duration: 300,
-        easing: Easing.in(Easing.exp),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowAddModal(false);
-      setShowAddCategory(false);
-    });
-  };
-
-  const handleAddCategory = () => {
-    if (!newCatName.trim()) return;
-    addCategory(newCatName.trim(), newCatIcon, newCatColor);
-    notification(NotificationFeedbackType.Success);
-    closeSheet();
-    setNewCatName("");
-    setNewCatIcon("tag");
-    setNewCatColor("#FBBF24");
   };
 
   return (
@@ -230,7 +128,7 @@ export default function CategoriesScreen() {
         <Pressable
           onPress={() => {
             impact(ImpactFeedbackStyle.Medium);
-            openSheet();
+            setShowAddCategory(true);
           }}
           style={{
             width: 40,
@@ -299,50 +197,27 @@ export default function CategoriesScreen() {
                   }}
                 >
                   {stat.sessionCount === 0
-                    ? "0 No sessions"
+                    ? "No sessions"
                     : `${stat.sessionCount} ${stat.sessionCount === 1 ? "session" : "sessions"}`}
                 </Text>
               </View>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "800",
-                  color: isDark ? "#fff" : "#1a1a1a",
-                }}
-              >
-                {formatTime(stat.totalMins)}
-              </Text>
+              <View style={{ alignItems: "flex-end", gap: 4 }}>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: isDark ? "#fff" : "#1a1a1a" }}>
+                  {formatTime(stat.totalMins)}
+                </Text>
+                <Pressable
+                  onPress={() => { impact(ImpactFeedbackStyle.Medium); setActionCategoryId(stat.id); }}
+                  hitSlop={10}
+                  style={{ padding: 2 }}
+                >
+                  <MoreHorizontal size={16} color={isDark ? "#52525b" : "#9ca3af"} />
+                </Pressable>
+              </View>
             </Pressable>
           ))}
         </View>
         <View style={{ height: 120 }} />
       </ScrollView>
-
-      {/* Floating + Button */}
-      <Pressable
-        onPress={() => {
-          impact(ImpactFeedbackStyle.Medium);
-          setShowAddCategory(true);
-        }}
-        style={{
-          position: "absolute",
-          bottom: 36,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: "#FBBF24",
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: "#FBBF24",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.4,
-          shadowRadius: 16,
-          elevation: 10,
-        }}
-      >
-        <Plus size={26} color="#fff" strokeWidth={2.5} />
-      </Pressable>
 
       {/* Category Detail Slide-In Overlay */}
       <Animated.View
@@ -555,309 +430,63 @@ export default function CategoriesScreen() {
         </SafeAreaView>
       </Animated.View>
 
-      {/* Add Category Sheet */}
-      <Modal
-        visible={showAddModal}
-        transparent
-        animationType="none"
-        onRequestClose={closeSheet}
-      >
-        <View style={{ flex: 1 }}>
-          {/* Backdrop — fades only, never moves */}
-          <Animated.View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.5)",
-              opacity: sheetBackdrop,
-            }}
-          />
-          <Pressable
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-            }}
-            onPress={closeSheet}
-          />
-          {/* Sheet slides up independently */}
-          <Animated.View
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              maxHeight: screenHeight * 0.9,
-              transform: [{ translateY: sheetSlide }],
-            }}
-          >
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              style={{
-                backgroundColor: isDark ? "#121212" : "#fff",
-                borderTopLeftRadius: 40,
-                borderTopRightRadius: 40,
-                flex: 1,
-              }}
-            >
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ padding: 32, paddingBottom: 48 }}
-                keyboardShouldPersistTaps="handled"
-              >
-                {/* Sheet header */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 28,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 22,
-                      fontWeight: "900",
-                      color: isDark ? "#fff" : "#121212",
-                    }}
-                  >
-                    New Category
-                  </Text>
-                  <Pressable
-                    onPress={closeSheet}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: isDark ? "#27272a" : "#f3f4f6",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <X size={18} color={isDark ? "#fff" : "#121212"} />
-                  </Pressable>
-                </View>
+      <NewCategorySheet visible={showAddCategory} onClose={() => setShowAddCategory(false)} />
+      <EditCategorySheet category={editingCategory} onClose={() => setEditingCategory(null)} />
+      <ActionSheet
+        visible={actionCategoryId !== null}
+        onClose={() => setActionCategoryId(null)}
+        title="Category Actions"
+        actions={[
+          {
+            label: "Edit category",
+            icon: <Edit2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              const cat = categories.find((c: Category) => c.id === actionCategoryId);
+              setEditingCategory(cat || null);
+              setActionCategoryId(null);
+            },
+          },
+          {
+            label: "Delete category",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => {
+              Alert.alert("Delete category?", "Sessions logged here will remain but won't be grouped.", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Delete", style: "destructive", onPress: () => { deleteCategory(actionCategoryId!); setActionCategoryId(null); } },
+              ]);
+            },
+          },
+        ]}
+      />
 
-                {/* Name input */}
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: "900",
-                    color: isDark ? "#71717a" : "#9ca3af",
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    marginBottom: 10,
-                  }}
-                >
-                  Category Name
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: isDark ? "#18181b" : "#f9fafb",
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: isDark ? "#27272a" : "#f3f4f6",
-                    marginBottom: 24,
-                  }}
-                >
-                  <TextInput
-                    value={newCatName}
-                    onChangeText={setNewCatName}
-                    placeholder={
-                      newCatName.length > 0 ? "" : "e.g. Learning, Workout..."
-                    }
-                    placeholderTextColor={isDark ? "#3f3f46" : "#d1d5db"}
-                    autoFocus
-                    style={{
-                      padding: 18,
-                      fontSize: 15,
-                      fontWeight: "700",
-                      color: isDark ? "#fff" : "#121212",
-                    }}
-                  />
-                </View>
-
-                {/* Icon picker */}
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: "900",
-                    color: isDark ? "#71717a" : "#9ca3af",
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    marginBottom: 10,
-                  }}
-                >
-                  Icon
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{ marginBottom: 24 }}
-                >
-                  <View style={{ flexDirection: "row", gap: 10 }}>
-                    {ICONS.map((icon, idx) => (
-                      <Pressable
-                        key={`icon-${idx}`}
-                        onPress={() => {
-                          setNewCatIcon(icon);
-                          impact(ImpactFeedbackStyle.Light);
-                        }}
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 16,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor:
-                            newCatIcon === icon
-                              ? "#FBBF24"
-                              : isDark
-                                ? "#18181b"
-                                : "#f9fafb",
-                          borderWidth: 1,
-                          borderColor:
-                            newCatIcon === icon
-                              ? "#FBBF24"
-                              : isDark
-                                ? "#27272a"
-                                : "#f3f4f6",
-                        }}
-                      >
-                        <CategoryIcon
-                          name={icon}
-                          size={20}
-                          color={
-                            newCatIcon === icon
-                              ? "#fff"
-                              : isDark
-                                ? "#52525b"
-                                : "#9ca3af"
-                          }
-                        />
-                      </Pressable>
-                    ))}
-                  </View>
-                </ScrollView>
-
-                {/* Color picker */}
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: "900",
-                    color: isDark ? "#71717a" : "#9ca3af",
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    marginBottom: 10,
-                  }}
-                >
-                  Color
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{ marginBottom: 32 }}
-                >
-                  <View style={{ flexDirection: "row", gap: 12 }}>
-                    {COLORS.map((color, idx) => (
-                      <Pressable
-                        key={`color-${idx}`}
-                        onPress={() => {
-                          setNewCatColor(color);
-                          impact(ImpactFeedbackStyle.Light);
-                        }}
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 20,
-                          backgroundColor: color,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderWidth: 3,
-                          borderColor:
-                            newCatColor === color
-                              ? isDark
-                                ? "#fff"
-                                : "#121212"
-                              : "transparent",
-                        }}
-                      >
-                        {newCatColor === color && (
-                          <Check size={16} color="#fff" />
-                        )}
-                      </Pressable>
-                    ))}
-                  </View>
-                </ScrollView>
-
-                {/* Create button */}
-                <Pressable
-                  onPress={handleAddCategory}
-                  disabled={!newCatName.trim()}
-                  style={{
-                    paddingVertical: 18,
-                    borderRadius: 24,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: !newCatName.trim()
-                      ? isDark
-                        ? "#27272a"
-                        : "#f3f4f6"
-                      : "#FBBF24",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "900",
-                      color: !newCatName.trim()
-                        ? isDark
-                          ? "#52525b"
-                          : "#9ca3af"
-                        : "#fff",
-                      textTransform: "uppercase",
-                      letterSpacing: 1,
-                    }}
-                  >
-                    Create Category
-                  </Text>
-                </Pressable>
-              </ScrollView>
-            </Pressable>
-          </Animated.View>
-        </View>
-      </Modal>
-
-      {/* Log Action Sheet */}
-      <LogActionSheet
+      <ActionSheet
         visible={selectedActionLogId !== null}
         onClose={() => setSelectedActionLogId(null)}
-        onEdit={() => {
-          if (selectedActionLogId) {
-            router.push({
-              pathname: "/modal",
-              params: { editId: selectedActionLogId },
-            });
-            setSelectedActionLogId(null);
-          }
-        }}
-        onDuplicate={() => {
-          if (selectedActionLogId) {
-            duplicateActivity(selectedActionLogId);
-            setSelectedActionLogId(null);
-          }
-        }}
-        onDelete={() => {
-          if (selectedActionLogId) {
-            deleteActivity(selectedActionLogId);
-            setSelectedActionLogId(null);
-          }
-        }}
+        title="Log Actions"
+        actions={[
+          {
+            label: "Edit details",
+            icon: <Edit2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              if (selectedActionLogId) {
+                router.push({ pathname: "/logmanual", params: { editId: selectedActionLogId } });
+                setSelectedActionLogId(null);
+              }
+            },
+          },
+          {
+            label: "Duplicate activity",
+            icon: <Copy size={20} color={isDark ? "#9ca3af" : "#4b5563"} />,
+            onPress: () => { if (selectedActionLogId) { duplicateActivity(selectedActionLogId); setSelectedActionLogId(null); } },
+          },
+          {
+            label: "Delete forever",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => { if (selectedActionLogId) { deleteActivity(selectedActionLogId); setSelectedActionLogId(null); } },
+          },
+        ]}
       />
     </SafeAreaView>
   );

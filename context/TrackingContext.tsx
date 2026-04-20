@@ -69,6 +69,8 @@ type TrackingContextType = {
   duplicateActivity: (id: number) => Promise<void>;
   refreshActivities: () => Promise<void>;
   addCategory: (label: string, iconName: string, color: string) => void;
+  deleteCategory: (id: string) => void;
+  editCategory: (id: string, label: string, iconName: string, color: string) => void;
   getTotalFocusTimeToday: () => number;
   customGoals: CustomGoal[];
   addCustomGoal: (goal: CustomGoal) => void;
@@ -177,6 +179,12 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     };
     setCategories((prev) => [...prev, newCat]);
   };
+
+  const deleteCategory = (id: string) =>
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+
+  const editCategory = (id: string, label: string, iconName: string, color: string) =>
+    setCategories((prev) => prev.map((c) => c.id === id ? { ...c, label, iconName, color } : c));
 
   const refreshActivities = async () => {
     if (!db || isRefreshing.current) return;
@@ -383,6 +391,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         duplicateActivity,
         refreshActivities,
         addCategory,
+        deleteCategory,
+        editCategory,
         getTotalFocusTimeToday,
         customGoals,
         addCustomGoal,

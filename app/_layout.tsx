@@ -163,7 +163,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="modal"
+          name="logmanual"
           options={{
             presentation: "modal",
             contentStyle: { backgroundColor: bg },

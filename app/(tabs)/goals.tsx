@@ -4,7 +4,7 @@ import DatePickerModal from "@/components/DatePickerModal";
 import EmptyState from "@/components/EmptyState";
 import GoalCard from "@/components/GoalCard";
 import SectionHeader from "@/components/SectionHeader";
-import LogActionSheet from "@/components/LogActionSheet";
+import ActionSheet from "@/components/ActionSheet";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Activity,
@@ -17,13 +17,16 @@ import { impact, notification } from "@/utils/haptics";
 import {
   Calendar as CalendarIcon,
   Clock,
+  Edit2,
   Flame,
   Plus,
   Target,
+  Trash2,
   X
 } from "lucide-react-native";
 import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -53,6 +56,11 @@ export default function GoalsScreen() {
     deleteCustomGoal,
   } = useTracking();
   const { t } = useLanguage();
+  const { openModal } = useLocalSearchParams<{ openModal?: string }>();
+
+  useEffect(() => {
+    if (openModal === "1") openSheet();
+  }, [openModal]);
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -60,6 +68,7 @@ export default function GoalsScreen() {
 
   const [goalName, setGoalName] = useState("");
   const [targetHrs, setTargetHrs] = useState("");
+  const [targetUnit, setTargetUnit] = useState<"hrs" | "mins">("hrs");
   const [selectedCatId, setSelectedCatId] = useState<string>("");
 
   const [startDate, setStartDate] = useState(new Date());
@@ -120,7 +129,10 @@ export default function GoalsScreen() {
     if (existingGoal) {
       setEditId(existingGoal.id);
       setGoalName(existingGoal.name);
-      setTargetHrs((existingGoal.targetMins / 60).toString());
+      setTargetHrs(existingGoal.targetMins < 60
+        ? existingGoal.targetMins.toString()
+        : (existingGoal.targetMins / 60).toString());
+      setTargetUnit(existingGoal.targetMins < 60 ? "mins" : "hrs");
       setSelectedCatId(existingGoal.categoryId);
       setStartDate(new Date(existingGoal.startDate));
       setEndDate(new Date(existingGoal.endDate));
@@ -128,6 +140,7 @@ export default function GoalsScreen() {
       setEditId(null);
       setGoalName("");
       setTargetHrs("");
+      setTargetUnit("hrs");
       setStartDate(new Date());
       const endD = new Date();
       endD.setDate(endD.getDate() + 7);
@@ -168,8 +181,9 @@ export default function GoalsScreen() {
   };
 
   const handleSaveGoal = () => {
-    const hrs = parseFloat(targetHrs);
-    if (!goalName.trim() || isNaN(hrs) || hrs <= 0 || !selectedCatId) return;
+    const val = parseFloat(targetHrs);
+    if (!goalName.trim() || isNaN(val) || val <= 0 || !selectedCatId) return;
+    const targetMinsCalc = targetUnit === "hrs" ? Math.round(val * 60) : Math.round(val);
 
     // ensure end time is end of day
     const fixedEnd = new Date(endDate);
@@ -179,7 +193,7 @@ export default function GoalsScreen() {
       editCustomGoal({
         id: editId,
         name: goalName.trim(),
-        targetMins: Math.round(hrs * 60),
+        targetMins: targetMinsCalc,
         categoryId: selectedCatId,
         startDate: startDate.getTime(),
         endDate: fixedEnd.getTime(),
@@ -188,7 +202,7 @@ export default function GoalsScreen() {
       addCustomGoal({
         id: Date.now().toString(),
         name: goalName.trim(),
-        targetMins: Math.round(hrs * 60),
+        targetMins: targetMinsCalc,
         categoryId: selectedCatId,
         startDate: startDate.getTime(),
         endDate: fixedEnd.getTime(),
@@ -328,8 +342,9 @@ export default function GoalsScreen() {
                   .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
                 const pct = Math.min(100, Math.round((loggedMins / goal.targetMins) * 100));
                 const achieved = loggedMins >= goal.targetMins;
-                const loggedHrs = (loggedMins / 60).toFixed(1);
-                const targetHrsVal = (goal.targetMins / 60).toFixed(1);
+                const fmtMins = (m: number) => m < 60 ? `${m}m` : `${(m / 60).toFixed(1).replace(".0", "")}h`;
+                const loggedHrs = fmtMins(loggedMins);
+                const targetHrsVal = fmtMins(goal.targetMins);
                 return (
                   <View
                     key={goal.id}
@@ -346,7 +361,7 @@ export default function GoalsScreen() {
                         {goal.name}
                       </Text>
                       <Text className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 mt-0.5">
-                        {loggedHrs}h of {targetHrsVal}h · {new Date(goal.endDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                        {loggedHrs} of {targetHrsVal} ·{new Date(goal.endDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                       </Text>
                     </View>
                     <View className={`px-2 py-1 rounded-full ${achieved ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-red-100 dark:bg-red-900/40"}`}>
@@ -364,29 +379,35 @@ export default function GoalsScreen() {
         <View style={{ height: 160 }} />
       </ScrollView>
 
-      {/* Action Sheet mapping Note: We re-use LogActionSheet but passing custom handlers */}
-      <LogActionSheet
+      <ActionSheet
         title="Goal Actions"
         visible={selectedActionGoalId !== null}
         onClose={() => setSelectedActionGoalId(null)}
-        onEdit={() => {
-          if (selectedActionGoalId) {
-            const goalToEdit = customGoals.find(
-              (g) => g.id === selectedActionGoalId,
-            );
-            setSelectedActionGoalId(null);
-            if (goalToEdit) {
-              setTimeout(() => openSheet(goalToEdit), 300); // Wait for sheet to close
-            }
-          }
-        }}
-        onDelete={() => {
-          if (selectedActionGoalId) {
-            deleteCustomGoal(selectedActionGoalId);
-            setSelectedActionGoalId(null);
-            notification(NotificationFeedbackType.Success);
-          }
-        }}
+        actions={[
+          {
+            label: "Edit goal",
+            icon: <Edit2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              if (selectedActionGoalId) {
+                const goalToEdit = customGoals.find((g) => g.id === selectedActionGoalId);
+                setSelectedActionGoalId(null);
+                if (goalToEdit) setTimeout(() => openSheet(goalToEdit), 300);
+              }
+            },
+          },
+          {
+            label: "Delete goal",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => {
+              if (selectedActionGoalId) {
+                deleteCustomGoal(selectedActionGoalId);
+                setSelectedActionGoalId(null);
+                notification(NotificationFeedbackType.Success);
+              }
+            },
+          },
+        ]}
       />
 
       {renderAddGoalModal()}
@@ -525,19 +546,38 @@ export default function GoalsScreen() {
                     />
                   </View>
 
-                  {/* Hours Target Input */}
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: "900",
-                      color: isDark ? "#71717a" : "#9ca3af",
-                      textTransform: "uppercase",
-                      letterSpacing: 2,
-                      marginBottom: 12,
-                    }}
-                  >
-                    Target
-                  </Text>
+                  {/* Target Input */}
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "900",
+                        color: isDark ? "#71717a" : "#9ca3af",
+                        textTransform: "uppercase",
+                        letterSpacing: 2,
+                      }}
+                    >
+                      Target
+                    </Text>
+                    <View style={{ flexDirection: "row", backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", borderRadius: 12, padding: 3 }}>
+                      {(["hrs", "mins"] as const).map((unit) => (
+                        <Pressable
+                          key={unit}
+                          onPress={() => setTargetUnit(unit)}
+                          style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 5,
+                            borderRadius: 10,
+                            backgroundColor: targetUnit === unit ? "#FBBF24" : "transparent",
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: "900", color: targetUnit === unit ? "#fff" : isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase" }}>
+                            {unit}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
                   <View
                     style={{
                       backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
@@ -555,7 +595,7 @@ export default function GoalsScreen() {
                     <TextInput
                       value={targetHrs}
                       onChangeText={setTargetHrs}
-                      placeholder="Total Hours (e.g. 50)"
+                      placeholder={targetUnit === "hrs" ? "Total hours (e.g. 10)" : "Total minutes (e.g. 90)"}
                       placeholderTextColor={isDark ? "#52525b" : "#d1d5db"}
                       keyboardType="numeric"
                       style={{

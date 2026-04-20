@@ -1,5 +1,7 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
+import AddGoalModal from "@/components/AddGoalModal";
 import CategoryPillScroller from "@/components/CategoryPillScroller";
+import NewCategorySheet from "@/components/NewCategorySheet";
 import DatePickerModal from "@/components/DatePickerModal";
 import FormField from "@/components/FormField";
 import ScreenHeader from "@/components/ScreenHeader";
@@ -14,6 +16,7 @@ import {
     Calendar as CalendarIcon,
     Check,
     Clock,
+    Plus,
     Tag,
     Target,
     Zap,
@@ -72,6 +75,8 @@ export default function EntryModal() {
   const [category, setCategory] = useState("work");
   const [description, setDescription] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [showAddGoal, setShowAddGoal] = useState(false);
+  const [showNewCat, setShowNewCat] = useState(false);
 
   // Initial Data Population for Edit Mode
   useEffect(() => {
@@ -194,6 +199,12 @@ export default function EntryModal() {
 
             {/* Duration Row */}
             <View className="mb-5">
+              <View className="flex-row items-center mb-2">
+                <Clock size={12} color="#9ca3af" />
+                <Text className="ml-1 text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">
+                  Duration
+                </Text>
+              </View>
               <TimeInputTrio
                 hours={hours} minutes={minutes} seconds={seconds}
                 onChangeHours={setHours} onChangeMinutes={setMinutes} onChangeSeconds={setSeconds}
@@ -255,6 +266,15 @@ export default function EntryModal() {
               label={t("active_goals")}
               className="mb-8"
               labelClassName="mb-4"
+              headerRight={
+                <Pressable
+                  onPress={() => setShowAddGoal(true)}
+                  className="flex-row items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-zinc-800"
+                >
+                  <Plus size={10} color="#9ca3af" />
+                  <Text className="text-[10px] font-black text-gray-400 uppercase">New</Text>
+                </Pressable>
+              }
             >
               {customGoals.length > 0 ? (
                 <ScrollView
@@ -281,9 +301,7 @@ export default function EntryModal() {
                             Math.floor((remaining % 3600) / 60).toString(),
                           );
                           setSeconds((remaining % 60).toString());
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Medium,
-                          );
+                          impact(ImpactFeedbackStyle.Medium);
                         }}
                         className={`mr-3 p-4 rounded-[20px] border min-w-[150px] ${isSelected ? "border-[#FBBF24] bg-amber-50 dark:bg-amber-500/10" : "bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
                       >
@@ -342,6 +360,15 @@ export default function EntryModal() {
               label={t("category_label")}
               className="mb-8"
               labelClassName="mb-3"
+              headerRight={
+                <Pressable
+                  onPress={() => setShowNewCat(true)}
+                  className="flex-row items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-zinc-800"
+                >
+                  <Plus size={10} color="#9ca3af" />
+                  <Text className="text-[10px] font-black text-gray-400 uppercase">New</Text>
+                </Pressable>
+              }
             >
               <CategoryPillScroller
                 categories={categories}
@@ -381,6 +408,9 @@ export default function EntryModal() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <AddGoalModal visible={showAddGoal} onClose={() => setShowAddGoal(false)} />
+      <NewCategorySheet visible={showNewCat} onClose={() => setShowNewCat(false)} onCreated={setCategory} />
     </SafeAreaView>
   );
 }

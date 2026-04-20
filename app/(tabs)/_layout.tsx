@@ -163,7 +163,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         }}
         onLogManually={() => {
           setShowSheet(false);
-          navigation.navigate("modal");
+          navigation.navigate("logmanual");
         }}
         onStartLiveSession={() => {
           setShowSheet(false);

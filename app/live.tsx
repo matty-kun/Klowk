@@ -7,7 +7,9 @@ import { Category, useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import { useRouter } from "expo-router";
-import { Check, Clock, Tag, Target, Zap } from "lucide-react-native";
+import AddGoalModal from "@/components/AddGoalModal";
+import NewCategorySheet from "@/components/NewCategorySheet";
+import { Check, Clock, Plus, Tag, Target, Zap } from "lucide-react-native";
 
 import { useColorScheme } from "nativewind";
 import React, { useState } from "react";
@@ -36,6 +38,8 @@ export default function LiveSessionPage() {
   const [seconds, setSeconds] = useState("");
   const [category, setCategory] = useState("work");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [showAddGoal, setShowAddGoal] = useState(false);
+  const [showNewCat, setShowNewCat] = useState(false);
 
   const getGoalRemainingSecs = (goalId: string) => {
     const goal = customGoals.find((g) => g.id === goalId);
@@ -120,11 +124,20 @@ export default function LiveSessionPage() {
 
           {/* Goals Selection */}
           <View className="mb-8">
-            <View className="flex-row items-center mb-4">
-              <Target size={14} color="#FBBF24" />
-              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">
-                {t("active_goals")}
-              </Text>
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <Target size={14} color="#FBBF24" />
+                <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">
+                  {t("active_goals")}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setShowAddGoal(true)}
+                className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
+              >
+                <Plus size={11} color="#FBBF24" strokeWidth={3} />
+                <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
+              </Pressable>
             </View>
 
             {customGoals.length > 0 ? (
@@ -205,11 +218,20 @@ export default function LiveSessionPage() {
 
           {/* Category Selection */}
           <View className="mb-10">
-            <View className="flex-row items-center mb-4">
-              <Tag size={14} color="#9ca3af" />
-              <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">
-                {t("category_label")}
-              </Text>
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <Tag size={14} color="#9ca3af" />
+                <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">
+                  {t("category_label")}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setShowNewCat(true)}
+                className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
+              >
+                <Plus size={11} color="#FBBF24" strokeWidth={3} />
+                <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
+              </Pressable>
             </View>
             <CategoryPillScroller
               categories={categories}
@@ -240,6 +262,8 @@ export default function LiveSessionPage() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      <AddGoalModal visible={showAddGoal} onClose={() => setShowAddGoal(false)} />
+      <NewCategorySheet visible={showNewCat} onClose={() => setShowNewCat(false)} onCreated={setCategory} />
     </SafeAreaView>
   );
 }

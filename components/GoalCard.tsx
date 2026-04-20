@@ -28,7 +28,8 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, onPres
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
 
-  const formatHrs = (mins: number) => (mins / 60).toFixed(1).replace(".0", "");
+  const formatTime = (mins: number) =>
+    mins < 60 ? `${mins}m` : `${(mins / 60).toFixed(1).replace(".0", "")}h`;
   const pct = Math.min(100, (currentMins / goal.targetMins) * 100) || 0;
   const isCompleted = pct >= 100;
   const daysRemaining = Math.max(
@@ -68,8 +69,8 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, onPres
             <MoreHorizontal size={18} color={isDark ? "#52525b" : "#9ca3af"} />
           </Pressable>
           <Text className="text-xs font-black text-[#121212] dark:text-white">
-            {formatHrs(currentMins)}{" "}
-            <Text className="text-gray-400">/ {formatHrs(goal.targetMins)}h</Text>
+            {formatTime(currentMins)}{" "}
+            <Text className="text-gray-400">/ {formatTime(goal.targetMins)}</Text>
           </Text>
           <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase">
             {daysRemaining} {daysRemaining === 1 ? t("day_left") : t("days_left")}

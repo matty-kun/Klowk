@@ -1,5 +1,5 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
-import LogActionSheet from "@/components/LogActionSheet";
+import ActionSheet from "@/components/ActionSheet";
 import ProgressBar from "@/components/ProgressBar";
 import ToggleBar from "@/components/ToggleBar";
 import { Text } from "@/components/Themed";
@@ -27,6 +27,8 @@ import {
     Clock,
     Code,
     Coffee as CoffeeIcon,
+    Copy,
+    Edit2,
     Heart,
     Layers,
     MoreHorizontal,
@@ -36,6 +38,7 @@ import {
     Tag,
     Target,
     TrendingUp as TrendIcon,
+    Trash2,
     Users,
     X,
     Zap,
@@ -629,7 +632,7 @@ export default React.memo(function ReportsScreen() {
         title: string;
         detail: string;
         icon: any;
-        route?: "/goals" | "/live" | "/modal";
+        route?: "/goals" | "/live" | "/logmanual";
       }[]
     > = {
       on_track: [
@@ -666,13 +669,13 @@ export default React.memo(function ReportsScreen() {
           title: "Recover before pushing",
           detail: "Log Health or Leisure time before your next Work block.",
           icon: Heart,
-          route: "/modal",
+          route: "/logmanual",
         },
         {
           title: "Protect energy",
           detail: "Reduce intensity and split work into smaller sessions.",
           icon: Coffee,
-          route: "/modal",
+          route: "/logmanual",
         },
       ],
       at_risk: [
@@ -1109,30 +1112,33 @@ export default React.memo(function ReportsScreen() {
         </Animated.View>
       )}
 
-      <LogActionSheet
+      <ActionSheet
         visible={selectedActionLogId !== null}
         onClose={() => setSelectedActionLogId(null)}
-        onEdit={() => {
-          if (selectedActionLogId) {
-            router.push({
-              pathname: "/modal",
-              params: { editId: selectedActionLogId },
-            });
-            setSelectedActionLogId(null);
-          }
-        }}
-        onDuplicate={() => {
-          if (selectedActionLogId) {
-            duplicateActivity(selectedActionLogId);
-            setSelectedActionLogId(null);
-          }
-        }}
-        onDelete={() => {
-          if (selectedActionLogId) {
-            deleteActivity(selectedActionLogId);
-            setSelectedActionLogId(null);
-          }
-        }}
+        title="Log Actions"
+        actions={[
+          {
+            label: "Edit details",
+            icon: <Edit2 size={20} color={colorScheme === "dark" ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              if (selectedActionLogId) {
+                router.push({ pathname: "/logmanual", params: { editId: selectedActionLogId } });
+                setSelectedActionLogId(null);
+              }
+            },
+          },
+          {
+            label: "Duplicate activity",
+            icon: <Copy size={20} color={colorScheme === "dark" ? "#9ca3af" : "#4b5563"} />,
+            onPress: () => { if (selectedActionLogId) { duplicateActivity(selectedActionLogId); setSelectedActionLogId(null); } },
+          },
+          {
+            label: "Delete forever",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => { if (selectedActionLogId) { deleteActivity(selectedActionLogId); setSelectedActionLogId(null); } },
+          },
+        ]}
       />
 
       {/* Add Category Sheet */}

@@ -1,10 +1,11 @@
 import CategoryPillScroller from "@/components/CategoryPillScroller";
 import DatePickerModal from "@/components/DatePickerModal";
+import WheelPicker from "@/components/WheelPicker";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
 import { impact, notification } from "@/utils/haptics";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { Calendar as CalendarIcon, Clock, X } from "lucide-react-native";
+import { Calendar as CalendarIcon, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -34,8 +35,8 @@ export default function AddGoalModal({ visible, onClose }: Props) {
   const { t } = useLanguage();
 
   const [goalName, setGoalName] = useState("");
-  const [targetVal, setTargetVal] = useState("");
-  const [targetUnit, setTargetUnit] = useState<"hrs" | "mins">("hrs");
+  const [targetHours, setTargetHours] = useState(0);
+  const [targetMins, setTargetMins] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(() => {
@@ -45,10 +46,14 @@ export default function AddGoalModal({ visible, onClose }: Props) {
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeDateType, setActiveDateType] = useState<"start" | "end">("start");
+  const hourValues = React.useMemo(() => Array.from({ length: 100 }, (_, i) => `${i}`), []);
+  const minValues = React.useMemo(() => Array.from({ length: 60 }, (_, i) => `${i}`), []);
 
   const sheetSlide = useRef(new Animated.Value(800)).current;
   const sheetBackdrop = useRef(new Animated.Value(0)).current;
   const keyboardOffset = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
+  const [sheetScrollEnabled, setSheetScrollEnabled] = useState(true);
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCatId) {
@@ -71,8 +76,8 @@ export default function AddGoalModal({ visible, onClose }: Props) {
   useEffect(() => {
     if (visible) {
       setGoalName("");
-      setTargetVal("");
-      setTargetUnit("hrs");
+      setTargetHours(0);
+      setTargetMins(0);
       setStartDate(new Date());
       const d = new Date();
       d.setDate(d.getDate() + 7);
@@ -90,15 +95,14 @@ export default function AddGoalModal({ visible, onClose }: Props) {
   }, [visible]);
 
   const handleSave = () => {
-    const val = parseFloat(targetVal);
-    if (!goalName.trim() || isNaN(val) || val <= 0 || !selectedCatId) return;
-    const targetMins = targetUnit === "hrs" ? Math.round(val * 60) : Math.round(val);
+    const totalMins = targetHours * 60 + targetMins;
+    if (!goalName.trim() || totalMins <= 0 || !selectedCatId) return;
     const fixedEnd = new Date(endDate);
     fixedEnd.setHours(23, 59, 59, 999);
     addCustomGoal({
       id: Date.now().toString(),
       name: goalName.trim(),
-      targetMins,
+      targetMins: totalMins,
       categoryId: selectedCatId,
       startDate: startDate.getTime(),
       endDate: fixedEnd.getTime(),
@@ -107,7 +111,7 @@ export default function AddGoalModal({ visible, onClose }: Props) {
     onClose();
   };
 
-  const isFormValid = goalName.trim() && targetVal.trim() && !isNaN(parseFloat(targetVal)) && selectedCatId;
+  const isFormValid = goalName.trim() && (targetHours * 60 + targetMins) > 0 && selectedCatId;
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -120,7 +124,7 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                 onPress={(e) => e.stopPropagation()}
                 style={{ backgroundColor: isDark ? "#1C1C1E" : "#fff", borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 32, paddingBottom: 48, maxHeight: height * 0.9 }}
               >
-                <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} bounces={false} scrollEnabled={sheetScrollEnabled}>
                   {/* Header */}
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
                     <Text style={{ fontSize: 24, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>
@@ -154,32 +158,46 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                   </View>
 
                   {/* Target */}
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                    <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2 }}>
-                      Target
-                    </Text>
-                    <View style={{ flexDirection: "row", backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", borderRadius: 12, padding: 3 }}>
-                      {(["hrs", "mins"] as const).map((unit) => (
-                        <Pressable key={unit} onPress={() => setTargetUnit(unit)} style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, backgroundColor: targetUnit === unit ? "#FBBF24" : "transparent" }}>
-                          <Text style={{ fontSize: 11, fontWeight: "900", color: targetUnit === unit ? "#fff" : isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase" }}>
-                            {unit}
-                          </Text>
-                        </Pressable>
-                      ))}
+                  <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
+                    Target
+                  </Text>
+                  <View
+                    onTouchStart={() => setSheetScrollEnabled(false)}
+                    onTouchEnd={() => setSheetScrollEnabled(true)}
+                    onTouchCancel={() => setSheetScrollEnabled(true)}
+                    style={{
+                      backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: isDark ? "#3a3a3c" : "#f3f4f6",
+                      marginBottom: 24,
+                      flexDirection: "row",
+                      paddingVertical: 12,
+                      paddingHorizontal: 8,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <WheelPicker
+                        values={hourValues}
+                        selectedIndex={targetHours}
+                        onChange={setTargetHours}
+                        itemHeight={32}
+                        visibleItems={3}
+                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
+                      />
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>hrs</Text>
                     </View>
-                  </View>
-                  <View style={{ backgroundColor: isDark ? "#2c2c2e" : "#f9fafb", borderRadius: 20, borderWidth: 1, borderColor: isDark ? "#3a3a3c" : "#f3f4f6", marginBottom: 24, flexDirection: "row", alignItems: "center" }}>
-                    <View style={{ paddingLeft: 18, marginRight: -8 }}>
-                      <Clock size={16} color={isDark ? "#52525b" : "#9ca3af"} />
+                    <View style={{ flex: 1 }}>
+                      <WheelPicker
+                        values={minValues}
+                        selectedIndex={targetMins}
+                        onChange={setTargetMins}
+                        itemHeight={32}
+                        visibleItems={3}
+                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
+                      />
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>min</Text>
                     </View>
-                    <TextInput
-                      value={targetVal}
-                      onChangeText={setTargetVal}
-                      placeholder={targetUnit === "hrs" ? "Total hours (e.g. 10)" : "Total minutes (e.g. 90)"}
-                      placeholderTextColor={isDark ? "#52525b" : "#d1d5db"}
-                      keyboardType="numeric"
-                      style={{ flex: 1, padding: 18, fontSize: 16, fontWeight: "700", color: isDark ? "#fff" : "#121212" }}
-                    />
                   </View>
 
                   {/* Date Range */}

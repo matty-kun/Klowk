@@ -1,12 +1,12 @@
-import ActionSheet from "@/components/ActionSheet";
+import ActionWidget from "@/components/ActionWidget";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { impact, notification } from "@/utils/haptics";
+import { ImpactFeedbackStyle } from "expo-haptics";
+import { impact } from "@/utils/haptics";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { BarChart3, Home, Plus, Square, Target } from "lucide-react-native";
+import { BarChart3, Home, Plus, Target } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -30,13 +30,12 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
-  const { currentActivity, stopTracker } = useTracking();
+  const { currentActivity } = useTracking();
   const [showSheet, setShowSheet] = useState(false);
   const router = useRouter();
 
   const isTimerRunning = !!currentActivity;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const morphAnim = useRef(new Animated.Value(isTimerRunning ? 1 : 0)).current;
   const sheetAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -59,51 +58,6 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       return () => pulse.stop();
     }
   }, [isTimerRunning]);
-
-  useEffect(() => {
-    Animated.spring(morphAnim, {
-      toValue: isTimerRunning ? 1 : 0,
-      useNativeDriver: true,
-      tension: 80,
-      friction: 10,
-    }).start();
-  }, [isTimerRunning]);
-
-  const plusOpacity = morphAnim.interpolate({
-    inputRange: [0, 0.4],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-  const plusScale = morphAnim.interpolate({
-    inputRange: [0, 0.4],
-    outputRange: [1, 0.3],
-    extrapolate: "clamp",
-  });
-  const stopOpacity = morphAnim.interpolate({
-    inputRange: [0.6, 1],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
-  const stopScale = morphAnim.interpolate({
-    inputRange: [0.6, 1],
-    outputRange: [0.3, 1],
-    extrapolate: "clamp",
-  });
-  const btnRotate = morphAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "90deg"],
-  });
-  // Fade between the two background layers using native driver
-  const orangeOpacity = morphAnim.interpolate({
-    inputRange: [0, 0.5],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-  const darkOpacity = morphAnim.interpolate({
-    inputRange: [0.5, 1],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
 
   useEffect(() => {
     Animated.spring(sheetAnim, {
@@ -129,13 +83,13 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
     outputRange: ["0deg", "45deg"],
   });
 
-  const handlePlusTap = async () => {
+  const handlePlusTap = () => {
     if (showSheet) {
       impact(ImpactFeedbackStyle.Light);
       setShowSheet(false);
     } else if (isTimerRunning) {
-      notification(NotificationFeedbackType.Success);
-      await stopTracker();
+      impact(ImpactFeedbackStyle.Medium);
+      router.push("/tracker");
     } else {
       impact(ImpactFeedbackStyle.Medium);
       router.push("/live");
@@ -154,21 +108,12 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         zIndex: 1000,
       }}
     >
-      <ActionSheet
+      <ActionWidget
         visible={showSheet}
         onClose={() => setShowSheet(false)}
-        onTalkToKala={() => {
-          setShowSheet(false);
-          navigation.navigate("chat");
-        }}
-        onLogManually={() => {
-          setShowSheet(false);
-          navigation.navigate("logmanual");
-        }}
-        onStartLiveSession={() => {
-          setShowSheet(false);
-          router.push("/live");
-        }}
+        onTalkToKala={() => { setShowSheet(false); navigation.navigate("chat"); }}
+        onLogManually={() => { setShowSheet(false); navigation.navigate("logmanual"); }}
+        onStartLiveSession={() => { setShowSheet(false); router.push("/live"); }}
       />
 
       <View
@@ -296,74 +241,24 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
               width: 68,
               height: 68,
               borderRadius: 34,
-              overflow: "hidden",
+              backgroundColor: "#FBBF24",
               elevation: 10,
-              transform: [{ rotate: btnRotate }],
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#FBBF24",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.35,
+              shadowRadius: 16,
             }}
           >
-            {/* Orange layer (plus state) */}
             <Animated.View
               style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                borderRadius: 34,
-                backgroundColor: "#FBBF24",
-                opacity: orangeOpacity,
-              }}
-            />
-            {/* Dark/white layer (stop state) */}
-            <Animated.View
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                borderRadius: 34,
-                backgroundColor: isDark ? "#ffffff" : "#121212",
-                opacity: darkOpacity,
-              }}
-            />
-
-            {/* Plus icon */}
-            <Animated.View
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: plusOpacity,
-                transform: [{ scale: plusScale }, { rotate: sheetRotate }],
+                transform: [{ rotate: sheetRotate }],
               }}
             >
               <Plus size={32} color="#fff" strokeWidth={3} />
-            </Animated.View>
-            {/* Stop icon */}
-            <Animated.View
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: stopOpacity,
-                transform: [{ scale: stopScale }],
-              }}
-            >
-              <Square
-                size={24}
-                color={isDark ? "#121212" : "#fff"}
-                fill={isDark ? "#121212" : "#fff"}
-                strokeWidth={0}
-              />
             </Animated.View>
           </Animated.View>
         </Pressable>

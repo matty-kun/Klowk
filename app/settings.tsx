@@ -116,9 +116,9 @@ const SettingItem = ({
 import { useTracking } from "@/context/TrackingContext";
 import { getHapticsEnabled, setHapticsEnabled } from "@/utils/haptics";
 import {
-  cancelDailyReminder,
-  getDailyReminderSettings,
-  scheduleDailyReminder,
+  cancelInactivityReminder,
+  getInactivityReminderSettings,
+  scheduleInactivityReminder,
 } from "@/utils/notifications";
 
 export default function SettingsScreen() {
@@ -131,11 +131,11 @@ export default function SettingsScreen() {
 
   React.useEffect(() => setLocalIsDark(isDarkMode), [isDarkMode]);
   React.useEffect(() => setLocalLang(language), [language]);
-  const [dailyReminder, setDailyReminder] = React.useState(false);
+  const [notifsEnabled, setNotifsEnabled] = React.useState(false);
   const [hapticsOn, setHapticsOn] = React.useState(getHapticsEnabled);
 
   React.useEffect(() => {
-    getDailyReminderSettings().then(({ enabled }) => setDailyReminder(enabled));
+    getInactivityReminderSettings().then(({ enabled }) => setNotifsEnabled(enabled));
   }, []);
   const [langToggleWidth, setLangToggleWidth] = React.useState(0);
   const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
@@ -146,13 +146,13 @@ export default function SettingsScreen() {
       const Notifications = require("expo-notifications") as typeof import("expo-notifications");
       const { status } = await Notifications.requestPermissionsAsync();
       if (status === "granted") {
-        await scheduleDailyReminder(9, 0);
-        setDailyReminder(true);
+        await scheduleInactivityReminder(21, 0);
+        setNotifsEnabled(true);
         notification(NotificationFeedbackType.Success);
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "Notifications on! 🔔",
-            body: "You'll get a daily nudge at 9:00 AM.",
+            body: "You'll get an evening reminder if you haven't logged anything today.",
             sound: "default",
             vibrate: [0, 250, 100, 250],
           },
@@ -160,8 +160,8 @@ export default function SettingsScreen() {
         });
       }
     } else {
-      await cancelDailyReminder();
-      setDailyReminder(false);
+      await cancelInactivityReminder();
+      setNotifsEnabled(false);
     }
   };
 
@@ -370,7 +370,7 @@ export default function SettingsScreen() {
                   Notification
                 </Text>
                 <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                  Stay on top of your day with timely reminders
+                  Morning nudge + evening reminder if you haven't logged
                 </Text>
               </View>
               <View
@@ -382,7 +382,7 @@ export default function SettingsScreen() {
                 <MotiView
                   animate={{
                     translateX:
-                      (dailyReminder ? 1 : 0) * ((notifToggleWidth - 8) / 2),
+                      (notifsEnabled ? 1 : 0) * ((notifToggleWidth - 8) / 2),
                   }}
                   transition={{ type: "spring", damping: 20, stiffness: 150 }}
                   style={{
@@ -408,7 +408,7 @@ export default function SettingsScreen() {
                   className="flex-1 py-3 items-center z-10"
                 >
                   <Text
-                    className={`text-[10px] font-black uppercase ${!dailyReminder ? "text-amber-400" : "text-gray-400"}`}
+                    className={`text-[10px] font-black uppercase ${!notifsEnabled ? "text-amber-400" : "text-gray-400"}`}
                   >
                     Off
                   </Text>
@@ -421,7 +421,7 @@ export default function SettingsScreen() {
                   className="flex-1 py-3 items-center z-10"
                 >
                   <Text
-                    className={`text-[10px] font-black uppercase ${dailyReminder ? "text-amber-400" : "text-gray-400"}`}
+                    className={`text-[10px] font-black uppercase ${notifsEnabled ? "text-amber-400" : "text-gray-400"}`}
                   >
                     On
                   </Text>

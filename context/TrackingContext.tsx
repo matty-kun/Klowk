@@ -1,5 +1,6 @@
 import { CATEGORIES as DEFAULT_CATEGORIES } from "@/constants/Categories";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { dismissInactivityReminderForToday } from "@/utils/notifications";
 import { useSQLiteContext } from "expo-sqlite";
 import {
     createContext,
@@ -73,6 +74,7 @@ type TrackingContextType = {
   editCategory: (id: string, label: string, iconName: string, color: string) => void;
   getTotalFocusTimeToday: () => number;
   customGoals: CustomGoal[];
+  isGoalsLoaded: boolean;
   addCustomGoal: (goal: CustomGoal) => void;
   deleteCustomGoal: (id: string) => void;
   editCustomGoal: (goal: CustomGoal) => void;
@@ -90,8 +92,10 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [customGoals, setCustomGoals] = useState<CustomGoal[]>([]);
+  const [isGoalsLoaded, setIsGoalsLoaded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const isRefreshing = useRef(false);
+  const currentActivityRef = useRef<Activity | null>(null);
 
   // Persistence for Categories
   useEffect(() => {
@@ -140,6 +144,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         if (saved) setCustomGoals(JSON.parse(saved));
       } catch (e) {
         console.error("Failed to load goals", e);
+      } finally {
+        setIsGoalsLoaded(true);
       }
     };
     loadGoals();
@@ -197,6 +203,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
 
       // Global State Check: Identify ongoing activity
       const ongoing = result.find((a) => a.end_time === null);
+      currentActivityRef.current = ongoing || null;
       setCurrentActivity(ongoing || null);
       setActivities(result);
     } catch (err) {
@@ -229,7 +236,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     description?: string,
     targetSecs?: number,
   ) => {
-    if (currentActivity) return;
+    if (currentActivityRef.current) return;
     try {
       const now = Date.now();
       await db.runAsync(
@@ -243,20 +250,22 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   };
 
   const stopTracker = async () => {
-    if (!currentActivity) return;
+    const activityToStop = currentActivityRef.current;
+    if (!activityToStop) return;
     try {
       const now = Date.now();
       const durationSecs = Math.max(
         0,
-        Math.floor((now - currentActivity.start_time) / 1000),
+        Math.floor((now - activityToStop.start_time) / 1000),
       );
 
       await db.runAsync(
         "UPDATE activities SET end_time = ?, duration = ? WHERE id = ?",
-        [now, durationSecs, currentActivity.id],
+        [now, durationSecs, activityToStop.id],
       );
       setIsMinimized(false);
       await refreshActivities();
+      dismissInactivityReminderForToday().catch(() => {});
     } catch (err) {
       console.error("Failed to stop tracker:", err);
     }
@@ -310,6 +319,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         ],
       );
       await refreshActivities();
+      dismissInactivityReminderForToday().catch(() => {});
     } catch (err) {
       console.error("Failed to add manual activity:", err);
     }
@@ -363,6 +373,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         ],
       );
       await refreshActivities();
+      dismissInactivityReminderForToday().catch(() => {});
     } catch (err) {
       console.error("Failed to duplicate activity:", err);
     }
@@ -395,6 +406,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         editCategory,
         getTotalFocusTimeToday,
         customGoals,
+        isGoalsLoaded,
         addCustomGoal,
         deleteCustomGoal,
         editCustomGoal,

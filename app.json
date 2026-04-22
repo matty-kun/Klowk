@@ -21,7 +21,7 @@
         "foregroundImage": "./assets/images/adaptive-icon-foreground.png",
         "backgroundImage": "./assets/images/adaptive-icon-background.png"
       },
-      "minSdkVersion": 31,
+      "minSdkVersion": 24,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "io.flow.app",

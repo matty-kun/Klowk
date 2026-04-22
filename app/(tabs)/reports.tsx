@@ -1,5 +1,6 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import ActionSheet from "@/components/ActionSheet";
+import CategoryDetailSheet from "@/components/CategoryDetailSheet";
 import ProgressBar from "@/components/ProgressBar";
 import ToggleBar from "@/components/ToggleBar";
 import { Text } from "@/components/Themed";
@@ -91,9 +92,18 @@ const Coffee = ({ size, color }: { size: number; color: string }) => (
 
 // --- Helper Components for Charts ---
 
-const DonutChart = ({ data, total }: { data: any[]; total: number }) => {
+const DonutChart = ({
+  data,
+  total,
+  timeRange,
+}: {
+  data: any[];
+  total: number;
+  timeRange: "today" | "week" | "month";
+}) => {
   const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
+  const periodLabel = timeRange === "today" ? "Today" : timeRange === "week" ? "This Week" : "This Month";
   const size = 160;
   const strokeWidth = 14;
   const center = size / 2;
@@ -157,7 +167,7 @@ const DonutChart = ({ data, total }: { data: any[]; total: number }) => {
       </Svg>
       <View className="absolute items-center bg-transparent">
         <Text className="text-gray-400 dark:text-gray-500 font-black text-[8px] uppercase tracking-widest mb-1">
-          {t("focused")}
+          {periodLabel}
         </Text>
         <Text className="text-2xl font-black text-klowk-black dark:text-white">
           {total < 3600
@@ -169,65 +179,105 @@ const DonutChart = ({ data, total }: { data: any[]; total: number }) => {
   );
 };
 
-const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
+const TrendLineChart = ({
+  activities,
+  timeRange,
+}: {
+  activities: any[];
+  timeRange: "today" | "week" | "month";
+}) => {
   const { colorScheme } = useColorScheme();
-  const { t } = useLanguage();
-  const days = ["S", "M", "T", "W", "T", "F", "S"];
-
   const now = new Date();
-  const currentDay = now.getDay();
-  const dailyData = days.map((_, i) => {
-    const d = new Date(now);
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - d.getDay() + i);
-    const dayStart = d.getTime();
-    const dayEnd = dayStart + 86400000;
-    const ms = activities
-      .filter((a) => a.start_time >= dayStart && a.start_time < dayEnd)
-      .reduce((sum, a) => sum + (a.duration || 0), 0);
-    return ms;
-  });
 
-  const max = Math.max(...dailyData, 3600); // Max at least 1 hour for scale
+  // Build buckets and labels depending on timeRange
+  let bucketData: number[] = [];
+  let labels: string[] = [];
+  let activeIndex = -1;
+
+  if (timeRange === "today") {
+    // 24 hourly buckets
+    bucketData = Array.from({ length: 24 }, (_, h) => {
+      const start = new Date(now);
+      start.setHours(h, 0, 0, 0);
+      const end = start.getTime() + 3600000;
+      return activities
+        .filter((a) => a.start_time >= start.getTime() && a.start_time < end)
+        .reduce((sum, a) => sum + (a.duration || 0), 0);
+    });
+    labels = Array.from({ length: 24 }, (_, h) => {
+      if (h === 0) return "12am";
+      if (h === 6) return "6am";
+      if (h === 12) return "12pm";
+      if (h === 18) return "6pm";
+      return "";
+    });
+    activeIndex = now.getHours();
+  } else if (timeRange === "week") {
+    const weekStart = new Date(now);
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(now.getDate() - now.getDay());
+    bucketData = ["S", "M", "T", "W", "T", "F", "S"].map((_, i) => {
+      const dayStart = weekStart.getTime() + i * 86400000;
+      return activities
+        .filter((a) => a.start_time >= dayStart && a.start_time < dayStart + 86400000)
+        .reduce((sum, a) => sum + (a.duration || 0), 0);
+    });
+    labels = ["S", "M", "T", "W", "T", "F", "S"];
+    activeIndex = now.getDay();
+  } else {
+    // Monthly: one bucket per day of month
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    bucketData = Array.from({ length: daysInMonth }, (_, d) => {
+      const dayStart = new Date(year, month, d + 1).getTime();
+      return activities
+        .filter((a) => a.start_time >= dayStart && a.start_time < dayStart + 86400000)
+        .reduce((sum, a) => sum + (a.duration || 0), 0);
+    });
+    labels = Array.from({ length: daysInMonth }, (_, d) =>
+      (d + 1) % 7 === 1 ? `${d + 1}` : "",
+    );
+    activeIndex = now.getDate() - 1;
+  }
+
+  const max = Math.max(...bucketData, 3600);
   const chartHeight = 100;
   const chartWidth = width - 120;
-  const yAxisHours = [max, max * 0.66, max * 0.33, 0].map(
-    (secs) => `${(secs / 3600).toFixed(1)}h`,
-  );
+  const count = bucketData.length;
 
-  const points = dailyData
-    .map((val, i) => {
-      const x = (i / (days.length - 1)) * chartWidth;
-      const y = chartHeight - (val / max) * (chartHeight - 30) - 15; // Closer to base
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const yAxisHours = [max, max * 0.66, max * 0.33, 0].map((secs) => {
+    if (secs === 0) return "0";
+    if (secs < 3600) return `${Math.round(secs / 60)}m`;
+    return `${(secs / 3600).toFixed(1)}h`;
+  });
+
+  const toPoint = (val: number, i: number) => {
+    const x = count > 1 ? (i / (count - 1)) * chartWidth : chartWidth / 2;
+    const y = chartHeight - (val / max) * (chartHeight - 30) - 15;
+    return { x, y };
+  };
+
+  const points = bucketData.map((v, i) => toPoint(v, i));
+  const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
+  const fillPath = `M 0,${chartHeight} ${points.map((p) => `L ${p.x},${p.y}`).join(" ")} L ${chartWidth},${chartHeight} Z`;
+
+  const titleMap = { today: "Daily Trend", week: "Weekly Trend", month: "Monthly Trend" };
 
   return (
     <View className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] shadow-sm border border-gray-50 dark:border-zinc-800 mb-8 overflow-hidden">
       <View className="flex-row justify-between items-center mb-6 bg-transparent">
         <Text className="font-black text-lg text-klowk-black dark:text-white">
-          {t("weekly_trend")}
+          {titleMap[timeRange]}
         </Text>
         <TrendIcon size={16} color="#FBBF24" />
       </View>
 
       <View className="h-40 bg-transparent relative">
         <View className="flex-row mt-2">
-          <View
-            style={{
-              height: 100,
-              width: 38,
-              justifyContent: "space-between",
-              paddingRight: 2,
-              paddingLeft: 4,
-            }}
-          >
+          <View style={{ height: 100, width: 38, justifyContent: "space-between", paddingRight: 2, paddingLeft: 4 }}>
             {yAxisHours.map((label, i) => (
-              <Text
-                key={i}
-                className="text-[9px] font-bold text-gray-300 dark:text-zinc-600 text-left"
-              >
+              <Text key={i} className="text-[9px] font-bold text-gray-300 dark:text-zinc-600 text-left">
                 {label}
               </Text>
             ))}
@@ -236,71 +286,64 @@ const WeeklyLineChart = ({ activities }: { activities: any[] }) => {
           <View className="flex-1 relative">
             <View className="absolute top-0 left-0 right-0 h-[100px] justify-between bg-transparent">
               {[...Array(4)].map((_, i) => (
-                <View
-                  key={i}
-                  className="w-full h-[1px] bg-gray-50 dark:bg-zinc-800"
-                />
+                <View key={i} className="w-full h-[1px] bg-gray-50 dark:bg-zinc-800" />
               ))}
             </View>
 
             <View className="h-[100px] bg-transparent">
               <Svg height={chartHeight} width={chartWidth}>
                 <Defs>
-                  <SvgGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                  <SvgGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
                     <Stop offset="0" stopColor="#FBBF24" stopOpacity="0.2" />
                     <Stop offset="1" stopColor="#FBBF24" stopOpacity="0" />
                   </SvgGradient>
                 </Defs>
-                <Path
-                  d={`M 0,${chartHeight} ${points
-                    .split(" ")
-                    .map((p, i) => (i === 0 ? `L ${p}` : p))
-                    .join(" ")} L ${chartWidth},${chartHeight} Z`}
-                  fill="url(#grad)"
-                />
+                <Path d={fillPath} fill="url(#trendGrad)" />
                 <Polyline
-                  points={points}
+                  points={polyline}
                   fill="none"
                   stroke="#FBBF24"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {dailyData.map((val, i) => {
-                  const x = (i / (days.length - 1)) * chartWidth;
-                  const y = chartHeight - (val / max) * (chartHeight - 30) - 15; // Sync with points
-                  return (
-                    <Circle
-                      key={i}
-                      cx={x}
-                      cy={y}
-                      r="4"
-                      fill={
-                        i === currentDay
-                          ? "#FBBF24"
-                          : colorScheme === "dark"
-                            ? "#121212"
-                            : "white"
-                      }
-                      stroke="#FBBF24"
-                      strokeWidth="2"
-                    />
-                  );
-                })}
+                {points.map((p, i) => (
+                  <Circle
+                    key={i}
+                    cx={p.x}
+                    cy={p.y}
+                    r={count <= 31 ? "4" : "2"}
+                    fill={i === activeIndex ? "#FBBF24" : colorScheme === "dark" ? "#18181b" : "white"}
+                    stroke="#FBBF24"
+                    strokeWidth="2"
+                  />
+                ))}
               </Svg>
             </View>
           </View>
         </View>
 
-        <View className="flex-row justify-between items-center bg-transparent mt-8 px-1 pb-2 pl-[38px]">
-          {days.map((day, i) => (
-            <Text
-              key={i}
-              className={`text-[10px] font-bold ${i === currentDay ? "text-amber-400" : "text-gray-400 dark:text-gray-600"}`}
-            >
-              {day}
-            </Text>
-          ))}
+        <View style={{ height: 20, marginTop: 8, marginLeft: 38, position: "relative" }}>
+          {labels.map((label, i) => {
+            if (!label) return null;
+            const x = count > 1 ? (i / (count - 1)) * chartWidth : chartWidth / 2;
+            return (
+              <Text
+                key={i}
+                style={{
+                  position: "absolute",
+                  left: x - 14,
+                  width: 28,
+                  textAlign: "center",
+                  fontSize: 10,
+                  fontWeight: "700",
+                  color: i === activeIndex ? "#FBBF24" : colorScheme === "dark" ? "#52525b" : "#9ca3af",
+                }}
+              >
+                {label}
+              </Text>
+            );
+          })}
         </View>
       </View>
     </View>
@@ -457,9 +500,6 @@ export default React.memo(function ReportsScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(
-    null,
-  );
   const [showForecast, setShowForecast] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">(
@@ -471,7 +511,6 @@ export default React.memo(function ReportsScreen() {
   const [newCatIcon, setNewCatIcon] = useState("briefcase");
   const [newCatColor, setNewCatColor] = useState("#FBBF24");
 
-  const slideAnim = useRef(new Animated.Value(width)).current;
   const forecastAnim = useRef(new Animated.Value(width)).current;
   const sheetSlide = useRef(new Animated.Value(150)).current;
   const sheetBackdrop = useRef(new Animated.Value(0)).current;
@@ -529,29 +568,6 @@ export default React.memo(function ReportsScreen() {
       0,
     );
   }, [categoryStats]);
-
-  const selectedCatData = useMemo(() => {
-    return selectedCategory
-      ? categories.find((c: Category) => c.id === selectedCategory)
-      : null;
-  }, [selectedCategory, categories]);
-
-  const selectedCatLogs = useMemo(() => {
-    return selectedCategory
-      ? filteredActivities.filter(
-          (a: Activity) => a.category === selectedCategory,
-        )
-      : [];
-  }, [selectedCategory, filteredActivities]);
-
-  useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: selectedCategory ? 0 : width,
-      useNativeDriver: true,
-      tension: 40,
-      friction: 8,
-    }).start();
-  }, [selectedCategory]);
 
   useEffect(() => {
     Animated.spring(forecastAnim, {
@@ -712,10 +728,12 @@ export default React.memo(function ReportsScreen() {
     return {
       title: titleByStatus[forecast.status] || "Forecast",
       heroText: forecast.message,
-      statsText:
-        forecast.targetMins > 0
-          ? `Current: ${(forecast.currentMins / 60).toFixed(1)}h  •  Projected: ${(forecast.projectedMins / 60).toFixed(1)}h  •  Target: ${(forecast.targetMins / 60).toFixed(1)}h`
-          : `Current: ${(forecast.currentMins / 60).toFixed(1)}h in this ${timeRange}`,
+      statsText: (() => {
+        const fmt = (mins: number) => mins < 60 ? `${Math.round(mins)}m` : `${(mins / 60).toFixed(1)}h`;
+        return forecast.targetMins > 0
+          ? `Current: ${fmt(forecast.currentMins)}  •  Projected: ${fmt(forecast.projectedMins)}  •  Target: ${fmt(forecast.targetMins)}`
+          : `Current: ${fmt(forecast.currentMins)} in this ${timeRange}`;
+      })(),
       strategies: strategyByStatus[forecast.status] || strategyByStatus.no_goal,
     };
   }, [forecast, timeRange]);
@@ -809,7 +827,7 @@ export default React.memo(function ReportsScreen() {
 
         <View className="px-6 mt-4">
           <View className="bg-white dark:bg-zinc-900 p-8 rounded-[40px] shadow-sm border border-gray-50 dark:border-zinc-800 mb-8 items-center">
-            <DonutChart data={categoryStats} total={totalTimeRecorded} />
+            <DonutChart data={categoryStats} total={totalTimeRecorded} timeRange={timeRange} />
 
             <View className="flex-row flex-wrap justify-center gap-x-6 gap-y-3 mt-2">
               {categoryStats
@@ -833,7 +851,7 @@ export default React.memo(function ReportsScreen() {
             </View>
           </View>
 
-          <WeeklyLineChart activities={filteredActivities} />
+          <TrendLineChart activities={activities} timeRange={timeRange} />
 
           <View className="mb-8">
             <View className="flex-row items-center justify-between mb-6 px-1">
@@ -914,100 +932,14 @@ export default React.memo(function ReportsScreen() {
         </View>
       </Animated.ScrollView>
 
-      {/* Category Detail Overlay */}
-      <Animated.View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: isDark ? "#121212" : "#fff",
-          zIndex: 100,
-          transform: [{ translateX: slideAnim }],
-        }}
-      >
-        <SafeAreaView
-          className="flex-1 bg-white dark:bg-klowk-black"
-          edges={["top"]}
-        >
-          <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
-            <Pressable
-              onPress={() => setSelectedCategory(null)}
-              className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full active:bg-gray-100 dark:active:bg-zinc-800"
-            >
-              <ArrowLeft size={20} color={isDark ? "#fff" : "#121212"} />
-            </Pressable>
-            <Text className="text-lg font-black text-klowk-black dark:text-white">
-              {t("category_detail")}
-            </Text>
-            <View className="w-10" />
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            className="flex-1 px-6 bg-white dark:bg-klowk-black"
-          >
-            <View className="items-center py-8">
-              <View
-                style={{
-                  backgroundColor: selectedCatData?.color + "15",
-                  padding: 20,
-                  borderRadius: 24,
-                  marginBottom: 16,
-                }}
-              >
-                <CategoryIcon
-                  name={selectedCatData?.iconName || "tag"}
-                  size={40}
-                  color={selectedCatData?.color || "#FBBF24"}
-                />
-              </View>
-              <Text className="text-3xl font-black text-klowk-black dark:text-white mb-1">
-                {capitalize(
-                  t((selectedCatData?.label || "").toLowerCase() as any) ||
-                    selectedCatData?.label ||
-                    "",
-                )}
-              </Text>
-              <Text className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[4px]">
-                {selectedCatLogs.length} {t("sessions_total")}
-              </Text>
-            </View>
-
-            {selectedCatLogs.map((log: Activity) => (
-              <View
-                key={log.id}
-                className="bg-white dark:bg-zinc-900 p-6 rounded-[32px] mb-4 shadow-sm border border-gray-50 dark:border-zinc-800 flex-row items-center justify-between"
-              >
-                <View className="flex-1">
-                  <Text className="text-base font-bold text-klowk-black dark:text-white mb-1.5">
-                    {log.title}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Text className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase">
-                      {formatDate(log.start_time)} •{" "}
-                      {formatTimestamp(log.start_time)}
-                    </Text>
-                  </View>
-                </View>
-                <View className="items-end ml-4">
-                  <Text className="text-lg font-black text-klowk-black dark:text-white">
-                    {formatDuration(log.duration || 0)}
-                  </Text>
-                  <Pressable
-                    onPress={() => setSelectedActionLogId(log.id)}
-                    hitSlop={10}
-                    className="p-1 mt-1"
-                  >
-                    <MoreHorizontal size={16} color="#9ca3af" />
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </SafeAreaView>
-      </Animated.View>
+      <CategoryDetailSheet
+        categoryId={selectedCategory}
+        categories={categories}
+        activities={filteredActivities}
+        onClose={() => setSelectedCategory(null)}
+        onDeleteActivity={deleteActivity}
+        onDuplicateActivity={duplicateActivity}
+      />
 
       {/* Forecast Overlay (Stay on same page) */}
       {filteredActivities.length > 0 && (
@@ -1111,35 +1043,6 @@ export default React.memo(function ReportsScreen() {
           </SafeAreaView>
         </Animated.View>
       )}
-
-      <ActionSheet
-        visible={selectedActionLogId !== null}
-        onClose={() => setSelectedActionLogId(null)}
-        title="Log Actions"
-        actions={[
-          {
-            label: "Edit details",
-            icon: <Edit2 size={20} color={colorScheme === "dark" ? "#e5e7eb" : "#121212"} />,
-            onPress: () => {
-              if (selectedActionLogId) {
-                router.push({ pathname: "/logmanual", params: { editId: selectedActionLogId } });
-                setSelectedActionLogId(null);
-              }
-            },
-          },
-          {
-            label: "Duplicate activity",
-            icon: <Copy size={20} color={colorScheme === "dark" ? "#9ca3af" : "#4b5563"} />,
-            onPress: () => { if (selectedActionLogId) { duplicateActivity(selectedActionLogId); setSelectedActionLogId(null); } },
-          },
-          {
-            label: "Delete forever",
-            icon: <Trash2 size={20} color="#ef4444" />,
-            destructive: true,
-            onPress: () => { if (selectedActionLogId) { deleteActivity(selectedActionLogId); setSelectedActionLogId(null); } },
-          },
-        ]}
-      />
 
       {/* Add Category Sheet */}
       <Modal

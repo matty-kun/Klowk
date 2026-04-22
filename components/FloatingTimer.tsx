@@ -48,11 +48,11 @@ export default function FloatingTimer() {
   // Show / hide animation
   useEffect(() => {
     if (isMinimized && currentActivity) {
-      opacity.value = withTiming(1, { duration: 250 });
-      scale.value = withSpring(1, { damping: 14, stiffness: 120 });
+      opacity.value = 1;
+      scale.value = withSpring(1, { damping: 18, stiffness: 400 });
     } else {
-      opacity.value = withTiming(0, { duration: 180 });
-      scale.value = withTiming(0.5, { duration: 180 });
+      opacity.value = 0;
+      scale.value = 0.5;
     }
   }, [isMinimized, currentActivity]);
 
@@ -92,14 +92,16 @@ export default function FloatingTimer() {
         Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4,
       onPanResponderGrant: () => {
         isDragging.current = false;
+        // Fire press immediately on touch down
+        runOnJS(onPressRef.current)();
       },
       onPanResponderMove: (_, g) => {
         isDragging.current = true;
-        // Write directly to shared values — no Animated overhead
         translateX.value = lastOffset.current.x + g.dx;
         translateY.value = lastOffset.current.y + g.dy;
       },
       onPanResponderRelease: (_, g) => {
+        if (!isDragging.current) return;
         let nx = lastOffset.current.x + g.dx;
         let ny = lastOffset.current.y + g.dy;
         nx = Math.max(10, Math.min(nx, SCREEN_WIDTH - BUBBLE_WIDTH - 10));
@@ -108,10 +110,6 @@ export default function FloatingTimer() {
         translateX.value = withSpring(nx, { damping: 18, stiffness: 180 });
         translateY.value = withSpring(ny, { damping: 18, stiffness: 180 });
         lastOffset.current = { x: nx, y: ny };
-
-        if (!isDragging.current) {
-          runOnJS(onPressRef.current)();
-        }
       },
     }),
   ).current;
@@ -125,7 +123,7 @@ export default function FloatingTimer() {
     opacity: opacity.value,
   }));
 
-  if (!isMinimized || !currentActivity) return null;
+  if (!currentActivity) return null;
 
   const m = Math.floor(elapsed / 60);
   const s = elapsed % 60;

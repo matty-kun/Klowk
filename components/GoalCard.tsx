@@ -65,9 +65,11 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, onPres
           </View>
         </View>
         <View className="items-end">
-          <Pressable hitSlop={15} style={{ marginBottom: 4 }} onPress={onPressMore}>
-            <MoreHorizontal size={18} color={isDark ? "#52525b" : "#9ca3af"} />
-          </Pressable>
+          {!isCompleted && (
+            <Pressable hitSlop={15} style={{ marginBottom: 4 }} onPress={onPressMore}>
+              <MoreHorizontal size={18} color={isDark ? "#52525b" : "#9ca3af"} />
+            </Pressable>
+          )}
           <Text className="text-xs font-black text-[#121212] dark:text-white">
             {formatTime(currentMins)}{" "}
             <Text className="text-gray-400">/ {formatTime(goal.targetMins)}</Text>

@@ -3,10 +3,10 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 
-const DAILY_REMINDER_KEY = "daily_reminder_enabled";
-const DAILY_REMINDER_HOUR_KEY = "daily_reminder_hour";
-const DAILY_REMINDER_MINUTE_KEY = "daily_reminder_minute";
-const DAILY_REMINDER_ID = "daily-reminder";
+const INACTIVITY_REMINDER_KEY = "inactivity_reminder_enabled";
+const INACTIVITY_REMINDER_HOUR_KEY = "inactivity_reminder_hour";
+const INACTIVITY_REMINDER_MINUTE_KEY = "inactivity_reminder_minute";
+const INACTIVITY_REMINDER_ID = "inactivity-reminder";
 
 // expo-notifications remote push is not supported in Expo Go (SDK 53+).
 // Lazy-require the module inside functions to avoid the module-level warning.
@@ -69,11 +69,11 @@ export async function registerForPushNotificationsAsync() {
   }
 }
 
-export async function scheduleDailyReminder(hour = 9, minute = 0) {
+export async function scheduleInactivityReminder(hour = 21, minute = 0) {
+  if (isExpoGo) return;
   const Notifications = getNotifications();
 
-  // Cancel any existing daily reminder first
-  await cancelDailyReminder();
+  await Notifications.cancelScheduledNotificationAsync(INACTIVITY_REMINDER_ID).catch(() => {});
 
   const trigger: any = {
     type: "daily",
@@ -83,39 +83,62 @@ export async function scheduleDailyReminder(hour = 9, minute = 0) {
   };
 
   await Notifications.scheduleNotificationAsync({
-    identifier: DAILY_REMINDER_ID,
+    identifier: INACTIVITY_REMINDER_ID,
     content: {
-      title: "Time to log your day! ⏱",
-      body: "Don't forget to track what you worked on today.",
+      title: "You haven't logged anything today 📋",
+      body: "Take a moment to track what you worked on — even one log counts.",
       sound: "default",
     },
     trigger,
   });
 
-  await AsyncStorage.setItem(DAILY_REMINDER_KEY, "true");
-  await AsyncStorage.setItem(DAILY_REMINDER_HOUR_KEY, String(hour));
-  await AsyncStorage.setItem(DAILY_REMINDER_MINUTE_KEY, String(minute));
+  await AsyncStorage.setItem(INACTIVITY_REMINDER_KEY, "true");
+  await AsyncStorage.setItem(INACTIVITY_REMINDER_HOUR_KEY, String(hour));
+  await AsyncStorage.setItem(INACTIVITY_REMINDER_MINUTE_KEY, String(minute));
 }
 
-export async function cancelDailyReminder() {
+export async function cancelInactivityReminder() {
+  if (isExpoGo) return;
   const Notifications = getNotifications();
-  await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID).catch(() => {});
-  await AsyncStorage.setItem(DAILY_REMINDER_KEY, "false");
+  await Notifications.cancelScheduledNotificationAsync(INACTIVITY_REMINDER_ID).catch(() => {});
+  await AsyncStorage.setItem(INACTIVITY_REMINDER_KEY, "false");
 }
 
-export async function getDailyReminderSettings(): Promise<{
+/**
+ * Call this whenever a log is completed for today.
+ * Cancels today's inactivity notification and reschedules for tomorrow.
+ */
+export async function dismissInactivityReminderForToday() {
+  if (isExpoGo) return;
+
+  const [enabled, hourStr, minuteStr] = await Promise.all([
+    AsyncStorage.getItem(INACTIVITY_REMINDER_KEY),
+    AsyncStorage.getItem(INACTIVITY_REMINDER_HOUR_KEY),
+    AsyncStorage.getItem(INACTIVITY_REMINDER_MINUTE_KEY),
+  ]);
+
+  if (enabled !== "true") return;
+
+  // Reschedule — cancels and re-creates the daily trigger (effectively skips today
+  // since the notification fires in the future and the daily trigger will next fire tomorrow)
+  const hour = hourStr != null ? parseInt(hourStr) : 21;
+  const minute = minuteStr != null ? parseInt(minuteStr) : 0;
+  await scheduleInactivityReminder(hour, minute);
+}
+
+export async function getInactivityReminderSettings(): Promise<{
   enabled: boolean;
   hour: number;
   minute: number;
 }> {
   const [enabled, hour, minute] = await Promise.all([
-    AsyncStorage.getItem(DAILY_REMINDER_KEY),
-    AsyncStorage.getItem(DAILY_REMINDER_HOUR_KEY),
-    AsyncStorage.getItem(DAILY_REMINDER_MINUTE_KEY),
+    AsyncStorage.getItem(INACTIVITY_REMINDER_KEY),
+    AsyncStorage.getItem(INACTIVITY_REMINDER_HOUR_KEY),
+    AsyncStorage.getItem(INACTIVITY_REMINDER_MINUTE_KEY),
   ]);
   return {
     enabled: enabled === "true",
-    hour: hour != null ? parseInt(hour) : 9,
+    hour: hour != null ? parseInt(hour) : 21,
     minute: minute != null ? parseInt(minute) : 0,
   };
 }

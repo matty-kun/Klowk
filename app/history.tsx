@@ -2,6 +2,7 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import ActionSheet from "@/components/ActionSheet";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { DisplayActivity, pomodoroBaseTitle } from "@/utils/pomodoroMerge";
 import { impact } from "@/utils/haptics";
 import { formatLogDuration, formatTimestamp } from "@/utils/time";
 import { ImpactFeedbackStyle } from "expo-haptics";
@@ -39,9 +40,8 @@ export default React.memo(function LogsScreen() {
   const isDark = colorScheme === "dark";
 
   const [search, setSearch] = useState("");
-  const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(
-    null,
-  );
+  const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
+  const [selectedPomodoroIds, setSelectedPomodoroIds] = useState<number[] | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
@@ -84,12 +84,13 @@ export default React.memo(function LogsScreen() {
   // Filter activities by search + category (memoized)
   const filtered = React.useMemo(() => {
     return activities.filter((a: Activity) => {
+      const displayTitle = pomodoroBaseTitle(a.title) ?? a.title;
       const matchesSearch = search.trim()
         ? (() => {
             const q = search.toLowerCase();
             const cat = categories.find((c) => c.id === a.category);
             return (
-              a.title.toLowerCase().includes(q) ||
+              displayTitle.toLowerCase().includes(q) ||
               (cat?.label || "").toLowerCase().includes(q)
             );
           })()
@@ -101,21 +102,58 @@ export default React.memo(function LogsScreen() {
     });
   }, [search, activities, selectedCategories, categories]);
 
-  // Group by date (memoized)
+  // Group by date, then merge Pomodoro phases into one entry (memoized)
   const grouped = React.useMemo(() => {
-    return filtered.reduce(
-      (acc, curr: Activity) => {
-        const date = new Date(curr.created_at).toLocaleDateString(undefined, {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
+    const byDate: Record<string, Activity[]> = {};
+    for (const a of filtered) {
+      const date = new Date(a.created_at).toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      if (!byDate[date]) byDate[date] = [];
+      byDate[date].push(a);
+    }
+
+    const result: Record<string, DisplayActivity[]> = {};
+    for (const [date, logs] of Object.entries(byDate)) {
+      const pomGroups: Record<string, Activity[]> = {};
+      const regular: DisplayActivity[] = [];
+
+      for (const log of logs) {
+        const base = pomodoroBaseTitle(log.title);
+        if (base !== null) {
+          const key = `${base}||${log.category}`;
+          if (!pomGroups[key]) pomGroups[key] = [];
+          pomGroups[key].push(log);
+        } else {
+          regular.push(log);
+        }
+      }
+
+      const merged: DisplayActivity[] = [...regular];
+      for (const [key, phases] of Object.entries(pomGroups)) {
+        const base = key.split("||")[0];
+        const totalDuration = phases.reduce((s, p) => s + (p.duration || 0), 0);
+        const earliest = phases.reduce(
+          (min, p) => (p.start_time < min ? p.start_time : min),
+          phases[0].start_time,
+        );
+        const roundCount = phases.filter((p) => /\s[—-]\sRound \d+$/.test(p.title)).length;
+        merged.push({
+          ...phases[0],
+          title: base,
+          duration: totalDuration,
+          start_time: earliest,
+          pomodoroIds: phases.map((p) => p.id),
+          pomodoroRounds: roundCount,
         });
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(curr);
-        return acc;
-      },
-      {} as Record<string, Activity[]>,
-    );
+      }
+
+      merged.sort((a, b) => b.start_time - a.start_time);
+      result[date] = merged;
+    }
+    return result;
   }, [filtered]);
 
   return (
@@ -272,13 +310,14 @@ export default React.memo(function LogsScreen() {
               <View className="h-[2px] flex-1 bg-gray-50 dark:bg-zinc-900 ml-4 rounded-full" />
             </View>
 
-            {logs.map((log) => {
+            {(logs as DisplayActivity[]).map((log) => {
               const category = categories.find((c) => c.id === log.category);
               const catColor = category?.color || "#6b7280";
+              const isPomodoro = !!log.pomodoroIds;
 
               return (
                 <View
-                  key={log.id}
+                  key={isPomodoro ? `pomo-${log.pomodoroIds!.join("-")}` : log.id}
                   className="mb-4 bg-white dark:bg-zinc-900 p-5 rounded-[28px] border border-gray-50 dark:border-zinc-800 shadow-sm flex-row items-center"
                 >
                   <View
@@ -295,14 +334,21 @@ export default React.memo(function LogsScreen() {
                     <Text className="text-klowk-black dark:text-white font-bold text-base mb-1">
                       {log.title || t("untitled_session")}
                     </Text>
-                    <View className="flex-row items-center">
+                    <View className="flex-row items-center flex-wrap" style={{ gap: 4 }}>
                       <Text
                         style={{ color: catColor }}
-                        className="text-[10px] font-black uppercase mr-2"
+                        className="text-[10px] font-black uppercase"
                       >
                         {category?.label || t("personal")}
                       </Text>
-                      <View className="w-1 h-1 rounded-full bg-gray-100 dark:bg-zinc-800 mr-2" />
+                      {isPomodoro && log.pomodoroRounds != null && (
+                        <View style={{ backgroundColor: "#FBBF2420", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, flexDirection: "row", alignItems: "center" }}>
+                          <Text style={{ fontSize: 9 }}>🍅</Text>
+                          <Text style={{ color: "#FBBF24", fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }}>
+                            {log.pomodoroRounds} {log.pomodoroRounds === 1 ? "round" : "rounds"}
+                          </Text>
+                        </View>
+                      )}
                       <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase">
                         {formatTimestamp(log.start_time)}
                       </Text>
@@ -317,7 +363,13 @@ export default React.memo(function LogsScreen() {
                       )}
                     </Text>
                     <TouchableOpacity
-                      onPress={() => setSelectedActionLogId(log.id)}
+                      onPress={() => {
+                        if (isPomodoro) {
+                          setSelectedPomodoroIds(log.pomodoroIds!);
+                        } else {
+                          setSelectedActionLogId(log.id);
+                        }
+                      }}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       className="p-1"
                     >
@@ -539,6 +591,25 @@ export default React.memo(function LogsScreen() {
             icon: <Trash2 size={20} color="#ef4444" />,
             destructive: true,
             onPress: () => selectedActionLogId && deleteActivity(selectedActionLogId),
+          },
+        ]}
+      />
+
+      <ActionSheet
+        visible={selectedPomodoroIds !== null}
+        onClose={() => setSelectedPomodoroIds(null)}
+        title="Session Actions"
+        actions={[
+          {
+            label: "Delete session",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => {
+              if (selectedPomodoroIds) {
+                selectedPomodoroIds.forEach((id) => deleteActivity(id));
+                setSelectedPomodoroIds(null);
+              }
+            },
           },
         ]}
       />

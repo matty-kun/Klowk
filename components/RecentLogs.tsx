@@ -1,0 +1,112 @@
+import ActionSheet from "@/components/ActionSheet";
+import LogCard from "@/components/LogCard";
+import { useLanguage } from "@/context/LanguageContext";
+import { Activity, Category } from "@/context/TrackingContext";
+import { DisplayActivity } from "@/utils/pomodoroMerge";
+import { router } from "expo-router";
+import { Copy, Edit2, Trash2 } from "lucide-react-native";
+import { View as MotiView } from "moti";
+import { useColorScheme } from "nativewind";
+import React, { useState } from "react";
+import { Text, View } from "react-native";
+
+interface Props {
+  recentLogs: DisplayActivity[];
+  categories: Category[];
+  deleteActivity: (id: number) => void;
+  duplicateActivity: (id: number) => void;
+}
+
+export default function RecentLogs({ recentLogs, categories, deleteActivity, duplicateActivity }: Props) {
+  const { t } = useLanguage();
+  const { colorScheme } = useColorScheme();
+  const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
+  const [selectedPomodoroIds, setSelectedPomodoroIds] = useState<number[] | null>(null);
+
+  return (
+    <>
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", delay: 800 }}
+        style={{ paddingHorizontal: 24, marginBottom: 16 }}
+      >
+        <Text style={{ fontSize: 10, fontWeight: "900", color: "#FBBF24", textTransform: "uppercase", letterSpacing: 2 }}>
+          {t("logs")}
+        </Text>
+      </MotiView>
+
+      <View className="px-6 mb-28">
+        {recentLogs.map((log: DisplayActivity) => {
+          const cat = categories.find((c) => c.id === log.category);
+          const isPomodoro = !!log.pomodoroIds;
+          return (
+            <LogCard
+              key={isPomodoro ? `pomo-${log.pomodoroIds!.join("-")}` : log.id}
+              log={log}
+              categoryColor={cat?.color || "#6b7280"}
+              categoryLabel={cat?.label || t("personal")}
+              categoryIconName={cat?.iconName || "tag"}
+              pomodoroRounds={log.pomodoroRounds}
+              onPressMore={() => {
+                if (isPomodoro) {
+                  setSelectedPomodoroIds(log.pomodoroIds!);
+                } else {
+                  setSelectedActionLogId(log.id);
+                }
+              }}
+            />
+          );
+        })}
+      </View>
+
+      <ActionSheet
+        visible={selectedActionLogId !== null}
+        onClose={() => setSelectedActionLogId(null)}
+        title="Log Actions"
+        actions={[
+          {
+            label: "Edit details",
+            icon: <Edit2 size={20} color={colorScheme === "dark" ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              if (selectedActionLogId) {
+                router.push({ pathname: "/logmanual", params: { editId: selectedActionLogId } });
+                setSelectedActionLogId(null);
+              }
+            },
+          },
+          {
+            label: "Duplicate activity",
+            icon: <Copy size={20} color={colorScheme === "dark" ? "#9ca3af" : "#4b5563"} />,
+            onPress: () => selectedActionLogId && duplicateActivity(selectedActionLogId),
+          },
+          {
+            label: "Delete forever",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => selectedActionLogId && deleteActivity(selectedActionLogId),
+          },
+        ]}
+      />
+
+      <ActionSheet
+        visible={selectedPomodoroIds !== null}
+        onClose={() => setSelectedPomodoroIds(null)}
+        title="Session Actions"
+        actions={[
+          {
+            label: "Delete session",
+            icon: <Trash2 size={20} color="#ef4444" />,
+            destructive: true,
+            onPress: () => {
+              if (selectedPomodoroIds) {
+                selectedPomodoroIds.forEach((id) => deleteActivity(id));
+                setSelectedPomodoroIds(null);
+              }
+            },
+          },
+        ]}
+      />
+    </>
+  );
+}

@@ -180,7 +180,7 @@ function RootLayoutNav() {
           name="tracker"
           options={{
             presentation: "fullScreenModal",
-            animation: "fade",
+            animation: "none",
             contentStyle: { backgroundColor: bg },
           }}
         />

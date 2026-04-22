@@ -5,7 +5,7 @@ import NewCategorySheet from "@/components/NewCategorySheet";
 import DatePickerModal from "@/components/DatePickerModal";
 import FormField from "@/components/FormField";
 import ScreenHeader from "@/components/ScreenHeader";
-import TimeInputTrio from "@/components/TimeInputTrio";
+import WheelPicker from "@/components/WheelPicker";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
@@ -55,7 +55,7 @@ export default function EntryModal() {
     const logged = activities
       .filter(
         (a) =>
-          a.title === goal.name &&
+          (a.title === goal.name || (a.title.startsWith(goal.name + " —") && !a.title.endsWith(" — Short Break") && !a.title.endsWith(" — Long Break"))) &&
           a.category === goal.categoryId &&
           a.duration &&
           a.start_time >= goal.startDate &&
@@ -67,9 +67,9 @@ export default function EntryModal() {
 
   // Form State
   const [title, setTitle] = useState("");
-  const [hours, setHours] = useState("");
-  const [minutes, setMinutes] = useState("");
-  const [seconds, setSeconds] = useState("");
+  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(0);
+  const [seconds, setSeconds] = useState(0);
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState("work");
@@ -87,14 +87,13 @@ export default function EntryModal() {
       if (activityToEdit) {
         setTitle(activityToEdit.title);
         setCategory(activityToEdit.category || "work");
-        setDescription(activityToEdit.description || "");
+        const desc = activityToEdit.description || "";
+        setDescription(desc === "Pomodoro" || desc === "Pomodoro break" ? "" : desc);
         setDate(new Date(activityToEdit.start_time));
         if (activityToEdit.duration) {
-          setHours(Math.floor(activityToEdit.duration / 3600).toString());
-          setMinutes(
-            Math.floor((activityToEdit.duration % 3600) / 60).toString(),
-          );
-          setSeconds((activityToEdit.duration % 60).toString());
+          setHours(Math.floor(activityToEdit.duration / 3600));
+          setMinutes(Math.floor((activityToEdit.duration % 3600) / 60));
+          setSeconds(activityToEdit.duration % 60);
         }
       }
     }
@@ -130,10 +129,7 @@ export default function EntryModal() {
     if (!title) return;
     notification(NotificationFeedbackType.Success);
 
-    const totalSecs =
-      (parseInt(hours) || 0) * 3600 +
-      (parseInt(minutes) || 0) * 60 +
-      (parseInt(seconds) || 0);
+    const totalSecs = hours * 3600 + minutes * 60 + seconds;
 
     if (editId && typeof editId === "string") {
       await editActivity(
@@ -205,10 +201,44 @@ export default function EntryModal() {
                   Duration
                 </Text>
               </View>
-              <TimeInputTrio
-                hours={hours} minutes={minutes} seconds={seconds}
-                onChangeHours={setHours} onChangeMinutes={setMinutes} onChangeSeconds={setSeconds}
-              />
+              <View
+                style={{
+                  backgroundColor: colorScheme === "dark" ? "#1c1c1e" : "#f9fafb",
+                  borderRadius: 20,
+                  paddingVertical: 12,
+                  paddingHorizontal: 8,
+                  borderWidth: 1,
+                  borderColor: colorScheme === "dark" ? "#27272a" : "#f3f4f6",
+                  flexDirection: "row",
+                }}
+              >
+                {([
+                  { label: "hrs", values: Array.from({ length: 24 }, (_, i) => `${i}`), selectedIndex: hours, onChange: setHours },
+                  { label: "min", values: Array.from({ length: 60 }, (_, i) => `${i}`), selectedIndex: minutes, onChange: setMinutes },
+                  { label: "sec", values: Array.from({ length: 60 }, (_, i) => `${i}`), selectedIndex: seconds, onChange: setSeconds },
+                ] as const).map((col) => (
+                  <View key={col.label} style={{ flex: 1, alignItems: "center" }}>
+                    <WheelPicker
+                      values={col.values as unknown as string[]}
+                      selectedIndex={col.selectedIndex}
+                      onChange={col.onChange}
+                      itemHeight={32}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 9,
+                        fontWeight: "700",
+                        color: colorScheme === "dark" ? "#71717a" : "#9ca3af",
+                        marginTop: 6,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.8,
+                      }}
+                    >
+                      {col.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
             {/* Date Picker */}
@@ -262,27 +292,27 @@ export default function EntryModal() {
 
             {/* Goals Selection */}
             <FormField
-              icon={<Target size={14} color="#FBBF24" />}
+              icon={<Target size={14} color="#9ca3af" />}
               label={t("active_goals")}
               className="mb-8"
               labelClassName="mb-4"
               headerRight={
                 <Pressable
                   onPress={() => setShowAddGoal(true)}
-                  className="flex-row items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-zinc-800"
+                  className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
                 >
-                  <Plus size={10} color="#9ca3af" />
-                  <Text className="text-[10px] font-black text-gray-400 uppercase">New</Text>
+                  <Plus size={11} color="#FBBF24" strokeWidth={3} />
+                  <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
                 </Pressable>
               }
             >
-              {customGoals.length > 0 ? (
+              {customGoals.filter((g) => getGoalRemainingSecs(g.id) > 0).length > 0 ? (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   className="flex-row"
                 >
-                  {customGoals.map((goal) => {
+                  {customGoals.filter((g) => getGoalRemainingSecs(g.id) > 0).map((goal) => {
                     const isSelected = selectedGoalId === goal.id;
                     const cat = categories.find(
                       (c) => c.id === goal.categoryId,
@@ -296,11 +326,9 @@ export default function EntryModal() {
                           setSelectedGoalId(goal.id);
                           setTitle(goal.name);
                           setCategory(goal.categoryId);
-                          setHours(Math.floor(remaining / 3600).toString());
-                          setMinutes(
-                            Math.floor((remaining % 3600) / 60).toString(),
-                          );
-                          setSeconds((remaining % 60).toString());
+                          setHours(Math.floor(remaining / 3600));
+                          setMinutes(Math.floor((remaining % 3600) / 60));
+                          setSeconds(remaining % 60);
                           impact(ImpactFeedbackStyle.Medium);
                         }}
                         className={`mr-3 p-4 rounded-[20px] border min-w-[150px] ${isSelected ? "border-[#FBBF24] bg-amber-50 dark:bg-amber-500/10" : "bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
@@ -399,8 +427,7 @@ export default function EntryModal() {
             >
               {editId
                 ? t("save_changes")
-                : (parseInt(hours) || 0) * 3600 +
-                      (parseInt(minutes) || 0) * 60 >
+                : hours * 3600 + minutes * 60 >
                     0
                   ? t("save_entry")
                   : t("launch_session")}

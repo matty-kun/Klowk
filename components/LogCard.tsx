@@ -17,10 +17,11 @@ type Props = {
   categoryColor: string;
   categoryLabel: string;
   categoryIconName: string;
+  pomodoroRounds?: number;
   onPressMore: () => void;
 };
 
-export default React.memo(function LogCard({ log, categoryColor, categoryLabel, categoryIconName, onPressMore }: Props) {
+export default React.memo(function LogCard({ log, categoryColor, categoryLabel, categoryIconName, pomodoroRounds, onPressMore }: Props) {
   const { t } = useLanguage();
 
   return (
@@ -35,10 +36,18 @@ export default React.memo(function LogCard({ log, categoryColor, categoryLabel, 
         <Text className="font-bold text-klowk-black dark:text-white" numberOfLines={1}>
           {log.title || t("untitled_session")}
         </Text>
-        <View className="flex-row items-center">
+        <View className="flex-row items-center flex-wrap gap-y-1">
           <Text style={{ color: categoryColor }} className="text-[10px] font-black uppercase mr-2">
             {categoryLabel}
           </Text>
+          {pomodoroRounds != null && (
+            <View style={{ backgroundColor: "#FBBF2420", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, marginRight: 6, flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ fontSize: 9 }}>🍅</Text>
+              <Text style={{ color: "#FBBF24", fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }}>
+                {pomodoroRounds} {pomodoroRounds === 1 ? "round" : "rounds"}
+              </Text>
+            </View>
+          )}
           <Text className="text-[8px] text-gray-400 dark:text-gray-500 font-bold uppercase">
             {formatDate(log.start_time)} • {formatTimestamp(log.start_time)}
           </Text>

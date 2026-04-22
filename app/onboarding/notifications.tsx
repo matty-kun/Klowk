@@ -4,6 +4,7 @@ import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import { Image } from "expo-image";
 import * as Notifications from "expo-notifications";
+import { scheduleInactivityReminder } from "@/utils/notifications";
 import { router } from "expo-router";
 import { Bell, CheckCircle2, ChevronLeft } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -30,7 +31,9 @@ export default function NotificationsScreen() {
         setNotificationsEnabled(true);
         notification(NotificationFeedbackType.Success);
 
-        // Test notification
+        await scheduleInactivityReminder(21, 0);
+
+        // Welcome notification
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "Welcome to Flow! 🐌",

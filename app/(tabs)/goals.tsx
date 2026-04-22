@@ -1,3 +1,4 @@
+import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryPillScroller from "@/components/CategoryPillScroller";
 import { computeStreak } from "@/utils/streak";
 import DatePickerModal from "@/components/DatePickerModal";
@@ -14,9 +15,10 @@ import {
 } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
+import { sendLocalNotification } from "@/utils/notifications";
+import WheelPicker from "@/components/WheelPicker";
 import {
   Calendar as CalendarIcon,
-  Clock,
   Edit2,
   Flame,
   Plus,
@@ -42,6 +44,65 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const CONFETTI_COLORS = ["#FBBF24", "#34d399", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c", "#f87171"];
+
+function ConfettiOverlay({ visible }: { visible: boolean }) {
+  const { width, height } = Dimensions.get("window");
+  const particles = useRef(
+    Array.from({ length: 55 }, (_, i) => ({
+      startX: Math.random() * width,
+      drift: (Math.random() - 0.5) * 140,
+      fallDist: 200 + Math.random() * 450,
+      size: 5 + Math.random() * 9,
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      isCircle: Math.random() > 0.5,
+      rotation: Math.random() * 900 - 450,
+      anim: new Animated.Value(0),
+      delay: Math.random() * 600,
+    }))
+  ).current;
+
+  useEffect(() => {
+    if (!visible) return;
+    particles.forEach((p) => {
+      p.anim.setValue(0);
+      Animated.timing(p.anim, {
+        toValue: 1,
+        duration: 2600,
+        delay: p.delay,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }} pointerEvents="none">
+      {particles.map((p, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: "absolute",
+            top: -20,
+            left: p.startX,
+            width: p.size,
+            height: p.size,
+            borderRadius: p.isCircle ? p.size / 2 : p.size / 4,
+            backgroundColor: p.color,
+            opacity: p.anim.interpolate({ inputRange: [0, 0.65, 1], outputRange: [1, 0.9, 0] }),
+            transform: [
+              { translateX: p.anim.interpolate({ inputRange: [0, 1], outputRange: [0, p.drift] }) },
+              { translateY: p.anim.interpolate({ inputRange: [0, 1], outputRange: [0, p.fallDist] }) },
+              { rotate: p.anim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", `${p.rotation}deg`] }) },
+            ],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 const { width, height } = Dimensions.get("window");
 
 export default function GoalsScreen() {
@@ -51,6 +112,7 @@ export default function GoalsScreen() {
     activities,
     categories,
     customGoals,
+    isGoalsLoaded,
     addCustomGoal,
     editCustomGoal,
     deleteCustomGoal,
@@ -67,9 +129,12 @@ export default function GoalsScreen() {
   const [editId, setEditId] = useState<string | null>(null);
 
   const [goalName, setGoalName] = useState("");
-  const [targetHrs, setTargetHrs] = useState("");
-  const [targetUnit, setTargetUnit] = useState<"hrs" | "mins">("hrs");
+  const [targetHours, setTargetHours] = useState(0);
+  const [targetMinutes, setTargetMinutes] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
+  const scrollRef = useRef<ScrollView>(null);
+  const hourValues = React.useMemo(() => Array.from({ length: 100 }, (_, i) => `${i}`), []);
+  const minValues = React.useMemo(() => Array.from({ length: 60 }, (_, i) => `${i}`), []);
 
   const [startDate, setStartDate] = useState(new Date());
 
@@ -129,18 +194,16 @@ export default function GoalsScreen() {
     if (existingGoal) {
       setEditId(existingGoal.id);
       setGoalName(existingGoal.name);
-      setTargetHrs(existingGoal.targetMins < 60
-        ? existingGoal.targetMins.toString()
-        : (existingGoal.targetMins / 60).toString());
-      setTargetUnit(existingGoal.targetMins < 60 ? "mins" : "hrs");
+      setTargetHours(Math.floor(existingGoal.targetMins / 60));
+      setTargetMinutes(existingGoal.targetMins % 60);
       setSelectedCatId(existingGoal.categoryId);
       setStartDate(new Date(existingGoal.startDate));
       setEndDate(new Date(existingGoal.endDate));
     } else {
       setEditId(null);
       setGoalName("");
-      setTargetHrs("");
-      setTargetUnit("hrs");
+      setTargetHours(0);
+      setTargetMinutes(0);
       setStartDate(new Date());
       const endD = new Date();
       endD.setDate(endD.getDate() + 7);
@@ -181,9 +244,8 @@ export default function GoalsScreen() {
   };
 
   const handleSaveGoal = () => {
-    const val = parseFloat(targetHrs);
-    if (!goalName.trim() || isNaN(val) || val <= 0 || !selectedCatId) return;
-    const targetMinsCalc = targetUnit === "hrs" ? Math.round(val * 60) : Math.round(val);
+    const targetMinsCalc = targetHours * 60 + targetMinutes;
+    if (!goalName.trim() || targetMinsCalc <= 0 || !selectedCatId) return;
 
     // ensure end time is end of day
     const fixedEnd = new Date(endDate);
@@ -213,9 +275,30 @@ export default function GoalsScreen() {
     closeSheet();
   };
 
+  const [showConfetti, setShowConfetti] = useState(false);
+  const prevCompletedIds = useRef<Set<string>>(new Set());
+
   const currentStreak = useMemo(() => computeStreak(activities), [activities]);
 
   const now = Date.now();
+
+  const goalLoggedSecs = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const goal of customGoals) {
+      const secs = activities
+        .filter((a: Activity) =>
+          (a.title === goal.name || (a.title.startsWith(goal.name + " —") && !a.title.endsWith(" — Short Break") && !a.title.endsWith(" — Long Break"))) &&
+          a.category === goal.categoryId &&
+          a.duration != null &&
+          a.start_time >= goal.startDate &&
+          a.start_time <= goal.endDate,
+        )
+        .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+      map.set(goal.id, secs);
+    }
+    return map;
+  }, [customGoals, activities]);
+
   const activeGoals = useMemo(
     () => customGoals.filter((g) => g.endDate >= now),
     [customGoals],
@@ -225,9 +308,50 @@ export default function GoalsScreen() {
     [customGoals],
   );
 
+  const { ongoingGoals, completedActiveGoals } = useMemo(() => {
+    const ongoing: CustomGoal[] = [];
+    const completed: CustomGoal[] = [];
+    for (const goal of activeGoals) {
+      const secs = goalLoggedSecs.get(goal.id) || 0;
+      if (secs >= goal.targetMins * 60) completed.push(goal);
+      else ongoing.push(goal);
+    }
+    return { ongoingGoals: ongoing, completedActiveGoals: completed };
+  }, [activeGoals, goalLoggedSecs]);
+
+  // Seed prevCompletedIds on mount so we only confetti for NEW completions
+  useEffect(() => {
+    prevCompletedIds.current = new Set(
+      activeGoals
+        .filter((g) => (goalLoggedSecs.get(g.id) || 0) >= g.targetMins * 60)
+        .map((g) => g.id),
+    );
+  }, []);
+
+  useEffect(() => {
+    const completedNow = new Set<string>(
+      activeGoals
+        .filter((g) => (goalLoggedSecs.get(g.id) || 0) >= g.targetMins * 60)
+        .map((g) => g.id),
+    );
+
+    const newlyDone = [...completedNow].filter((id) => !prevCompletedIds.current.has(id));
+    if (newlyDone.length > 0) {
+      const goalName = customGoals.find((g) => g.id === newlyDone[0])?.name ?? "Your goal";
+      notification(NotificationFeedbackType.Success);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3200);
+      sendLocalNotification("Goal Complete! 🎉", `You've achieved "${goalName}". Stellar work!`).catch(() => {});
+    }
+
+    prevCompletedIds.current = completedNow;
+  }, [goalLoggedSecs]);
+
 
   // Render Empty State
-  if (customGoals.length === 0 && pastGoals.length === 0) {
+  if (!isGoalsLoaded) return null;
+
+  if (customGoals.length === 0) {
     return (
       <SafeAreaView
         className="flex-1 bg-white dark:bg-[#121212]"
@@ -247,6 +371,7 @@ export default function GoalsScreen() {
           action={{ label: t("create_new_goal"), onPress: openSheet }}
         />
 
+        <ConfettiOverlay visible={showConfetti} />
         {renderAddGoalModal()}
       </SafeAreaView>
     );
@@ -297,26 +422,20 @@ export default function GoalsScreen() {
         </View>
 
         {/* Active Goals List */}
-        {activeGoals.length > 0 && (
+        {ongoingGoals.length > 0 && (
           <>
             <SectionHeader label={t("active_objectives")} />
             <View className="gap-4">
-              {activeGoals.map((goal, idx) => {
+              {ongoingGoals.map((goal, idx) => {
                 const catData = categories.find((c: Category) => c.id === goal.categoryId);
                 if (!catData) return null;
-                const currentMins = activities
-                  .filter((a: Activity) =>
-                    a.category === goal.categoryId &&
-                    a.start_time >= goal.startDate &&
-                    a.start_time <= goal.endDate,
-                  )
-                  .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+                const currentSecs = goalLoggedSecs.get(goal.id) || 0;
                 return (
                   <GoalCard
                     key={goal.id}
                     goal={goal}
                     catData={catData}
-                    currentMins={currentMins}
+                    currentMins={Math.floor(currentSecs / 60)}
                     index={idx}
                     onPressMore={() => setSelectedActionGoalId(goal.id)}
                   />
@@ -326,6 +445,55 @@ export default function GoalsScreen() {
           </>
         )}
 
+        {/* Completed Active Goals */}
+        {completedActiveGoals.length > 0 && (
+          <View className="mt-8">
+            <SectionHeader label="Completed" />
+            <View className="gap-3">
+              {completedActiveGoals.map((goal) => {
+                const catData = categories.find((c: Category) => c.id === goal.categoryId);
+                const loggedSecs = goalLoggedSecs.get(goal.id) || 0;
+                const cappedMins = Math.min(Math.floor(loggedSecs / 60), goal.targetMins);
+                const fmtMins = (m: number) => m < 60 ? `${m}m` : `${(m / 60).toFixed(1).replace(".0", "")}h`;
+                return (
+                  <MotiView
+                    key={goal.id}
+                    from={{ opacity: 0, translateY: 8 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    className="bg-emerald-50 dark:bg-emerald-950/40 rounded-[28px] p-5 border border-emerald-100 dark:border-emerald-900/50"
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center flex-1 pr-3">
+                        <View
+                          style={{ backgroundColor: `${catData?.color || "#10b981"}20` }}
+                          className="w-11 h-11 rounded-[14px] items-center justify-center mr-3"
+                        >
+                          <CategoryIcon name={catData?.iconName || "target"} size={22} color={catData?.color || "#10b981"} />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="font-black text-[#121212] dark:text-white text-base leading-tight" numberOfLines={1}>
+                            {goal.name}
+                          </Text>
+                          <Text className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 uppercase tracking-wide">
+                            {fmtMins(cappedMins)} logged · ✓ Complete
+                          </Text>
+                        </View>
+                      </View>
+                      <Pressable
+                        onPress={() => setSelectedActionGoalId(goal.id)}
+                        className="w-8 h-8 items-center justify-center"
+                        hitSlop={12}
+                      >
+                        <X size={16} color={isDark ? "#52525b" : "#9ca3af"} />
+                      </Pressable>
+                    </View>
+                  </MotiView>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {/* Past Goals */}
         {pastGoals.length > 0 && (
           <View className="mt-8">
@@ -333,13 +501,8 @@ export default function GoalsScreen() {
             <View className="gap-3">
               {pastGoals.map((goal) => {
                 const catData = categories.find((c: Category) => c.id === goal.categoryId);
-                const loggedMins = activities
-                  .filter((a: Activity) =>
-                    a.category === goal.categoryId &&
-                    a.start_time >= goal.startDate &&
-                    a.start_time <= goal.endDate,
-                  )
-                  .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+                const loggedSecs = goalLoggedSecs.get(goal.id) || 0;
+                const loggedMins = Math.floor(loggedSecs / 60);
                 const pct = Math.min(100, Math.round((loggedMins / goal.targetMins) * 100));
                 const achieved = loggedMins >= goal.targetMins;
                 const fmtMins = (m: number) => m < 60 ? `${m}m` : `${(m / 60).toFixed(1).replace(".0", "")}h`;
@@ -379,6 +542,8 @@ export default function GoalsScreen() {
         <View style={{ height: 160 }} />
       </ScrollView>
 
+      <ConfettiOverlay visible={showConfetti} />
+
       <ActionSheet
         title="Goal Actions"
         visible={selectedActionGoalId !== null}
@@ -417,8 +582,7 @@ export default function GoalsScreen() {
   function renderAddGoalModal() {
     const isFormValid =
       goalName.trim() &&
-      targetHrs.trim() &&
-      !isNaN(parseFloat(targetHrs)) &&
+      (targetHours * 60 + targetMinutes) > 0 &&
       selectedCatId;
 
     return (
@@ -452,6 +616,7 @@ export default function GoalsScreen() {
                 }}
               >
                 <ScrollView
+                  ref={scrollRef}
                   showsVerticalScrollIndicator={false}
                   bounces={false}
                 >
@@ -547,37 +712,9 @@ export default function GoalsScreen() {
                   </View>
 
                   {/* Target Input */}
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: "900",
-                        color: isDark ? "#71717a" : "#9ca3af",
-                        textTransform: "uppercase",
-                        letterSpacing: 2,
-                      }}
-                    >
-                      Target
-                    </Text>
-                    <View style={{ flexDirection: "row", backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", borderRadius: 12, padding: 3 }}>
-                      {(["hrs", "mins"] as const).map((unit) => (
-                        <Pressable
-                          key={unit}
-                          onPress={() => setTargetUnit(unit)}
-                          style={{
-                            paddingHorizontal: 12,
-                            paddingVertical: 5,
-                            borderRadius: 10,
-                            backgroundColor: targetUnit === unit ? "#FBBF24" : "transparent",
-                          }}
-                        >
-                          <Text style={{ fontSize: 11, fontWeight: "900", color: targetUnit === unit ? "#fff" : isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase" }}>
-                            {unit}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
+                  <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
+                    Target
+                  </Text>
                   <View
                     style={{
                       backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
@@ -586,26 +723,32 @@ export default function GoalsScreen() {
                       borderColor: isDark ? "#3a3a3c" : "#f3f4f6",
                       marginBottom: 24,
                       flexDirection: "row",
-                      alignItems: "center",
+                      paddingVertical: 12,
+                      paddingHorizontal: 8,
                     }}
                   >
-                    <View style={{ paddingLeft: 18, marginRight: -8 }}>
-                      <Clock size={16} color={isDark ? "#52525b" : "#9ca3af"} />
+                    <View style={{ flex: 1 }}>
+                      <WheelPicker
+                        values={hourValues}
+                        selectedIndex={targetHours}
+                        onChange={setTargetHours}
+                        itemHeight={32}
+                        visibleItems={3}
+                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
+                      />
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>hrs</Text>
                     </View>
-                    <TextInput
-                      value={targetHrs}
-                      onChangeText={setTargetHrs}
-                      placeholder={targetUnit === "hrs" ? "Total hours (e.g. 10)" : "Total minutes (e.g. 90)"}
-                      placeholderTextColor={isDark ? "#52525b" : "#d1d5db"}
-                      keyboardType="numeric"
-                      style={{
-                        flex: 1,
-                        padding: 18,
-                        fontSize: 16,
-                        fontWeight: "700",
-                        color: isDark ? "#fff" : "#121212",
-                      }}
-                    />
+                    <View style={{ flex: 1 }}>
+                      <WheelPicker
+                        values={minValues}
+                        selectedIndex={targetMinutes}
+                        onChange={setTargetMinutes}
+                        itemHeight={32}
+                        visibleItems={3}
+                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
+                      />
+                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>min</Text>
+                    </View>
                   </View>
 
                   {/* Date Range Row */}

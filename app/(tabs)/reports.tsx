@@ -3,7 +3,7 @@ import ActionSheet from "@/components/ActionSheet";
 import CategoryDetailSheet from "@/components/CategoryDetailSheet";
 import ProgressBar from "@/components/ProgressBar";
 import ToggleBar from "@/components/ToggleBar";
-import { Text } from "@/components/Themed";
+import { Text } from "react-native";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";

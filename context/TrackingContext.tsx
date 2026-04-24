@@ -58,7 +58,7 @@ type TrackingContextType = {
     durationSecs: number,
     description?: string,
     customDate?: Date,
-  ) => Promise<void>;
+  ) => Promise<number | undefined>;
   editActivity: (
     id: number,
     title: string,
@@ -305,7 +305,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     try {
       const timestamp = customDate ? customDate.getTime() : Date.now();
       const startTime = timestamp - durationSecs * 1000;
-      await db.runAsync(
+      const result = await db.runAsync(
         "INSERT INTO activities (title, category, description, start_time, end_time, duration, target_duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
           title,
@@ -320,6 +320,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       );
       await refreshActivities();
       dismissInactivityReminderForToday().catch(() => {});
+      return result.lastInsertRowId;
     } catch (err) {
       console.error("Failed to add manual activity:", err);
     }

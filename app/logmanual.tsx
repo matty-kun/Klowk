@@ -1,6 +1,6 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import AddGoalModal from "@/components/AddGoalModal";
-import CategoryPillScroller from "@/components/CategoryPillScroller";
+import CategoryCardPicker from "@/components/CategoryCardPicker";
 import NewCategorySheet from "@/components/NewCategorySheet";
 import DatePickerModal from "@/components/DatePickerModal";
 import FormField from "@/components/FormField";
@@ -11,6 +11,7 @@ import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
     AlignLeft,
     Calendar as CalendarIcon,
@@ -75,8 +76,27 @@ export default function EntryModal() {
   const [category, setCategory] = useState("work");
   const [description, setDescription] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [selectedRecentId, setSelectedRecentId] = useState<number | null>(null);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [showNewCat, setShowNewCat] = useState(false);
+
+  // Load persisted form state (only when not in edit mode)
+  useEffect(() => {
+    if (editId) return;
+    AsyncStorage.getItem("MANUAL_FORM_STATE").then((raw) => {
+      if (!raw) return;
+      try {
+        const s = JSON.parse(raw);
+        if (s.category) setCategory(s.category);
+        if (s.description) setDescription(s.description);
+      } catch {}
+    });
+  }, []);
+
+  useEffect(() => {
+    if (editId) return;
+    AsyncStorage.setItem("MANUAL_FORM_STATE", JSON.stringify({ title, hours, minutes, seconds, category, description }));
+  }, [title, hours, minutes, seconds, category, description]);
 
   // Initial Data Population for Edit Mode
   useEffect(() => {
@@ -167,10 +187,6 @@ export default function EntryModal() {
 
           {/* Form Fields */}
           <View className="mb-8">
-            <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
-              {t("manual_details")}
-            </Text>
-
             {/* Title */}
             <FormField
               icon={<Zap size={14} color="#9ca3af" />}
@@ -192,6 +208,102 @@ export default function EntryModal() {
                 />
               </View>
             </FormField>
+
+            {/* Recent Sessions */}
+            {!editId && (() => {
+              const seen = new Set<string>();
+              const recent = activities
+                .slice()
+                .reverse()
+                .filter((a) => {
+                  if (!a.title || !a.duration) return false;
+                  const isPomodoro = a.description === "Pomodoro" || a.description === "Pomodoro break";
+                  const isFreeSession = !!a.description?.startsWith("Target:");
+                  if (isPomodoro || isFreeSession || seen.has(a.title)) return false;
+                  seen.add(a.title);
+                  return true;
+                })
+                .slice(0, 5);
+              if (recent.length === 0) return null;
+              return (
+                <View className="mb-5">
+                  <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
+                    Recent Sessions
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {recent.map((a) => {
+                      const cat = categories.find((c: Category) => c.id === a.category);
+                      const h = Math.floor((a.duration || 0) / 3600);
+                      const m = Math.floor(((a.duration || 0) % 3600) / 60);
+                      const s = (a.duration || 0) % 60;
+                      const durationLabel = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m` : `${s}s`;
+                      const matchedGoal = customGoals.find(
+                        (g) =>
+                          (a.title === g.name || a.title.startsWith(g.name + " —")) &&
+                          a.category === g.categoryId,
+                      );
+                      const isSelected = selectedRecentId === a.id;
+                      return (
+                        <Pressable
+                          key={a.id}
+                          onPress={() => {
+                            impact(ImpactFeedbackStyle.Light);
+                            if (isSelected) {
+                              setSelectedRecentId(null);
+                              setTitle("");
+                              setHours(0);
+                              setMinutes(0);
+                              setSeconds(0);
+                              return;
+                            }
+                            setSelectedRecentId(a.id);
+                            setTitle(a.title);
+                            setCategory(a.category || "work");
+                            setHours(h);
+                            setMinutes(m);
+                            setSeconds(s);
+                            setSelectedGoalId(null);
+                          }}
+                          style={{
+                            marginRight: 10,
+                            padding: 12,
+                            borderRadius: 16,
+                            backgroundColor: isSelected ? "#FBBF2415" : colorScheme === "dark" ? "#1c1c1e" : "#f9fafb",
+                            borderWidth: 1.5,
+                            borderColor: isSelected ? "#FBBF24" : colorScheme === "dark" ? "#27272a" : "#f3f4f6",
+                            minWidth: 130,
+                            maxWidth: 160,
+                          }}
+                        >
+                          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
+                            <Text
+                              numberOfLines={1}
+                              style={{ fontSize: 12, fontWeight: "800", color: isSelected ? "#FBBF24" : colorScheme === "dark" ? "#fff" : "#121212", flexShrink: 1 }}
+                            >
+                              {a.title}
+                            </Text>
+                            {matchedGoal && (
+                              <View style={{ backgroundColor: "#14b8a620", borderRadius: 20, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                <Text style={{ fontSize: 8, fontWeight: "900", color: "#14b8a6", textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
+                                  🎯 {matchedGoal.name}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                            {cat && <CategoryIcon name={cat.iconName || "briefcase"} size={10} color="#9ca3af" />}
+                            <Text style={{ marginLeft: 4, fontSize: 9, fontWeight: "700", color: "#9ca3af", textTransform: "uppercase" }}>
+                              {cat ? cat.label : "General"}
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 10, fontWeight: "700", color: "#FBBF24" }}>{durationLabel}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              );
+            })()}
 
             {/* Duration Row */}
             <View className="mb-5">
@@ -398,11 +510,11 @@ export default function EntryModal() {
                 </Pressable>
               }
             >
-              <CategoryPillScroller
+              <CategoryCardPicker
                 categories={categories}
                 selectedId={category}
                 onSelect={setCategory}
-                layout="wrap"
+                activities={activities}
               />
             </FormField>
           </View>

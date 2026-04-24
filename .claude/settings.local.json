@@ -10,7 +10,16 @@
       "Bash(node --no-warnings --eval \"require\\('expo/bin/autolinking'\\)\" expo-modules-autolinking resolve --platform android --json)",
       "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(p['name'], p.get\\('sourceDir',''\\)\\) for p in data.get\\('modules',[]\\)]\")",
       "Bash(node --no-warnings --eval \"require\\('expo/bin/autolinking'\\)\" expo-modules-autolinking react-native-config --platform android --json)",
-      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); deps=data.get\\('dependencies',{}\\); [print\\(k, v.get\\('root',''\\)\\) for k,v in list\\(deps.items\\(\\)\\)[:5]]\")"
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); deps=data.get\\('dependencies',{}\\); [print\\(k, v.get\\('root',''\\)\\) for k,v in list\\(deps.items\\(\\)\\)[:5]]\")",
+      "Bash(npx tsc *)",
+      "Bash(node -e \" const {resolve} = require\\('./node_modules/expo-modules-autolinking/build/index.js'\\); \")",
+      "Bash(node /c/flow/node_modules/expo-modules-autolinking/build/cli.js resolve --json)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(m['packageName'], m.get\\('androidMavenUrl','source'\\)\\) for m in d.get\\('modules',[]\\)]\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\) if k in ['name','version','androidMavenUrl','platforms']}, indent=2\\)\\)\")",
+      "Bash(node -e \"const p = require\\('/c/flow/node_modules/expo-notifications/package.json'\\); console.log\\(JSON.stringify\\({androidMavenUrl: p.androidMavenUrl, platforms: p.platforms}, null, 2\\)\\)\")",
+      "Bash(node -e \"const p = require\\('c:/flow/node_modules/expo-notifications/package.json'\\); console.log\\(p.androidMavenUrl, p.platforms\\)\")",
+      "Bash(node -e \"const p = require\\('c:/flow/node_modules/expo-modules-autolinking/package.json'\\); console.log\\(p.main || p.exports\\)\")",
+      "Bash(node -e \"const p = require\\('c:/flow/app.json'\\); console.log\\(JSON.stringify\\(p.expo.autolinking, null, 2\\)\\)\")"
     ]
   }
 }

@@ -18,10 +18,11 @@ type Props = {
   categoryLabel: string;
   categoryIconName: string;
   pomodoroRounds?: number;
+  goalName?: string;
   onPressMore: () => void;
 };
 
-export default React.memo(function LogCard({ log, categoryColor, categoryLabel, categoryIconName, pomodoroRounds, onPressMore }: Props) {
+export default React.memo(function LogCard({ log, categoryColor, categoryLabel, categoryIconName, pomodoroRounds, goalName, onPressMore }: Props) {
   const { t } = useLanguage();
 
   return (
@@ -33,9 +34,19 @@ export default React.memo(function LogCard({ log, categoryColor, categoryLabel, 
         <CategoryIcon name={categoryIconName} size={18} color={categoryColor} />
       </View>
       <View className="flex-1">
-        <Text className="font-bold text-klowk-black dark:text-white" numberOfLines={1}>
-          {log.title || t("untitled_session")}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2, flexWrap: "wrap", gap: 4 }}>
+          <Text className="font-bold text-klowk-black dark:text-white" numberOfLines={1} style={{ flexShrink: 1 }}>
+            {log.title || t("untitled_session")}
+          </Text>
+          {goalName && (
+            <View style={{ backgroundColor: "#14b8a620", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ fontSize: 9 }}>🎯</Text>
+              <Text style={{ color: "#14b8a6", fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }} numberOfLines={1}>
+                {goalName}
+              </Text>
+            </View>
+          )}
+        </View>
         <View className="flex-row items-center flex-wrap gap-y-1">
           <Text style={{ color: categoryColor }} className="text-[10px] font-black uppercase mr-2">
             {categoryLabel}

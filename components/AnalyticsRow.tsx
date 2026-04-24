@@ -96,10 +96,12 @@ export default function AnalyticsRow({
           </View>
           <View className="flex-row items-baseline">
             <Text style={{ color: trendColor }} className="text-[34px] font-black">
-              {(rangeMinsTotal / 3600).toFixed(1)}
+              {rangeMinsTotal >= 3600
+                ? (rangeMinsTotal / 3600).toFixed(1)
+                : Math.round(rangeMinsTotal / 60)}
             </Text>
             <Text className="text-[10px] font-black text-gray-300 dark:text-zinc-600 ml-1">
-              {t("hrs")}
+              {rangeMinsTotal >= 3600 ? t("hrs").toLowerCase() : t("min")}
             </Text>
           </View>
         </View>

@@ -2,7 +2,6 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { formatDuration } from "@/utils/time";
 import { Image } from "expo-image";
-import { Flame } from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
 
@@ -68,7 +67,6 @@ interface Props {
   klowkForecastStatus: string;
   klowkForecastMessage: string;
   todayMinsTotal: number;
-  streak: number;
   dayOfWeek: string;
   dayOfMonth: string;
   greetingKey: string;
@@ -78,7 +76,6 @@ export default function GreetingSection({
   klowkForecastStatus,
   klowkForecastMessage,
   todayMinsTotal,
-  streak,
   dayOfWeek,
   dayOfMonth,
   greetingKey,
@@ -101,16 +98,10 @@ export default function GreetingSection({
 
   return (
     <View className="px-6 mb-8 mt-3">
-      <View className="flex-row items-center justify-between mb-1">
+      <View className="flex-row items-center mb-1">
         <Text className="text-gray-400 dark:text-gray-500 font-bold uppercase text-[10px] tracking-[1.5px]">
           {dayOfWeek}, {dayOfMonth}
         </Text>
-        {streak > 0 && (
-          <View className="flex-row items-center bg-amber-400 rounded-full px-2 py-1 gap-1">
-            <Flame size={10} color="#fff" fill="#fff" />
-            <Text className="text-white font-black text-[10px]">{streak}d</Text>
-          </View>
-        )}
       </View>
       <Text className="text-[26px] font-black text-klowk-black dark:text-white mb-10">
         {t(greetingKey as any)}{" "}

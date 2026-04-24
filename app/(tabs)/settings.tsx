@@ -1,25 +1,38 @@
 import { Text, View } from "@/components/Themed";
 import {
     Bell,
+    Check,
     ChevronRight,
     CircleHelp,
     LogOut,
+    Pencil,
     Shield,
     User,
 } from "lucide-react-native";
 import * as Notifications from "expo-notifications";
-import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, Switch } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, Switch, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useOnboarding } from "@/context/OnboardingContext";
 
 export default function SettingsScreen() {
+  const { userName, setUserName } = useOnboarding();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(userName || "");
+  const nameInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     Notifications.getPermissionsAsync().then(({ status }) => {
       setNotificationsEnabled(status === "granted");
     });
   }, []);
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (trimmed) await setUserName(trimmed);
+    setEditingName(false);
+  };
 
   const handleNotificationToggle = async (value: boolean) => {
     if (value) {
@@ -51,18 +64,35 @@ export default function SettingsScreen() {
             <User size={30} color="#FBBF24" />
           </View>
           <View className="flex-1">
-            <Text className="text-xl font-black text-klowk-black pr-2">
-              Premium User
-            </Text>
+            {editingName ? (
+              <TextInput
+                ref={nameInputRef}
+                value={nameInput}
+                onChangeText={setNameInput}
+                onSubmitEditing={handleSaveName}
+                autoFocus
+                returnKeyType="done"
+                className="text-xl font-black text-klowk-black pr-2"
+                style={{ padding: 0 }}
+              />
+            ) : (
+              <Text className="text-xl font-black text-klowk-black pr-2">
+                {userName || "User"}
+              </Text>
+            )}
             <Text className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               Flow Pro Account
             </Text>
           </View>
-          <View className="bg-amber-400/10 px-3 py-1 rounded-full">
-            <Text className="text-[10px] font-black text-amber-400 uppercase">
-              Active
-            </Text>
-          </View>
+          <Pressable
+            onPress={editingName ? handleSaveName : () => { setNameInput(userName || ""); setEditingName(true); }}
+            className="bg-amber-400/10 p-2 rounded-full"
+          >
+            {editingName
+              ? <Check size={16} color="#FBBF24" strokeWidth={3} />
+              : <Pencil size={16} color="#FBBF24" strokeWidth={2} />
+            }
+          </Pressable>
         </View>
 
         {/* Notifications Row */}

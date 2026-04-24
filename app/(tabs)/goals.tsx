@@ -1,6 +1,5 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryPillScroller from "@/components/CategoryPillScroller";
-import { computeStreak } from "@/utils/streak";
 import DatePickerModal from "@/components/DatePickerModal";
 import EmptyState from "@/components/EmptyState";
 import GoalCard from "@/components/GoalCard";
@@ -20,7 +19,6 @@ import WheelPicker from "@/components/WheelPicker";
 import {
   Calendar as CalendarIcon,
   Edit2,
-  Flame,
   Plus,
   Target,
   Trash2,
@@ -278,9 +276,7 @@ export default function GoalsScreen() {
   const [showConfetti, setShowConfetti] = useState(false);
   const prevCompletedIds = useRef<Set<string>>(new Set());
 
-  const currentStreak = useMemo(() => computeStreak(activities), [activities]);
-
-  const now = Date.now();
+const now = Date.now();
 
   const goalLoggedSecs = useMemo(() => {
     const map = new Map<string, number>();
@@ -303,6 +299,21 @@ export default function GoalsScreen() {
     () => customGoals.filter((g) => g.endDate >= now),
     [customGoals],
   );
+
+  const recentlyActiveGoalIds = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const recentActivities = activities.filter((a: Activity) => a.start_time >= cutoff);
+    const ids = new Set<string>();
+    for (const goal of activeGoals) {
+      const matched = recentActivities.some(
+        (a: Activity) =>
+          (a.title === goal.name || a.title.startsWith(goal.name + " —")) &&
+          a.category === goal.categoryId,
+      );
+      if (matched) ids.add(goal.id);
+    }
+    return ids;
+  }, [activities, activeGoals]);
   const pastGoals = useMemo(
     () => customGoals.filter((g) => g.endDate < now).sort((a, b) => b.endDate - a.endDate),
     [customGoals],
@@ -396,32 +407,7 @@ export default function GoalsScreen() {
           </Pressable>
         </View>
 
-        {/* The Streak */}
-        <View className="mb-6">
-          <SectionHeader label={t("activity")} />
-          <MotiView
-            from={{ opacity: 0, translateY: 10 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ delay: 100 }}
-            className="w-full bg-teal-50 dark:bg-teal-950/40 p-5 rounded-[28px] flex-row items-center justify-between"
-          >
-            <View className="flex-row items-center flex-1">
-              <View className="w-14 h-14 bg-white dark:bg-teal-900/30 rounded-[18px] items-center justify-center mr-4 shadow-sm">
-                <Flame size={28} color="#f43f5e" fill="#f43f5e" />
-              </View>
-              <View>
-                <Text className="text-[13px] font-bold text-[#f43f5e] uppercase tracking-wider mb-0.5">
-                  {t("focus_streak")}
-                </Text>
-                <Text className="text-2xl font-black text-[#121212] dark:text-white leading-tight">
-                  {currentStreak} {currentStreak === 1 ? t("day") : t("days")}
-                </Text>
-              </View>
-            </View>
-          </MotiView>
-        </View>
-
-        {/* Active Goals List */}
+{/* Active Goals List */}
         {ongoingGoals.length > 0 && (
           <>
             <SectionHeader label={t("active_objectives")} />
@@ -437,6 +423,7 @@ export default function GoalsScreen() {
                     catData={catData}
                     currentMins={Math.floor(currentSecs / 60)}
                     index={idx}
+                    isRecentlyActive={recentlyActiveGoalIds.has(goal.id)}
                     onPressMore={() => setSelectedActionGoalId(goal.id)}
                   />
                 );

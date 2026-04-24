@@ -31,6 +31,7 @@ interface Message {
   text: string;
   sender: "user" | "flow";
   timestamp: Date;
+  undoActivityId?: number;
 }
 
 const quickPrompts = [
@@ -43,7 +44,7 @@ const quickPrompts = [
 export default function ChatScreen() {
   const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
-  const { activities, customGoals, categories, addManualActivity } = useTracking();
+  const { activities, customGoals, categories, addManualActivity, deleteActivity } = useTracking();
   const { userName } = useOnboarding();
   const isDark = colorScheme === "dark";
 
@@ -106,6 +107,7 @@ export default function ChatScreen() {
     }
 
     if (totalSeconds <= 0) return null;
+    if (totalSeconds < 60) totalSeconds = 60;
 
     let title = "";
     const onMatch = text.match(/\b(?:on|for)\s+(.+)$/i);
@@ -380,7 +382,7 @@ export default function ChatScreen() {
 
     if (parsedLog) {
       try {
-        await addManualActivity(
+        const newId = await addManualActivity(
           parsedLog.title,
           parsedLog.category,
           parsedLog.totalSeconds,
@@ -398,9 +400,10 @@ export default function ChatScreen() {
           : "today";
         const klowkResponse: Message = {
           id: (Date.now() + 1).toString(),
-          text: `Logged automatically: ${durationLabel} for "${parsedLog.title}" under ${parsedLog.category} (${dateLabel}).`,
+          text: `Logged: ${durationLabel} for "${parsedLog.title}" under ${parsedLog.category} (${dateLabel}).`,
           sender: "flow",
           timestamp: new Date(),
+          undoActivityId: newId,
         };
         setMessages((prev) => [...prev, klowkResponse]);
         setIsTyping(false);
@@ -512,7 +515,12 @@ export default function ChatScreen() {
             }
           >
             {messages.map((msg) => (
-              <ChatBubble key={msg.id} message={msg} fadeAnim={fadeAnim} />
+              <ChatBubble
+                key={msg.id}
+                message={msg}
+                fadeAnim={fadeAnim}
+                onUndo={(id) => deleteActivity(id)}
+              />
             ))}
 
             {isTyping && <TypingBubble />}

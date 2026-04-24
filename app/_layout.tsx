@@ -10,7 +10,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { SQLiteProvider, type SQLiteDatabase } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "nativewind";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { LogBox } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
@@ -51,7 +51,37 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadHapticsPreference } from "@/utils/haptics";
 import { OnboardingProvider, useOnboarding } from "@/context/OnboardingContext";
-import { TrackingProvider } from "@/context/TrackingContext";
+import { TrackingProvider, useTracking } from "@/context/TrackingContext";
+import { loadTimerState } from "@/utils/timerState";
+import { setupTimerNotificationCategory, showTimerOngoingNotificationPaused, showTimerOngoingNotificationResumed, TIMER_STOP_ACTION, TIMER_PAUSE_ACTION, TIMER_RESUME_ACTION, TIMER_NEXT_ROUND_ACTION } from "@/utils/notifications";
+import { AppState, Platform } from "react-native";
+
+// Register notifee background event handler (Android only).
+// This runs when the app is killed or in background and the user taps a notification action.
+if (Platform.OS === "android") {
+  try {
+    const notifee = require("@notifee/react-native").default as typeof import("@notifee/react-native").default;
+    const { EventType } = require("@notifee/react-native") as typeof import("@notifee/react-native");
+    notifee.onBackgroundEvent(async ({ type, detail }) => {
+      if (type === EventType.PRESS) {
+        // Plain tap on notification — navigate to tracker when app foregrounds
+        await AsyncStorage.setItem("pending_notif_action", "open_tracker");
+        return;
+      }
+      if (type !== EventType.ACTION_PRESS) return;
+      const actionId = detail.pressAction?.id;
+      if (actionId === TIMER_PAUSE_ACTION) {
+        await AsyncStorage.setItem("pending_notif_action", actionId);
+        await showTimerOngoingNotificationPaused();
+      } else if (actionId === TIMER_RESUME_ACTION) {
+        await AsyncStorage.setItem("pending_notif_action", actionId);
+        await showTimerOngoingNotificationResumed();
+      } else if (actionId === TIMER_STOP_ACTION || actionId === TIMER_NEXT_ROUND_ACTION) {
+        await AsyncStorage.setItem("pending_notif_action", actionId);
+      }
+    });
+  } catch {}
+}
 
 export {
     // Catch any errors thrown by the Layout component.
@@ -84,6 +114,7 @@ export default function RootLayout() {
     if (loaded) {
       SplashScreen.hideAsync();
       loadHapticsPreference();
+      setupTimerNotificationCategory();
     }
   }, [loaded]);
 
@@ -109,7 +140,9 @@ const COLOR_SCHEME_KEY = "klowk_color_scheme";
 function RootLayoutNav() {
   const { colorScheme, setColorScheme } = useColorScheme();
   const { isOnboarded } = useOnboarding();
+  const { currentActivity, isMinimized } = useTracking();
   const router = useRouter();
+  const hasRestoredSession = useRef(false);
 
   // Restore saved color scheme on launch
   useEffect(() => {
@@ -117,6 +150,40 @@ function RootLayoutNav() {
       if (saved === "dark" || saved === "light") setColorScheme(saved);
     });
   }, []);
+
+  // When Android notification is tapped while app is backgrounded, open tracker
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const checkPendingNav = async () => {
+      const action = await AsyncStorage.getItem("pending_notif_action");
+      if (action === "open_tracker") {
+        await AsyncStorage.removeItem("pending_notif_action");
+        router.push("/tracker" as any);
+      }
+    };
+    checkPendingNav();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") checkPendingNav();
+    });
+    return () => sub.remove();
+  }, []);
+
+  // If the app was killed while a timer was running, restore to tracker.
+  // Guard: only fires once, and not when the user simply minimized (isMinimized=true already
+  // means they intentionally left the tracker open as a floating bubble).
+  useEffect(() => {
+    if (hasRestoredSession.current || !currentActivity || isMinimized) return;
+    hasRestoredSession.current = true;
+    loadTimerState().then((state) => {
+      if (!state) return;
+      const p = state.params;
+      const query = Object.entries(p)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v as string)}`)
+        .join("&");
+      router.replace(`/tracker?${query}` as any);
+    });
+  }, [currentActivity, isMinimized]);
 
   useEffect(() => {
     if (!isOnboarded) {

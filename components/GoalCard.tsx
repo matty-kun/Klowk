@@ -20,10 +20,11 @@ type Props = {
   catData: Category;
   currentMins: number;
   index?: number;
+  isRecentlyActive?: boolean;
   onPressMore: () => void;
 };
 
-export default function GoalCard({ goal, catData, currentMins, index = 0, onPressMore }: Props) {
+export default function GoalCard({ goal, catData, currentMins, index = 0, isRecentlyActive = false, onPressMore }: Props) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
@@ -42,8 +43,22 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, onPres
       from={{ opacity: 0, translateY: 10 }}
       animate={{ opacity: 1, translateY: 0 }}
       transition={{ delay: 200 + index * 50 }}
-      className="bg-white dark:bg-teal-950/30 rounded-[32px] border border-teal-100 dark:border-teal-900/50 shadow-sm p-5"
+      style={{
+        backgroundColor: isRecentlyActive ? (isDark ? "#14b8a610" : "#f0fdfa") : isDark ? "#18181b" : "#fff",
+        borderRadius: 32,
+        borderWidth: 1,
+        borderColor: isRecentlyActive ? "#14b8a640" : isDark ? "#27272a" : "#f3f4f6",
+        shadowColor: "#000",
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        padding: 20,
+      }}
     >
+      {isRecentlyActive && (
+        <View style={{ position: "absolute", top: 14, right: 14, backgroundColor: "#14b8a620", borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 }}>
+          <Text style={{ fontSize: 8, fontWeight: "900", color: "#14b8a6", textTransform: "uppercase", letterSpacing: 0.5 }}>Active</Text>
+        </View>
+      )}
       <View className="flex-row items-center justify-between mb-4">
         <View className="flex-row items-center flex-1 pr-4">
           <View

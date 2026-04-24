@@ -7,14 +7,22 @@ import RecentLogs from "@/components/RecentLogs";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { getForecast } from "@/utils/forecast";
 import { computeStreak } from "@/utils/streak";
+import { loadStreakMode, StreakMode } from "@/components/StreakModal";
 import { mergePomoActivities } from "@/utils/pomodoroMerge";
-import React, { useCallback, useState } from "react";
+import { useColorScheme } from "nativewind";
+import React, { useCallback, useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default React.memo(function TabOneScreen() {
   const { activities, deleteActivity, duplicateActivity, categories, customGoals } = useTracking();
+  const { colorScheme } = useColorScheme();
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">("today");
+  const [streakMode, setStreakMode] = useState<StreakMode>("logging");
+
+  useEffect(() => {
+    loadStreakMode().then(setStreakMode);
+  }, []);
   const now = new Date();
 
   const getPeriodTotal = useCallback((range: "today" | "week" | "month", offset: number = 0) => {
@@ -52,7 +60,7 @@ export default React.memo(function TabOneScreen() {
   const prevRangeMinsTotal = React.useMemo(() => getPeriodTotal(timeRange, -1), [timeRange, activities]);
   const trendUp = rangeMinsTotal > prevRangeMinsTotal;
   const isNeutral = rangeMinsTotal === prevRangeMinsTotal;
-  const trendColor = isNeutral ? "#121212" : trendUp ? "#10b981" : "#ef4444";
+  const trendColor = isNeutral ? (colorScheme === "dark" ? "#ffffff" : "#121212") : trendUp ? "#10b981" : "#ef4444";
 
   const todayMinsTotal = React.useMemo(
     () => activities
@@ -112,18 +120,20 @@ export default React.memo(function TabOneScreen() {
     [activities, customGoals],
   );
 
-  const streak = React.useMemo(() => computeStreak(activities), [activities]);
+  const streak = React.useMemo(
+    () => streakMode === "off" ? 0 : computeStreak(activities),
+    [activities, streakMode],
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        <HomeHeader />
+        <HomeHeader streak={streak} onStreakSaved={() => loadStreakMode().then(setStreakMode)} />
 
         <GreetingSection
           klowkForecastStatus={klowkForecast.status}
           klowkForecastMessage={klowkForecast.message}
           todayMinsTotal={todayMinsTotal}
-          streak={streak}
           dayOfWeek={dayOfWeek}
           dayOfMonth={dayOfMonth}
           greetingKey={greetingKey}
@@ -154,6 +164,7 @@ export default React.memo(function TabOneScreen() {
             <RecentLogs
               recentLogs={recentLogs}
               categories={categories}
+              customGoals={customGoals || []}
               deleteActivity={deleteActivity}
               duplicateActivity={duplicateActivity}
             />

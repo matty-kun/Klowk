@@ -8,7 +8,6 @@ import {
     ArrowLeft,
     Bell,
     Globe,
-    Info,
     Moon,
     Trash2,
 } from "lucide-react-native";
@@ -22,6 +21,7 @@ import {
     Pressable,
     ScrollView,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -114,6 +114,7 @@ const SettingItem = ({
 };
 
 import { useTracking } from "@/context/TrackingContext";
+import { useOnboarding } from "@/context/OnboardingContext";
 import { getHapticsEnabled, setHapticsEnabled } from "@/utils/haptics";
 import {
   cancelInactivityReminder,
@@ -125,9 +126,12 @@ export default function SettingsScreen() {
   const { colorScheme, toggleColorScheme, setColorScheme } = useColorScheme();
   const { t, language, setLanguage } = useLanguage();
   const { clearAllActivities } = useTracking();
+  const { userName, setUserName } = useOnboarding();
   const isDarkMode = colorScheme === "dark";
   const [localIsDark, setLocalIsDark] = React.useState(isDarkMode);
   const [localLang, setLocalLang] = React.useState(language);
+  const [editingName, setEditingName] = React.useState(false);
+  const [nameInput, setNameInput] = React.useState("");
 
   React.useEffect(() => setLocalIsDark(isDarkMode), [isDarkMode]);
   React.useEffect(() => setLocalLang(language), [language]);
@@ -140,6 +144,12 @@ export default function SettingsScreen() {
   const [langToggleWidth, setLangToggleWidth] = React.useState(0);
   const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
   const [notifToggleWidth, setNotifToggleWidth] = React.useState(0);
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (trimmed) await setUserName(trimmed);
+    setEditingName(false);
+  };
 
   const handleToggleDailyReminder = async (val: boolean) => {
     if (val) {
@@ -194,15 +204,37 @@ export default function SettingsScreen() {
             style={{ width: 80, height: 80, borderRadius: 40 }}
             contentFit="cover"
           />
-          <Text className="text-2xl font-black text-klowk-black dark:text-white mt-4">
-            Flow
-          </Text>
+          <View className="flex-row items-center justify-center mt-4">
+            {editingName ? (
+              <TextInput
+                value={nameInput}
+                onChangeText={setNameInput}
+                onSubmitEditing={handleSaveName}
+                onBlur={handleSaveName}
+                autoFocus
+                returnKeyType="done"
+                style={{
+                  fontSize: 22,
+                  fontWeight: "900",
+                  color: isDarkMode ? "#fff" : "#121212",
+                  borderBottomWidth: 2,
+                  borderBottomColor: "#FBBF24",
+                  minWidth: 80,
+                  textAlign: "center",
+                  padding: 0,
+                }}
+              />
+            ) : (
+              <Pressable onPress={() => { setNameInput(userName || ""); setEditingName(true); }}>
+                <Text className="text-2xl font-black text-klowk-black dark:text-white">
+                  {userName || "User"}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         <View className="mb-8">
-          <Text className="px-6 mb-3 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            {t("appearance_stats")}
-          </Text>
           <View className="bg-white dark:bg-klowk-black border-y border-gray-50 dark:border-zinc-800">
             {/* Theme Dual Buttons */}
             <View className="flex-row items-center px-6 py-4 border-b border-gray-50 dark:border-zinc-800">

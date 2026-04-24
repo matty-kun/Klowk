@@ -1,7 +1,7 @@
 import ActionSheet from "@/components/ActionSheet";
 import LogCard from "@/components/LogCard";
 import { useLanguage } from "@/context/LanguageContext";
-import { Activity, Category } from "@/context/TrackingContext";
+import { Activity, Category, CustomGoal } from "@/context/TrackingContext";
 import { DisplayActivity } from "@/utils/pomodoroMerge";
 import { router } from "expo-router";
 import { Copy, Edit2, Trash2 } from "lucide-react-native";
@@ -13,11 +13,12 @@ import { Text, View } from "react-native";
 interface Props {
   recentLogs: DisplayActivity[];
   categories: Category[];
+  customGoals: CustomGoal[];
   deleteActivity: (id: number) => void;
   duplicateActivity: (id: number) => void;
 }
 
-export default function RecentLogs({ recentLogs, categories, deleteActivity, duplicateActivity }: Props) {
+export default function RecentLogs({ recentLogs, categories, customGoals, deleteActivity, duplicateActivity }: Props) {
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
@@ -40,6 +41,11 @@ export default function RecentLogs({ recentLogs, categories, deleteActivity, dup
         {recentLogs.map((log: DisplayActivity) => {
           const cat = categories.find((c) => c.id === log.category);
           const isPomodoro = !!log.pomodoroIds;
+          const matchedGoal = customGoals.find(
+            (g) =>
+              (log.title === g.name || log.title.startsWith(g.name + " —")) &&
+              log.category === g.categoryId,
+          );
           return (
             <LogCard
               key={isPomodoro ? `pomo-${log.pomodoroIds!.join("-")}` : log.id}
@@ -48,6 +54,7 @@ export default function RecentLogs({ recentLogs, categories, deleteActivity, dup
               categoryLabel={cat?.label || t("personal")}
               categoryIconName={cat?.iconName || "tag"}
               pomodoroRounds={log.pomodoroRounds}
+              goalName={matchedGoal?.name}
               onPressMore={() => {
                 if (isPomodoro) {
                   setSelectedPomodoroIds(log.pomodoroIds!);

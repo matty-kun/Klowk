@@ -1,5 +1,5 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
-import CategoryPillScroller from "@/components/CategoryPillScroller";
+import CategoryCardPicker from "@/components/CategoryCardPicker";
 import ScreenHeader from "@/components/ScreenHeader";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react-native";
 import { DEFAULT_POMODORO_SETTINGS, PomodoroSettings } from "@/utils/pomodoro";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import WheelPicker from "@/components/WheelPicker";
 import { useColorScheme } from "nativewind";
@@ -48,6 +49,7 @@ export default function LiveSessionPage() {
   const [seconds, setSeconds] = useState(0);
   const [category, setCategory] = useState("work");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [selectedRecentId, setSelectedRecentId] = useState<number | null>(null);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [showNewCat, setShowNewCat] = useState(false);
 
@@ -55,6 +57,22 @@ export default function LiveSessionPage() {
   const [mode, setMode] = useState<"free" | "pomodoro">("free");
   const [pomodoroSettings, setPomodoroSettings] = useState<PomodoroSettings>(DEFAULT_POMODORO_SETTINGS);
   const parentScrollRef = useRef<ScrollView>(null);
+
+  React.useEffect(() => {
+    AsyncStorage.getItem("LIVE_FORM_STATE").then((raw) => {
+      if (!raw) return;
+      try {
+        const s = JSON.parse(raw);
+        if (s.category) setCategory(s.category);
+        if (s.mode) setMode(s.mode);
+        if (s.pomodoroSettings) setPomodoroSettings((prev) => ({ ...prev, ...s.pomodoroSettings }));
+      } catch {}
+    });
+  }, []);
+
+  React.useEffect(() => {
+    AsyncStorage.setItem("LIVE_FORM_STATE", JSON.stringify({ title, hours, minutes, seconds, category, mode, pomodoroSettings }));
+  }, [title, hours, minutes, seconds, category, mode, pomodoroSettings]);
 
   const updatePomodoro = (patch: Partial<PomodoroSettings>) => {
     setPomodoroSettings((prev) => ({ ...prev, ...patch }));
@@ -198,6 +216,105 @@ export default function LiveSessionPage() {
               />
             </View>
           </View>
+
+          {/* Recent Sessions */}
+          {(() => {
+            const seen = new Set<string>();
+            const recent = activities
+              .slice()
+              .reverse()
+              .filter((a) => {
+                if (!a.title || !a.duration) return false;
+                const isPomodoro = a.description === "Pomodoro" || a.description === "Pomodoro break";
+                const isFreeSession = !!a.description?.startsWith("Target:");
+                const matchesMode = mode === "pomodoro" ? isPomodoro : isFreeSession;
+                if (!matchesMode || seen.has(a.title)) return false;
+                seen.add(a.title);
+                return true;
+              })
+              .slice(0, 5);
+            if (recent.length === 0) return null;
+            return (
+              <View className="mb-8">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
+                  Recent Sessions
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {recent.map((a) => {
+                    const cat = categories.find((c) => c.id === a.category);
+                    const h = Math.floor((a.duration || 0) / 3600);
+                    const m = Math.floor(((a.duration || 0) % 3600) / 60);
+                    const s = (a.duration || 0) % 60;
+                    const durationLabel = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m` : `${s}s`;
+                    const matchedGoal = customGoals.find(
+                      (g) =>
+                        (a.title === g.name || a.title.startsWith(g.name + " —")) &&
+                        a.category === g.categoryId,
+                    );
+                    const isSelected = selectedRecentId === a.id;
+                    return (
+                      <Pressable
+                        key={a.id}
+                        onPress={() => {
+                          impact(ImpactFeedbackStyle.Light);
+                          if (isSelected) {
+                            setSelectedRecentId(null);
+                            setTitle("");
+                            setHours(0);
+                            setMinutes(0);
+                            setSeconds(0);
+                            return;
+                          }
+                          setSelectedRecentId(a.id);
+                          setTitle(a.title);
+                          setCategory(a.category || "work");
+                          if (mode === "free") {
+                            setHours(h);
+                            setMinutes(m);
+                            setSeconds(s);
+                          }
+                          setSelectedGoalId(null);
+                        }}
+                        style={{
+                          marginRight: 10,
+                          padding: 12,
+                          borderRadius: 16,
+                          backgroundColor: isSelected ? "#FBBF2415" : isDark ? "#1c1c1e" : "#f9fafb",
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? "#FBBF24" : isDark ? "#27272a" : "#f3f4f6",
+                          minWidth: 130,
+                          maxWidth: 160,
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
+                          <Text
+                            numberOfLines={1}
+                            style={{ fontSize: 12, fontWeight: "800", color: isSelected ? "#FBBF24" : isDark ? "#fff" : "#121212", flexShrink: 1 }}
+                          >
+                            {a.title}
+                          </Text>
+                          {matchedGoal && (
+                            <View style={{ backgroundColor: "#14b8a620", borderRadius: 20, paddingHorizontal: 6, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 8, fontWeight: "900", color: "#14b8a6", textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
+                                🎯 {matchedGoal.name}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                          {cat && <CategoryIcon name={cat.iconName || "briefcase"} size={10} color="#9ca3af" />}
+                          <Text style={{ marginLeft: 4, fontSize: 9, fontWeight: "700", color: "#9ca3af", textTransform: "uppercase" }}>
+                            {cat ? cat.label : "General"}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: "#FBBF24" }}>{durationLabel}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            );
+          })()}
 
           {/* Duration Section — hidden in Pomodoro mode */}
           <View className="mb-8" style={{ display: mode === "free" ? "flex" : "none" }}>
@@ -450,11 +567,11 @@ export default function LiveSessionPage() {
                 <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
               </Pressable>
             </View>
-            <CategoryPillScroller
+            <CategoryCardPicker
               categories={categories}
               selectedId={category}
               onSelect={setCategory}
-              layout="wrap"
+              activities={activities}
             />
           </View>
         </ScrollView>

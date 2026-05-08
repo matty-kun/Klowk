@@ -34,6 +34,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withNotifee",
       "expo-sqlite",
       "@react-native-community/datetimepicker",
       "expo-video",

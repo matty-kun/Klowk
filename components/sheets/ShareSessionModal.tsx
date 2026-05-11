@@ -4,6 +4,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import { useColorScheme } from "nativewind";
 import React, { useRef, useState } from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import {
   ActivityIndicator,
   Animated,
@@ -37,6 +38,7 @@ export default function ShareSessionModal({
   dateLabel,
 }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -339,7 +341,7 @@ export default function ShareSessionModal({
                     gap: 10,
                     height: 56,
                     borderRadius: 50,
-                    backgroundColor: "#FBBF24",
+                    backgroundColor: accentColor,
                     opacity: isSharing ? 0.7 : 1,
                     overflow: "hidden",
                   }}

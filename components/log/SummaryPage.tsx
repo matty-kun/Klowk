@@ -3,6 +3,7 @@ import { Activity, Category } from "@/context/TrackingContext";
 import { formatDuration } from "@/utils/time";
 import { mergePomoActivities } from "@/utils/pomodoroMerge";
 import React, { useMemo, useState } from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -14,15 +15,6 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: "month", label: "Month" },
   { key: "year", label: "Year" },
 ];
-
-const BG = "#FBBF24";
-const TEXT = "#121212";
-const TEXT_SUB = "rgba(18,18,18,0.5)";
-const DIVIDER = "rgba(18,18,18,0.12)";
-const PILL_INACTIVE_BG = "rgba(18,18,18,0.1)";
-const PILL_ACTIVE_BG = "#121212";
-const PILL_ACTIVE_TEXT = "#FBBF24";
-const PILL_INACTIVE_TEXT = "rgba(18,18,18,0.6)";
 
 interface Props {
   activities: Activity[];
@@ -85,7 +77,18 @@ function getHeadline(period: Period, totalMins: number): { main: string; sub: st
 }
 
 export default function SummaryPage({ activities, categories, width }: Props) {
+  const { accentColor } = useAppTheme();
   const [period, setPeriod] = useState<Period>("today");
+
+  // Determine if the background (accentColor) is dark to adjust text colors
+  const isAccentDark = accentColor === "#18181b" || accentColor === "#6366f1" || accentColor === "#8b5cf6" || accentColor === "#f43f5e";
+  
+  const TEXT = isAccentDark ? "#FFFFFF" : "#121212";
+  const TEXT_SUB = isAccentDark ? "rgba(255,255,255,0.7)" : "rgba(18,18,18,0.5)";
+  const DIVIDER = isAccentDark ? "rgba(255,255,255,0.2)" : "rgba(18,18,18,0.12)";
+  const PILL_INACTIVE_BG = isAccentDark ? "rgba(255,255,255,0.15)" : "rgba(18,18,18,0.1)";
+  const PILL_ACTIVE_BG = isAccentDark ? "#FFFFFF" : "#121212";
+  const PILL_INACTIVE_TEXT = isAccentDark ? "rgba(255,255,255,0.5)" : "rgba(18,18,18,0.6)";
 
   const { start, end, dateLabel } = useMemo(() => getPeriodRange(period), [period]);
 
@@ -116,10 +119,10 @@ export default function SummaryPage({ activities, categories, width }: Props) {
   const { main: headlineMain, sub: headlineSub } = getHeadline(period, totalMins);
 
   return (
-    <SafeAreaView style={{ flex: 1, width, backgroundColor: BG }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1, width, backgroundColor: accentColor }} edges={["top", "bottom"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        style={{ flex: 1, backgroundColor: BG }}
+        style={{ flex: 1, backgroundColor: accentColor }}
         contentContainerStyle={{ flexGrow: 1 }}
       >
         {/* Date top-left */}
@@ -226,7 +229,7 @@ export default function SummaryPage({ activities, categories, width }: Props) {
                 backgroundColor: period === key ? PILL_ACTIVE_BG : PILL_INACTIVE_BG,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "800", color: period === key ? PILL_ACTIVE_TEXT : PILL_INACTIVE_TEXT }}>
+              <Text style={{ fontSize: 13, fontWeight: "800", color: period === key ? accentColor : PILL_INACTIVE_TEXT }}>
                 {label}
               </Text>
             </Pressable>
@@ -236,7 +239,7 @@ export default function SummaryPage({ activities, categories, width }: Props) {
         {/* Branding footer */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
           <Image
-            source={require("@/assets/images/splash-icon.png")}
+            source={require("@/assets/images/silhouette.png")}
             style={{ width: 30, height: 30, borderRadius: 15 }}
           />
           <View>

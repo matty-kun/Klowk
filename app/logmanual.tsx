@@ -8,6 +8,7 @@ import FormField from "@/components/forms/FormField";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import WheelPicker from "@/components/forms/WheelPicker";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAppTheme } from "@/context/ThemeContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
@@ -39,6 +40,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function EntryModal() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const router = useRouter();
   const { editId } = useLocalSearchParams();
   const {
@@ -153,10 +155,10 @@ export default function EntryModal() {
   };
 
   const handleSave = async () => {
-    if (!title) return;
-    notification(NotificationFeedbackType.Success);
-
     const totalSecs = hours * 3600 + minutes * 60 + seconds;
+    if (!title || totalSecs === 0) return;
+
+    notification(NotificationFeedbackType.Success);
 
     const startDate = new Date(date);
     startDate.setHours(timeHour, timeMinute, 0, 0);
@@ -170,10 +172,8 @@ export default function EntryModal() {
         description,
         startDate,
       );
-    } else if (totalSecs > 0) {
-      await addManualActivity(title, category, totalSecs, description, startDate);
     } else {
-      await startTracker(title, category, description);
+      await addManualActivity(title, category, totalSecs, description, startDate);
     }
 
     router.back();
@@ -278,9 +278,9 @@ export default function EntryModal() {
                             marginRight: 10,
                             padding: 12,
                             borderRadius: 16,
-                            backgroundColor: isSelected ? "#FBBF2415" : colorScheme === "dark" ? "#1c1c1e" : "#f9fafb",
+                            backgroundColor: isSelected ? accentColor + "15" : colorScheme === "dark" ? "#1c1c1e" : "#f9fafb",
                             borderWidth: 1.5,
-                            borderColor: isSelected ? "#FBBF24" : colorScheme === "dark" ? "#27272a" : "#f3f4f6",
+                            borderColor: isSelected ? accentColor : colorScheme === "dark" ? "#27272a" : "#f3f4f6",
                             minWidth: 130,
                             maxWidth: 160,
                           }}
@@ -288,13 +288,13 @@ export default function EntryModal() {
                           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
                             <Text
                               numberOfLines={1}
-                              style={{ fontSize: 12, fontWeight: "800", color: isSelected ? "#FBBF24" : colorScheme === "dark" ? "#fff" : "#121212", flexShrink: 1 }}
+                              style={{ fontSize: 12, fontWeight: "800", color: isSelected ? accentColor : colorScheme === "dark" ? "#fff" : "#121212", flexShrink: 1 }}
                             >
                               {a.title}
                             </Text>
                             {matchedGoal && (
-                              <View style={{ backgroundColor: "#14b8a620", borderRadius: 20, paddingHorizontal: 6, paddingVertical: 2 }}>
-                                <Text style={{ fontSize: 8, fontWeight: "900", color: "#14b8a6", textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
+                              <View style={{ backgroundColor: accentColor + "33", borderRadius: 20, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                <Text style={{ fontSize: 8, fontWeight: "900", color: accentColor, textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
                                   🎯 {matchedGoal.name}
                                 </Text>
                               </View>
@@ -306,7 +306,7 @@ export default function EntryModal() {
                               {cat ? cat.label : "General"}
                             </Text>
                           </View>
-                          <Text style={{ fontSize: 10, fontWeight: "700", color: "#FBBF24" }}>{durationLabel}</Text>
+                          <Text style={{ fontSize: 10, fontWeight: "700", color: accentColor }}>{durationLabel}</Text>
                         </Pressable>
                       );
                     })}
@@ -445,10 +445,11 @@ export default function EntryModal() {
               headerRight={
                 <Pressable
                   onPress={() => setShowAddGoal(true)}
-                  className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
+                  className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: accentColor + (colorScheme === "dark" ? "1A" : "15") }}
                 >
-                  <Plus size={11} color="#FBBF24" strokeWidth={3} />
-                  <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
+                  <Plus size={11} color={accentColor} strokeWidth={3} />
+                  <Text style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
                 </Pressable>
               }
             >
@@ -477,10 +478,12 @@ export default function EntryModal() {
                           setSeconds(remaining % 60);
                           impact(ImpactFeedbackStyle.Medium);
                         }}
-                        className={`mr-3 p-4 rounded-[20px] border min-w-[150px] ${isSelected ? "border-[#FBBF24] bg-amber-50 dark:bg-amber-500/10" : "bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
+                        className={`mr-3 p-4 rounded-[20px] border min-w-[150px] ${!isSelected ? "bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800" : ""}`}
+                        style={isSelected ? { backgroundColor: accentColor + (colorScheme === "dark" ? "1A" : "15"), borderColor: accentColor } : undefined}
                       >
                         <Text
-                          className={`text-sm font-black mb-1 ${isSelected ? "text-[#FBBF24]" : "text-klowk-black dark:text-white"}`}
+                          className={`text-sm font-black mb-1 ${!isSelected ? "text-klowk-black dark:text-white" : ""}`}
+                          style={isSelected ? { color: accentColor } : undefined}
                           numberOfLines={1}
                         >
                           {goal.name}
@@ -489,10 +492,11 @@ export default function EntryModal() {
                           <CategoryIcon
                             name={cat?.iconName || "briefcase"}
                             size={10}
-                            color={isSelected ? "#FBBF24" : "#9ca3af"}
+                            color={isSelected ? accentColor : "#9ca3af"}
                           />
                           <Text
-                            className={`ml-1 text-[10px] font-bold uppercase ${isSelected ? "text-[#FBBF24]/70" : "text-gray-400"}`}
+                            className={`ml-1 text-[10px] font-bold uppercase ${!isSelected ? "text-gray-400" : ""}`}
+                            style={isSelected ? { color: accentColor + "B3" } : undefined}
                           >
                             {cat ? t(cat.id as any) || cat.label : "General"}
                           </Text>
@@ -509,7 +513,8 @@ export default function EntryModal() {
                                 : `${remM}m left`;
                           return (
                             <Text
-                              className={`text-[10px] font-black ${rem === 0 ? "text-green-500" : isSelected ? "text-[#FBBF24]" : "text-gray-400 dark:text-gray-500"}`}
+                              className={`text-[10px] font-black ${rem === 0 ? "text-green-500" : !isSelected ? "text-gray-400 dark:text-gray-500" : ""}`}
+                              style={rem > 0 && isSelected ? { color: accentColor } : undefined}
                             >
                               {label}
                             </Text>
@@ -537,10 +542,11 @@ export default function EntryModal() {
               headerRight={
                 <Pressable
                   onPress={() => setShowNewCat(true)}
-                  className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
+                  className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: accentColor + (colorScheme === "dark" ? "1A" : "15") }}
                 >
-                  <Plus size={11} color="#FBBF24" strokeWidth={3} />
-                  <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
+                  <Plus size={11} color={accentColor} strokeWidth={3} />
+                  <Text style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
                 </Pressable>
               }
             >
@@ -558,25 +564,20 @@ export default function EntryModal() {
         <View className="p-6 border-t border-gray-50 dark:border-zinc-900 bg-white dark:bg-klowk-black">
           <Pressable
             onPress={handleSave}
-            disabled={!title}
-            className={`py-5 rounded-[24px] flex-row items-center justify-center ${!title ? "bg-gray-100 dark:bg-zinc-900" : "bg-klowk-black dark:bg-white"}`}
+            disabled={!title || (hours === 0 && minutes === 0 && seconds === 0)}
+            className={`py-5 rounded-[24px] flex-row items-center justify-center ${(!title || (hours === 0 && minutes === 0 && seconds === 0)) ? "bg-gray-100 dark:bg-zinc-900" : "bg-klowk-black dark:bg-white"}`}
           >
             <Check
               size={20}
               color={
-                !title ? "#939393" : colorScheme === "dark" ? "#121212" : "#fff"
+                (!title || (hours === 0 && minutes === 0 && seconds === 0)) ? "#939393" : colorScheme === "dark" ? "#121212" : "#fff"
               }
               className="mr-3"
             />
             <Text
-              className={`font-black uppercase ${!title ? "text-gray-400" : colorScheme === "dark" ? "text-zinc-900" : "text-white"}`}
+              className={`font-black uppercase ${(!title || (hours === 0 && minutes === 0 && seconds === 0)) ? "text-gray-400" : colorScheme === "dark" ? "text-zinc-900" : "text-white"}`}
             >
-              {editId
-                ? t("save_changes")
-                : hours * 3600 + minutes * 60 >
-                    0
-                  ? t("save_entry")
-                  : t("launch_session")}
+              {editId ? t("save_changes") : t("save_entry")}
             </Text>
           </Pressable>
         </View>

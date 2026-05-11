@@ -2,6 +2,7 @@ import { CategoryIcon } from "@/components/category/CategoryIcon";
 import CategoryCardPicker from "@/components/category/CategoryCardPicker";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useLanguage } from "@/context/LanguageContext";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
@@ -42,6 +43,7 @@ export default function LiveSessionPage() {
   const { startTracker, categories, customGoals, activities, currentActivity } =
     useTracking();
   const { t } = useLanguage();
+  const { accentColor } = useAppTheme();
 
   const [title, setTitle] = useState("");
   const [hours, setHours] = useState(0);
@@ -154,43 +156,39 @@ export default function LiveSessionPage() {
               }}
             >
               {(["free", "pomodoro"] as const).map((m) => (
-                <Pressable
-                  key={m}
-                  onPress={() => { impact(ImpactFeedbackStyle.Light); setMode(m); }}
-                  style={{
-                    flex: 1,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    paddingVertical: 10,
-                    borderRadius: 12,
-                    backgroundColor:
-                      mode === m
-                        ? m === "pomodoro"
-                          ? "#FBBF24"
-                          : isDark ? "#2d2d2d" : "#fff"
-                        : "transparent",
-                  }}
-                >
-                  {m === "pomodoro" && (
-                    <Timer size={14} color={mode === "pomodoro" ? "#121212" : isDark ? "#71717a" : "#9ca3af"} />
-                  )}
-                  <Text
+                  <Pressable
+                    key={m}
+                    onPress={() => { impact(ImpactFeedbackStyle.Light); setMode(m); }}
                     style={{
-                      fontSize: 13,
-                      fontWeight: "800",
-                      color:
+                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor:
                         mode === m
-                          ? m === "pomodoro"
-                            ? "#121212"
-                            : isDark ? "#fff" : "#121212"
-                          : isDark ? "#71717a" : "#9ca3af",
+                          ? getContrastingColor(accentColor, isDark)
+                          : "transparent",
                     }}
                   >
-                    {m === "free" ? t("free_mode") : t("pomodoro_mode")}
-                  </Text>
-                </Pressable>
+                    {m === "pomodoro" && (
+                      <Timer size={14} color={mode === "pomodoro" ? (accentColor === "#18181b" && isDark ? "#121212" : "#fff") : isDark ? "#71717a" : "#9ca3af"} />
+                    )}
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "800",
+                        color:
+                          mode === m
+                            ? (accentColor === "#18181b" && isDark ? "#121212" : "#fff")
+                            : isDark ? "#71717a" : "#9ca3af",
+                      }}
+                    >
+                      {m === "free" ? t("free_mode") : t("pomodoro_mode")}
+                    </Text>
+                  </Pressable>
               ))}
             </View>
           </View>
@@ -198,7 +196,7 @@ export default function LiveSessionPage() {
           {/* Title Input */}
           <View className="mb-8">
             <View className="flex-row items-center mb-3">
-              <Zap size={14} color="#FBBF24" />
+              <Zap size={14} color={getContrastingColor(accentColor, isDark)} />
               <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">
                 {t("focus_target")}
               </Text>
@@ -279,9 +277,9 @@ export default function LiveSessionPage() {
                           marginRight: 10,
                           padding: 12,
                           borderRadius: 16,
-                          backgroundColor: isSelected ? "#FBBF2415" : isDark ? "#1c1c1e" : "#f9fafb",
+                          backgroundColor: isSelected ? getContrastingColor(accentColor, isDark) + "1A" : isDark ? "#1c1c1e" : "#f9fafb",
                           borderWidth: 1.5,
-                          borderColor: isSelected ? "#FBBF24" : isDark ? "#27272a" : "#f3f4f6",
+                          borderColor: isSelected ? getContrastingColor(accentColor, isDark) : isDark ? "#27272a" : "#f3f4f6",
                           minWidth: 130,
                           maxWidth: 160,
                         }}
@@ -289,13 +287,13 @@ export default function LiveSessionPage() {
                         <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
                           <Text
                             numberOfLines={1}
-                            style={{ fontSize: 12, fontWeight: "800", color: isSelected ? "#FBBF24" : isDark ? "#fff" : "#121212", flexShrink: 1 }}
+                            style={{ fontSize: 12, fontWeight: "800", color: isSelected ? getContrastingColor(accentColor, isDark) : isDark ? "#fff" : "#121212", flexShrink: 1 }}
                           >
                             {a.title}
                           </Text>
                           {matchedGoal && (
-                            <View style={{ backgroundColor: "#14b8a620", borderRadius: 20, paddingHorizontal: 6, paddingVertical: 2 }}>
-                              <Text style={{ fontSize: 8, fontWeight: "900", color: "#14b8a6", textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
+                            <View style={{ backgroundColor: getContrastingColor(accentColor, isDark) + "33", borderRadius: 20, paddingHorizontal: 6, paddingVertical: 2 }}>
+                              <Text style={{ fontSize: 8, fontWeight: "900", color: getContrastingColor(accentColor, isDark), textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
                                 🎯 {matchedGoal.name}
                               </Text>
                             </View>
@@ -307,7 +305,7 @@ export default function LiveSessionPage() {
                             {cat ? cat.label : "General"}
                           </Text>
                         </View>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: "#FBBF24" }}>{durationLabel}</Text>
+                        <Text style={{ fontSize: 10, fontWeight: "700", color: getContrastingColor(accentColor, isDark) }}>{durationLabel}</Text>
                       </Pressable>
                     );
                   })}
@@ -386,7 +384,7 @@ export default function LiveSessionPage() {
           {mode === "pomodoro" && (
             <View style={{ marginBottom: 32 }}>
               <View className="flex-row items-center mb-4">
-                <Timer size={14} color="#FBBF24" />
+                <Timer size={14} color={getContrastingColor(accentColor, isDark)} />
                 <Text className="ml-2 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none">
                   {t("pomodoro_settings")}
                 </Text>
@@ -467,10 +465,11 @@ export default function LiveSessionPage() {
               </View>
               <Pressable
                 onPress={() => setShowAddGoal(true)}
-                className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
+                className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
+                style={{ backgroundColor: getContrastingColor(accentColor, isDark) + (colorScheme === "dark" ? "1A" : "15") }}
               >
-                <Plus size={11} color="#FBBF24" strokeWidth={3} />
-                <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
+                <Plus size={11} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
+                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
               </Pressable>
             </View>
 
@@ -499,10 +498,12 @@ export default function LiveSessionPage() {
                         }
                         impact(ImpactFeedbackStyle.Medium);
                       }}
-                      className={`mr-3 p-4 rounded-[24px] border min-w-[160px] ${isSelected ? "border-[#FBBF24] bg-amber-50 dark:bg-amber-500/10" : "bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
+                      className={`mr-3 p-4 rounded-[24px] border min-w-[160px] ${!isSelected ? "bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-zinc-800" : ""}`}
+                      style={isSelected ? { backgroundColor: getContrastingColor(accentColor, isDark) + (colorScheme === "dark" ? "1A" : "15"), borderColor: getContrastingColor(accentColor, isDark) } : undefined}
                     >
                       <Text
-                        className={`text-sm font-black mb-1 ${isSelected ? "text-[#FBBF24]" : "text-klowk-black dark:text-white"}`}
+                        className={`text-sm font-black mb-1 ${!isSelected ? "text-klowk-black dark:text-white" : ""}`}
+                        style={isSelected ? { color: getContrastingColor(accentColor, isDark) } : undefined}
                         numberOfLines={1}
                       >
                         {goal.name}
@@ -511,10 +512,11 @@ export default function LiveSessionPage() {
                         <CategoryIcon
                           name={cat?.iconName || "briefcase"}
                           size={10}
-                          color={isSelected ? "#FBBF24" : "#9ca3af"}
+                          color={isSelected ? getContrastingColor(accentColor, isDark) : "#9ca3af"}
                         />
                         <Text
-                          className={`ml-1 text-[10px] font-bold uppercase ${isSelected ? "text-[#FBBF24]/70" : "text-gray-400"}`}
+                          className={`ml-1 text-[10px] font-bold uppercase ${!isSelected ? "text-gray-400" : ""}`}
+                          style={isSelected ? { color: getContrastingColor(accentColor, isDark) + "B3" } : undefined}
                         >
                           {cat ? t(cat.id as any) || cat.label : "General"}
                         </Text>
@@ -531,7 +533,8 @@ export default function LiveSessionPage() {
                               : `${remM}m left`;
                         return (
                           <Text
-                            className={`text-[10px] font-black ${rem === 0 ? "text-green-500" : isSelected ? "text-[#FBBF24]" : "text-gray-400 dark:text-gray-500"}`}
+                            className={`text-[10px] font-black ${rem === 0 ? "text-green-500" : !isSelected ? "text-gray-400 dark:text-gray-500" : ""}`}
+                            style={rem > 0 && isSelected ? { color: getContrastingColor(accentColor, isDark) } : undefined}
                           >
                             {label}
                           </Text>
@@ -561,10 +564,11 @@ export default function LiveSessionPage() {
               </View>
               <Pressable
                 onPress={() => setShowNewCat(true)}
-                className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
+                className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
+                style={{ backgroundColor: getContrastingColor(accentColor, isDark) + (colorScheme === "dark" ? "1A" : "15") }}
               >
-                <Plus size={11} color="#FBBF24" strokeWidth={3} />
-                <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
+                <Plus size={11} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
+                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
               </Pressable>
             </View>
             <CategoryCardPicker
@@ -581,15 +585,21 @@ export default function LiveSessionPage() {
           <Pressable
             onPress={handleStart}
             disabled={!canStart}
-            className={`py-5 rounded-[24px] flex-row items-center justify-center shadow-lg ${!canStart ? "bg-gray-100 dark:bg-zinc-900" : "bg-klowk-black dark:bg-white"}`}
+            style={{ 
+              backgroundColor: !canStart 
+                ? (isDark ? "#27272a" : "#f3f4f6") 
+                : getContrastingColor(accentColor, isDark) 
+            }}
+            className="py-5 rounded-[24px] flex-row items-center justify-center shadow-lg"
           >
             <Check
               size={20}
-              color={!canStart ? "#9ca3af" : isDark ? "#121212" : "#fff"}
+              color={!canStart ? "#9ca3af" : (accentColor === "#18181b" && isDark ? "#121212" : "#fff")}
               className="mr-3"
             />
             <Text
-              className={`font-black uppercase tracking-wider ${!canStart ? "text-gray-400" : isDark ? "text-klowk-black" : "text-white"}`}
+              style={{ color: !canStart ? "#9ca3af" : (accentColor === "#18181b" && isDark ? "#121212" : "#fff") }}
+              className="font-black uppercase tracking-wider"
             >
               {t("launch_focus")}
             </Text>

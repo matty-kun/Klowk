@@ -5,6 +5,7 @@ import { useColorScheme } from "nativewind";
 import React, { useEffect, useState } from "react";
 import { Image as RNImage, Text, View } from "react-native";
 import { CategoryIcon } from "@/components/category/CategoryIcon";
+import { useAppTheme } from "@/context/ThemeContext";
 
 const CARD_WIDTH = 340;
 
@@ -28,8 +29,9 @@ export default function ShareSessionCard({
   forCapture = false,
 }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
-  const catColor = category?.color || "#FBBF24";
+  const catColor = category?.color || accentColor;
 
   const [photoHeight, setPhotoHeight] = useState(CARD_WIDTH);
 

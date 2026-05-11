@@ -6,6 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Check, Image as ImageIcon, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useRef, useState } from "react";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import {
   Animated,
   Image,
@@ -21,12 +22,6 @@ const CAT_ICONS = [
   "briefcase", "heart", "book-open", "dumbbell", "coffee", "music",
   "gamepad", "camera", "plane", "home", "wallet", "star", "flame", "brain", "palette",
 ];
-const CAT_COLORS = [
-  "#FBBF24", "#f97316", "#ef4444", "#f43f5e", "#ec4899",
-  "#a855f7", "#6366f1", "#3b82f6", "#0ea5e9", "#06b6d4",
-  "#14b8a6", "#10b981", "#22c55e", "#84cc16",
-  "#78716c", "#6b7280",
-];
 
 type Props = {
   visible: boolean;
@@ -36,12 +31,20 @@ type Props = {
 
 export default function NewCategorySheet({ visible, onClose, onCreated }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { addCategory } = useTracking();
 
+  const CAT_COLORS = [
+    accentColor, "#f97316", "#ef4444", "#f43f5e", "#ec4899",
+    "#a855f7", "#6366f1", "#3b82f6", "#0ea5e9", "#06b6d4",
+    "#14b8a6", "#10b981", "#22c55e", "#84cc16",
+    "#78716c", "#6b7280",
+  ];
+
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("briefcase");
-  const [color, setColor] = useState("#FBBF24");
+  const [color, setColor] = useState(accentColor);
   const [customImageUri, setCustomImageUri] = useState<string | undefined>();
 
   const slideAnim = useRef(new Animated.Value(400)).current;
@@ -51,7 +54,7 @@ export default function NewCategorySheet({ visible, onClose, onCreated }: Props)
     if (visible) {
       setName("");
       setIcon("briefcase");
-      setColor("#FBBF24");
+      setColor(accentColor);
       setCustomImageUri(undefined);
       Animated.parallel([
         Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
@@ -164,9 +167,25 @@ export default function NewCategorySheet({ visible, onClose, onCreated }: Props)
               <Pressable
                 onPress={handleCreate}
                 disabled={!name.trim()}
-                style={{ paddingVertical: 18, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: name.trim() ? "#FBBF24" : (isDark ? "#2c2c2e" : "#f3f4f6") }}
+                style={{ 
+                  paddingVertical: 18, 
+                  borderRadius: 24, 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  backgroundColor: name.trim() 
+                    ? getContrastingColor(accentColor, isDark) 
+                    : (isDark ? "#2c2c2e" : "#f3f4f6") 
+                }}
               >
-                <Text style={{ fontSize: 15, fontWeight: "900", color: name.trim() ? "#fff" : (isDark ? "#52525b" : "#9ca3af"), textTransform: "uppercase", letterSpacing: 1 }}>
+                <Text style={{ 
+                  fontSize: 15, 
+                  fontWeight: "900", 
+                  color: name.trim() 
+                    ? (accentColor === "#18181b" && isDark ? "#121212" : "#fff") 
+                    : (isDark ? "#52525b" : "#9ca3af"), 
+                  textTransform: "uppercase", 
+                  letterSpacing: 1 
+                }}>
                   Create Category
                 </Text>
               </Pressable>

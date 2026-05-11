@@ -1,4 +1,5 @@
 import { useTracking } from "@/context/TrackingContext";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { sendLocalNotification } from "@/utils/notifications";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
@@ -28,6 +29,7 @@ const BUBBLE_HEIGHT = 48;
 
 export default function FloatingTimer() {
   const router = useRouter();
+  const { accentColor } = useAppTheme();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { currentActivity, isMinimized, setIsMinimized } = useTracking();
@@ -180,8 +182,8 @@ export default function FloatingTimer() {
           borderRadius: 24,
           backgroundColor: isDark ? "#1C1C1E" : "#fff",
           borderWidth: 1.5,
-          borderColor: "#FBBF24",
-          shadowColor: "#FBBF24",
+          borderColor: getContrastingColor(accentColor, isDark),
+          shadowColor: getContrastingColor(accentColor, isDark),
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.15,
           shadowRadius: 15,

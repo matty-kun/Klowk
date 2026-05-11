@@ -10,6 +10,7 @@ export interface WidgetData {
   todayMins: number;
   streak: number;
   weekDays: boolean[]; // index 0 = Monday ... 6 = Sunday
+  accentColor: string;
 }
 
 const nameToWidget: Record<string, React.ComponentType<WidgetData>> = {
@@ -25,10 +26,12 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case "WIDGET_ADDED":
     case "WIDGET_UPDATE": {
       if (!Widget) break;
-      const raw = await AsyncStorage.getItem(WIDGET_DATA_KEY);
-      const data: WidgetData = raw
-        ? JSON.parse(raw)
-        : { todayMins: 0, streak: 0, weekDays: [false, false, false, false, false, false, false] };
+      const rawData = await AsyncStorage.getItem(WIDGET_DATA_KEY);
+      const accentColor = await AsyncStorage.getItem("flow_accent_color") || "#FBBF24";
+      const data: WidgetData = {
+        ...(rawData ? JSON.parse(rawData) : { todayMins: 0, streak: 0, weekDays: [false, false, false, false, false, false, false] }),
+        accentColor,
+      };
       props.renderWidget(React.createElement(Widget, data));
       break;
     }

@@ -1,15 +1,18 @@
 import React from "react";
-import { FlexWidget, ImageWidget, TextWidget } from "react-native-android-widget";
+import { FlexWidget, ImageWidget, TextWidget, OverlapWidget } from "react-native-android-widget";
 
 interface Props {
   streak: number;
   weekDays: boolean[];
   todayMins: number;
+  accentColor: string;
 }
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
-export function StreakWidget({ streak, weekDays }: Props) {
+export function StreakWidget({ streak, weekDays, accentColor }: Props) {
+  const activeColor = (accentColor === "#18181b" ? "#FFFFFF" : accentColor) as any;
+
   return (
     <FlexWidget
       style={{
@@ -26,9 +29,9 @@ export function StreakWidget({ streak, weekDays }: Props) {
       <FlexWidget
         style={{
           flexDirection: "row",
-          justifyContent: "flex-start",
+          justifyContent: "space-between",
           alignItems: "center",
-          alignSelf: "stretch",
+          width: "match_parent",
         }}
       >
         <FlexWidget
@@ -36,7 +39,7 @@ export function StreakWidget({ streak, weekDays }: Props) {
             width: 22,
             height: 22,
             borderRadius: 6,
-            backgroundColor: "#FBBF24",
+            backgroundColor: activeColor,
             justifyContent: "center",
             alignItems: "center",
           }}
@@ -47,6 +50,12 @@ export function StreakWidget({ streak, weekDays }: Props) {
             imageHeight={16}
           />
         </FlexWidget>
+
+        <ImageWidget
+          image={require("../assets/images/adaptive-icon-foreground.png")}
+          imageWidth={22}
+          imageHeight={22}
+        />
       </FlexWidget>
 
       {/* Main row: fire+number | day dots */}
@@ -55,36 +64,47 @@ export function StreakWidget({ streak, weekDays }: Props) {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          alignSelf: "stretch",
+          width: "match_parent",
           flex: 1,
           paddingTop: 4,
           paddingBottom: 4,
         }}
       >
         {/* Fire with streak number stacked on top */}
-        <FlexWidget
+        <OverlapWidget
           style={{
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
             width: 56,
             height: 56,
-            position: "relative",
-            overflow: "visible",
           }}
         >
-          <TextWidget text="🔥" style={{ fontSize: 44, position: "absolute" }} />
-          <TextWidget
-            text={`${streak}`}
-            style={{
-              fontSize: streak >= 100 ? 11 : streak >= 10 ? 14 : 17,
-              fontWeight: "900",
-              color: "#FFFFFF",
-              position: "absolute",
-              textAlign: "center",
-            }}
+          <TextWidget 
+            text="🔥" 
+            style={{ 
+              fontSize: 44, 
+              width: "match_parent", 
+              height: "match_parent", 
+              textAlign: "center" 
+            }} 
           />
-        </FlexWidget>
+          <FlexWidget 
+            style={{ 
+              width: "match_parent", 
+              height: "match_parent", 
+              justifyContent: "center", 
+              alignItems: "center" 
+            }}
+          >
+            <TextWidget
+              text={`${streak}`}
+              style={{
+                fontSize: streak >= 100 ? 11 : streak >= 10 ? 14 : 17,
+                fontWeight: "900",
+                color: "#FFFFFF",
+                textAlign: "center",
+              }}
+            />
+          </FlexWidget>
+        </OverlapWidget>
 
         {/* Day dots — evenly spaced */}
         <FlexWidget
@@ -103,7 +123,6 @@ export function StreakWidget({ streak, weekDays }: Props) {
               style={{
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 4,
               }}
             >
               <FlexWidget
@@ -111,7 +130,7 @@ export function StreakWidget({ streak, weekDays }: Props) {
                   width: 22,
                   height: 22,
                   borderRadius: 11,
-                  backgroundColor: weekDays[i] ? "#FBBF24" : "rgba(255,255,255,0.12)",
+                  backgroundColor: weekDays[i] ? activeColor : "#ffffff1F",
                   justifyContent: "center",
                   alignItems: "center",
                 }}
@@ -130,7 +149,8 @@ export function StreakWidget({ streak, weekDays }: Props) {
                 style={{
                   fontSize: 8,
                   fontWeight: "700",
-                  color: weekDays[i] ? "#FBBF24" : "rgba(255,255,255,0.3)",
+                  color: weekDays[i] ? activeColor : "#ffffff4D",
+                  marginTop: 4,
                 }}
               />
             </FlexWidget>

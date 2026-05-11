@@ -6,7 +6,8 @@ import ToggleBar from "@/components/ui/ToggleBar";
 import { Text } from "react-native";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
-import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { useTracking, Activity, Category } from "@/context/TrackingContext";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { getForecast } from "@/utils/forecast";
 import { formatDate, formatDuration, formatTimestamp } from "@/utils/time";
 import { useNavigation } from "@react-navigation/native";
@@ -182,9 +183,11 @@ const DonutChart = ({
 const TrendLineChart = ({
   activities,
   timeRange,
+  accentColor,
 }: {
   activities: any[];
   timeRange: "today" | "week" | "month";
+  accentColor: string;
 }) => {
   const { colorScheme } = useColorScheme();
   const now = new Date();
@@ -270,7 +273,7 @@ const TrendLineChart = ({
         <Text className="font-black text-lg text-klowk-black dark:text-white">
           {titleMap[timeRange]}
         </Text>
-        <TrendIcon size={16} color="#FBBF24" />
+        <TrendIcon size={16} color={accentColor} />
       </View>
 
       <View className="h-40 bg-transparent relative">
@@ -294,15 +297,15 @@ const TrendLineChart = ({
               <Svg height={chartHeight} width={chartWidth}>
                 <Defs>
                   <SvgGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#FBBF24" stopOpacity="0.2" />
-                    <Stop offset="1" stopColor="#FBBF24" stopOpacity="0" />
+                    <Stop offset="0" stopColor={accentColor} stopOpacity="0.2" />
+                    <Stop offset="1" stopColor={accentColor} stopOpacity="0" />
                   </SvgGradient>
                 </Defs>
                 <Path d={fillPath} fill="url(#trendGrad)" />
                 <Polyline
                   points={polyline}
                   fill="none"
-                  stroke="#FBBF24"
+                  stroke={accentColor}
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -313,8 +316,8 @@ const TrendLineChart = ({
                     cx={p.x}
                     cy={p.y}
                     r={count <= 31 ? "4" : "2"}
-                    fill={i === activeIndex ? "#FBBF24" : colorScheme === "dark" ? "#18181b" : "white"}
-                    stroke="#FBBF24"
+                    fill={i === activeIndex ? accentColor : colorScheme === "dark" ? "#18181b" : "white"}
+                    stroke={accentColor}
                     strokeWidth="2"
                   />
                 ))}
@@ -337,7 +340,7 @@ const TrendLineChart = ({
                   textAlign: "center",
                   fontSize: 10,
                   fontWeight: "700",
-                  color: i === activeIndex ? "#FBBF24" : colorScheme === "dark" ? "#52525b" : "#9ca3af",
+                  color: i === activeIndex ? accentColor : colorScheme === "dark" ? "#52525b" : "#9ca3af",
                 }}
               >
                 {label}
@@ -485,6 +488,7 @@ const generateDynamicInsight = (
 export default React.memo(function ReportsScreen() {
   const { colorScheme } = useColorScheme();
   const { t, language } = useLanguage();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   const navigation = useNavigation<any>();
@@ -509,7 +513,7 @@ export default React.memo(function ReportsScreen() {
   // New Category State
   const [newCatName, setNewCatName] = useState("");
   const [newCatIcon, setNewCatIcon] = useState("briefcase");
-  const [newCatColor, setNewCatColor] = useState("#FBBF24");
+  const [newCatColor, setNewCatColor] = useState(accentColor);
 
   const forecastAnim = useRef(new Animated.Value(width)).current;
   const sheetSlide = useRef(new Animated.Value(150)).current;
@@ -610,7 +614,7 @@ export default React.memo(function ReportsScreen() {
     "wallet", "star", "flame", "brain", "palette",
   ];
   const COLORS = [
-    "#FBBF24", "#f97316", "#ef4444", "#f43f5e", "#ec4899",
+    accentColor, "#f97316", "#ef4444", "#f43f5e", "#ec4899",
     "#a855f7", "#6366f1", "#3b82f6", "#0ea5e9", "#06b6d4",
     "#14b8a6", "#10b981", "#22c55e", "#84cc16",
     "#78716c", "#6b7280", "#ffffff", "#e5e7eb",
@@ -763,12 +767,23 @@ export default React.memo(function ReportsScreen() {
 
           <View className="relative items-center justify-center -mt-8">
             <View
-              style={{ backgroundColor: "#FBBF24", height: 60, top: "50%" }}
+              style={{ backgroundColor: getContrastingColor(accentColor, isDark), height: 60, top: "50%" }}
               className="absolute left-[-24] right-[-24]"
             />
 
             <View className="flex-row items-end justify-between bg-transparent">
-              <View className="w-44 h-44 items-center justify-center bg-transparent">
+              <View className="w-44 h-44 items-center justify-center bg-transparent relative">
+                <View
+                  style={{
+                    position: "absolute",
+                    width: 110,
+                    height: 26,
+                    bottom: 10,
+                    backgroundColor: isDark ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.12)",
+                    borderRadius: 13,
+                    transform: [{ scaleX: 1.2 }],
+                  }}
+                />
                 <Image
                   source={require("../../assets/images/smart klowk.png")}
                   style={{ width: 170, height: 170 }}
@@ -794,10 +809,11 @@ export default React.memo(function ReportsScreen() {
                       impact(ImpactFeedbackStyle.Medium);
                       setShowForecast(true);
                     }}
-                    className="mt-4 bg-amber-400/10 py-2.5 px-4 rounded-xl flex-row items-center justify-center border border-amber-400/20"
+                    className="mt-4 py-2.5 px-4 rounded-xl flex-row items-center justify-center border"
+                    style={{ backgroundColor: accentColor + "1A", borderColor: accentColor + "33" }}
                   >
-                    <Sparkles size={12} color="#FBBF24" />
-                    <Text className="ml-2 text-[10px] font-black text-amber-400 uppercase tracking-wider">
+                    <Sparkles size={12} color={getContrastingColor(accentColor, isDark)} />
+                    <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="ml-2 text-[10px] font-black uppercase tracking-wider">
                       {t("forecast")}
                     </Text>
                   </Pressable>
@@ -813,8 +829,8 @@ export default React.memo(function ReportsScreen() {
               className="bg-white dark:bg-zinc-900 p-6 rounded-[34px] shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden"
             >
               <View className="flex-row items-center mb-3 bg-transparent">
-                <Sparkles size={14} color="#FBBF24" />
-                <Text className="ml-2 font-black text-amber-400 text-[10px] uppercase tracking-[3px]">
+                <Sparkles size={14} color={getContrastingColor(accentColor, isDark)} />
+                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="ml-2 font-black text-[10px] uppercase tracking-[3px]">
                   Insight
                 </Text>
               </View>
@@ -851,7 +867,7 @@ export default React.memo(function ReportsScreen() {
             </View>
           </View>
 
-          <TrendLineChart activities={activities} timeRange={timeRange} />
+          <TrendLineChart activities={activities} timeRange={timeRange} accentColor={accentColor} />
 
           <View className="mb-8">
             <View className="flex-row items-center justify-between mb-6 px-1">
@@ -865,7 +881,7 @@ export default React.memo(function ReportsScreen() {
                 }}
                 className="w-10 h-10 items-center justify-center bg-gray-50 dark:bg-zinc-900 rounded-full border border-gray-100 dark:border-zinc-800"
               >
-                <Plus size={20} color="#FBBF24" strokeWidth={3} />
+                <Plus size={20} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
               </Pressable>
             </View>
 
@@ -977,8 +993,8 @@ export default React.memo(function ReportsScreen() {
               className="flex-1 px-6 bg-white dark:bg-klowk-black"
             >
               <View className="items-center py-4 mb-2">
-                <View className="bg-amber-400/10 w-24 h-24 rounded-[32px] items-center justify-center">
-                  <Sparkles size={40} color="#FBBF24" />
+                <View style={{ backgroundColor: accentColor + "1A" }} className="w-24 h-24 rounded-[32px] items-center justify-center">
+                  <Sparkles size={40} color={getContrastingColor(accentColor, isDark)} />
                 </View>
                 <Text className="text-3xl font-black text-klowk-black dark:text-white mt-6 text-center">
                   {forecastContent.title}
@@ -986,7 +1002,7 @@ export default React.memo(function ReportsScreen() {
               </View>
 
               <LinearGradient
-                colors={["#FBBF24", "#FCD34D"]}
+                colors={[accentColor, accentColor + "B3"]}
                 style={{
                   borderRadius: 34,
                   padding: 32,
@@ -1019,7 +1035,7 @@ export default React.memo(function ReportsScreen() {
                       className="bg-gray-50 dark:bg-zinc-900 p-6 rounded-[32px] mb-4 flex-row items-center border border-transparent dark:border-zinc-800 active:opacity-80"
                     >
                       <View className="bg-white dark:bg-zinc-800 w-12 h-12 rounded-2xl items-center justify-center shadow-sm">
-                        <Icon size={20} color="#FBBF24" />
+                        <Icon size={20} color={getContrastingColor(accentColor, isDark)} />
                       </View>
                       <View className="flex-1 ml-4">
                         <Text className="font-bold text-klowk-black dark:text-white text-base">
@@ -1080,7 +1096,7 @@ export default React.memo(function ReportsScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     {ICONS.map((icon) => (
-                      <Pressable key={icon} onPress={() => { setNewCatIcon(icon); impact(ImpactFeedbackStyle.Light); }} style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: newCatIcon === icon ? "#FBBF24" : isDark ? "#18181b" : "#f9fafb", borderWidth: 1, borderColor: newCatIcon === icon ? "#FBBF24" : isDark ? "#27272a" : "#f3f4f6" }}>
+                      <Pressable key={icon} onPress={() => { setNewCatIcon(icon); impact(ImpactFeedbackStyle.Light); }} style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: newCatIcon === icon ? accentColor : isDark ? "#18181b" : "#f9fafb", borderWidth: 1, borderColor: newCatIcon === icon ? accentColor : isDark ? "#27272a" : "#f3f4f6" }}>
                         <CategoryIcon name={icon} size={20} color={newCatIcon === icon ? "#fff" : isDark ? "#52525b" : "#9ca3af"} />
                       </Pressable>
                     ))}
@@ -1098,7 +1114,7 @@ export default React.memo(function ReportsScreen() {
                   </View>
                 </ScrollView>
 
-                <Pressable onPress={handleAddCategory} disabled={!newCatName.trim()} style={{ paddingVertical: 18, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: !newCatName.trim() ? isDark ? "#27272a" : "#f3f4f6" : "#FBBF24" }}>
+                <Pressable onPress={handleAddCategory} disabled={!newCatName.trim()} style={{ paddingVertical: 18, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: !newCatName.trim() ? isDark ? "#27272a" : "#f3f4f6" : accentColor }}>
                   <Text style={{ fontSize: 15, fontWeight: "900", color: !newCatName.trim() ? isDark ? "#52525b" : "#9ca3af" : "#fff", textTransform: "uppercase", letterSpacing: 1 }}>Create Category</Text>
                 </Pressable>
               </ScrollView>

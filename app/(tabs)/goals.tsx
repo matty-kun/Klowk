@@ -27,6 +27,7 @@ import {
 import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
 import { useLocalSearchParams } from "expo-router";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -42,9 +43,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const CONFETTI_COLORS = ["#FBBF24", "#34d399", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c", "#f87171"];
-
 function ConfettiOverlay({ visible }: { visible: boolean }) {
+  const { accentColor } = useAppTheme();
+  const CONFETTI_COLORS = [accentColor, "#34d399", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c", "#f87171"];
   const { width, height } = Dimensions.get("window");
   const particles = useRef(
     Array.from({ length: 55 }, (_, i) => ({
@@ -105,6 +106,7 @@ const { width, height } = Dimensions.get("window");
 
 export default function GoalsScreen() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const {
     activities,
@@ -376,8 +378,8 @@ const now = Date.now();
         </View>
 
         <EmptyState
-          icon={<Target size={48} color="#14b8a6" strokeWidth={1.5} />}
-          iconBg="rgba(20,184,166,0.1)"
+          icon={<Target size={48} color={getContrastingColor(accentColor, isDark)} strokeWidth={1.5} />}
+          iconBg={accentColor + "1A"}
           title={t("no_goals_yet")}
           description={t("no_goals_desc")}
           action={{ label: t("create_new_goal"), onPress: openSheet }}
@@ -402,9 +404,10 @@ const now = Date.now();
               impact(ImpactFeedbackStyle.Light);
               openSheet();
             }}
-            className="w-10 h-10 bg-teal-500/10 rounded-full items-center justify-center"
+            style={{ backgroundColor: accentColor + "1A" }}
+            className="w-10 h-10 rounded-full items-center justify-center"
           >
-            <Plus size={20} color="#14b8a6" strokeWidth={3} />
+            <Plus size={20} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
           </Pressable>
         </View>
 
@@ -878,9 +881,9 @@ const now = Date.now();
                       justifyContent: "center",
                       backgroundColor: !isFormValid
                         ? isDark
-                          ? "rgba(251,191,36,0.15)"
+                          ? accentColor + "26"
                           : "#f3f4f6"
-                        : "#FBBF24",
+                        : getContrastingColor(accentColor, isDark),
                       shadowColor: "#000",
                       shadowOffset: { width: 0, height: 8 },
                       shadowOpacity: isDark ? 0.45 : 0.18,
@@ -894,9 +897,9 @@ const now = Date.now();
                         fontWeight: "900",
                         color: !isFormValid
                           ? isDark
-                            ? "rgba(251,191,36,0.4)"
+                            ? accentColor + "66"
                             : "#9ca3af"
-                          : "#fff",
+                          : (accentColor === "#18181b" && isDark ? "#121212" : "#121212"),
                         textTransform: "uppercase",
                         letterSpacing: 1,
                       }}

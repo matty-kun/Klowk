@@ -3,6 +3,7 @@ import { useOnboarding } from "@/context/OnboardingContext";
 import { formatDuration } from "@/utils/time";
 import { useColorScheme } from "nativewind";
 import React from "react";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { Image, Text, View } from "react-native";
 
 const FORECAST_MESSAGES: Record<string, Record<string, string>> = {
@@ -107,6 +108,7 @@ export default function GreetingSection({
   const { t, language } = useLanguage();
   const { userName } = useOnboarding();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const bubbleText =
     klowkForecastStatus === "no_goal"
@@ -136,13 +138,13 @@ export default function GreetingSection({
       </View>
       <Text className="text-[26px] font-black text-klowk-black dark:text-white mb-10">
         {t(greetingKey as any)}{" "}
-        <Text className="text-amber-400">{userName || "User"}!</Text>
+        <Text style={{ color: getContrastingColor(accentColor, isDark) }}>{userName || "User"}!</Text>
       </Text>
 
       <View className="relative items-center justify-center -mt-12">
         <View
-          className="absolute -left-6 -right-6 h-[56px] bg-klowk-orange"
-          style={{ top: "52%" }}
+          className="absolute -left-6 -right-6 h-[56px]"
+          style={{ top: "52%", backgroundColor: getContrastingColor(accentColor, isDark) }}
         />
         <View className="flex-row items-center justify-between mt-9">
           <View className="w-40 h-40 items-center justify-center -mt-14">

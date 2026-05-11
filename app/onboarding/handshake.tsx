@@ -1,19 +1,20 @@
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
-import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { impact, notification } from "@/utils/haptics";
+import { notification } from "@/utils/haptics";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
+import { NotificationFeedbackType } from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import React, { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ProgressIndicator from "./ProgressIndicator";
@@ -21,6 +22,7 @@ import TypewriterText from "./TypewriterText";
 
 export default function HandshakeScreen() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { setUserName } = useOnboarding();
   const { t } = useLanguage();
@@ -86,18 +88,12 @@ export default function HandshakeScreen() {
             <Pressable
               onPress={handleNext}
               disabled={!name.trim()}
-              className={`w-full py-4 px-6 rounded-[20px] items-center justify-center mb-3 ${
-                name.trim()
-                  ? "bg-amber-400"
-                  : "bg-gray-200 dark:bg-amber-400/30"
-              }`}
+              style={{ backgroundColor: name.trim() ? getContrastingColor(accentColor, isDark) : (isDark ? accentColor + "4D" : "#e5e7eb") }}
+              className="w-full py-4 px-6 rounded-[20px] items-center justify-center mb-3"
             >
               <Text
-                className={`text-base font-black uppercase tracking-wider ${
-                  name.trim()
-                    ? "text-white"
-                    : "text-gray-400 dark:text-amber-400/60"
-                }`}
+                style={{ color: name.trim() ? (accentColor === "#18181b" && isDark ? "#121212" : "white") : (isDark ? accentColor + "99" : "#9ca3af") }}
+                className="text-base font-black uppercase tracking-wider"
               >
                 Let's go →
               </Text>

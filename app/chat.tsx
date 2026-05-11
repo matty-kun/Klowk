@@ -2,6 +2,7 @@ import { isGeminiNanoAvailable, initGeminiNano, askGeminiNano } from "@/utils/ge
 import { askGeminiAI } from "@/utils/geminiAI";
 import { ChatBubble, TypingBubble } from "@/components/home/ChatBubble";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAppTheme } from "@/context/ThemeContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
@@ -44,6 +45,7 @@ const quickPrompts = [
 export default function ChatScreen() {
   const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
+  const { accentColor } = useAppTheme();
   const { activities, customGoals, categories, addManualActivity, deleteActivity } = useTracking();
   const { userName } = useOnboarding();
   const isDark = colorScheme === "dark";
@@ -493,7 +495,7 @@ export default function ChatScreen() {
                 <Text className="text-lg font-black text-klowk-black dark:text-white">
                   {t("talk_to_klowk")}
                 </Text>
-                <View className="ml-2 px-1.5 py-0.5 rounded bg-amber-400">
+                <View style={{ backgroundColor: accentColor }} className="ml-2 px-1.5 py-0.5 rounded">
                   <Text className="text-[9px] font-black text-white">BETA</Text>
                 </View>
               </View>
@@ -557,7 +559,8 @@ export default function ChatScreen() {
               {inputDisplay.trim().length > 0 && (
                 <Pressable
                   onPress={handleSend}
-                  className="w-10 h-10 rounded-full bg-amber-400 items-center justify-center ml-2"
+                  style={{ backgroundColor: accentColor }}
+                  className="w-10 h-10 rounded-full items-center justify-center ml-2"
                 >
                   <Send size={18} color="white" />
                 </Pressable>

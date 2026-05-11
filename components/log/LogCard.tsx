@@ -1,5 +1,6 @@
 import { CategoryIcon } from "@/components/category/CategoryIcon";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAppTheme } from "@/context/ThemeContext";
 import { formatDate, formatLogDuration, formatTimestamp } from "@/utils/time";
 import { MoreHorizontal } from "lucide-react-native";
 import React from "react";
@@ -24,6 +25,7 @@ type Props = {
 
 export default React.memo(function LogCard({ log, categoryColor, categoryLabel, categoryIconName, pomodoroRounds, goalName, onPressMore }: Props) {
   const { t } = useLanguage();
+  const { accentColor } = useAppTheme();
 
   return (
     <View className="bg-white dark:bg-zinc-900 rounded-[24px] p-4 mb-3 flex-row items-center border border-gray-50 dark:border-zinc-800 shadow-sm">
@@ -52,9 +54,9 @@ export default React.memo(function LogCard({ log, categoryColor, categoryLabel, 
             {categoryLabel}
           </Text>
           {pomodoroRounds != null && (
-            <View style={{ backgroundColor: "#FBBF2420", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, marginRight: 6, flexDirection: "row", alignItems: "center" }}>
+            <View style={{ backgroundColor: accentColor + "33", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, marginRight: 6, flexDirection: "row", alignItems: "center" }}>
               <Text style={{ fontSize: 9 }}>🍅</Text>
-              <Text style={{ color: "#FBBF24", fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }}>
+              <Text style={{ color: accentColor, fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }}>
                 {pomodoroRounds} {pomodoroRounds === 1 ? "round" : "rounds"}
               </Text>
             </View>

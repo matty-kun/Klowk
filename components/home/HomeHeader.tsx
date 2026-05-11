@@ -8,6 +8,8 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { MotiView } from "moti";
 import { useNavigation } from "@react-navigation/native";
 import StreakModal from "@/components/sheets/StreakModal";
+import { Image } from "expo-image";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 function AnimatedFlame({ color }: { color: string }) {
   return (
@@ -41,6 +43,8 @@ interface Props {
 
 export default function HomeHeader({ streak = 0, onStreakSaved }: Props) {
   const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const { accentColor } = useAppTheme();
   const navigation = useNavigation<any>();
   const [streakModalVisible, setStreakModalVisible] = useState(false);
 
@@ -55,10 +59,17 @@ export default function HomeHeader({ streak = 0, onStreakSaved }: Props) {
         {streak > 0 ? (
           <TouchableOpacity
             onPress={() => { impact(ImpactFeedbackStyle.Medium); setStreakModalVisible(true); }}
-            className="flex-row items-center bg-amber-100 dark:bg-[#2a1f0e] rounded-full px-3 py-1.5 gap-1.5"
+            style={{ backgroundColor: getContrastingColor(accentColor, isDark) + "22", flexShrink: 1, marginRight: 10 }}
+            className="flex-row items-center rounded-full px-4 py-1.5 gap-2"
           >
-            <AnimatedFlame color={colorScheme === "dark" ? "#f59e0b" : "#d97706"} />
-            <Text className="text-amber-600 dark:text-amber-400 font-black text-[12px]">x{streak} day streak!</Text>
+            <AnimatedFlame color={getContrastingColor(accentColor, isDark)} />
+            <Text 
+              style={{ color: getContrastingColor(accentColor, isDark) }} 
+              className="font-black text-[12px]"
+              numberOfLines={1}
+            >
+              x{streak} day streak!
+            </Text>
           </TouchableOpacity>
         ) : (
           <View />

@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { useColorScheme } from "nativewind";
 import React, { useState } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
+import { useAppTheme } from "@/context/ThemeContext";
 
 type Props = {
   message: {
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export const ChatBubble = React.memo(function ChatBubble({ message, fadeAnim, onUndo }: Props) {
+  const { accentColor } = useAppTheme();
   const isUser = message.sender === "user";
   const [undone, setUndone] = useState(false);
 
@@ -32,11 +34,12 @@ export const ChatBubble = React.memo(function ChatBubble({ message, fadeAnim, on
       )}
       <View className="max-w-[80%] flex-col gap-2">
         <View
+          style={(!isUser && message.undoActivityId != null && !undone) ? { backgroundColor: accentColor } : undefined}
           className={`p-4 rounded-[24px] ${
             isUser
               ? "bg-klowk-black dark:bg-zinc-800 rounded-tr-none"
               : message.undoActivityId != null && !undone
-              ? "bg-amber-400 rounded-tl-none"
+              ? "rounded-tl-none"
               : "bg-gray-50 dark:bg-zinc-900 rounded-tl-none"
           }`}
         >

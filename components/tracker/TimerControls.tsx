@@ -1,5 +1,6 @@
 import { Check, Pause, Play, Share2, Square } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useAppTheme } from "@/context/ThemeContext";
 
 interface Props {
   isDark: boolean;
@@ -30,6 +31,7 @@ export default function TimerControls({
   onFinish,
   onShare,
 }: Props) {
+  const { accentColor } = useAppTheme();
   if (isPomodoroMode && midRoundWaiting) {
     return (
       <View style={styles.controls}>
@@ -51,7 +53,7 @@ export default function TimerControls({
             <Share2 size={22} color={isDark ? "#e5e7eb" : "#374151"} />
           </Pressable>
         )}
-        <Pressable onPress={onFinish} style={[styles.btn, styles.checkBtn, { backgroundColor: "#FBBF24" }]}>
+        <Pressable onPress={onFinish} style={[styles.btn, styles.checkBtn, { backgroundColor: accentColor }]}>
           <Check size={30} color="#121212" strokeWidth={3} />
         </Pressable>
       </View>

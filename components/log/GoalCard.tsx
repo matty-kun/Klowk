@@ -7,6 +7,7 @@ import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 type Props = {
   goal: {
@@ -26,6 +27,7 @@ type Props = {
 
 export default function GoalCard({ goal, catData, currentMins, index = 0, isRecentlyActive = false, onPressMore }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
 
@@ -44,10 +46,10 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, isRece
       animate={{ opacity: 1, translateY: 0 }}
       transition={{ delay: 200 + index * 50 }}
       style={{
-        backgroundColor: isRecentlyActive ? (isDark ? "#14b8a610" : "#f0fdfa") : isDark ? "#18181b" : "#fff",
+        backgroundColor: isRecentlyActive ? accentColor + "1A" : isDark ? "#18181b" : "#fff",
         borderRadius: 32,
         borderWidth: 1,
-        borderColor: isRecentlyActive ? "#14b8a640" : isDark ? "#27272a" : "#f3f4f6",
+        borderColor: isRecentlyActive ? accentColor + "4D" : isDark ? "#27272a" : "#f3f4f6",
         shadowColor: "#000",
         shadowOpacity: 0.04,
         shadowRadius: 4,
@@ -55,8 +57,8 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, isRece
       }}
     >
       {isRecentlyActive && (
-        <View style={{ position: "absolute", top: 14, right: 14, backgroundColor: "#14b8a620", borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 }}>
-          <Text style={{ fontSize: 8, fontWeight: "900", color: "#14b8a6", textTransform: "uppercase", letterSpacing: 0.5 }}>Active</Text>
+        <View style={{ position: "absolute", top: 14, right: 14, backgroundColor: accentColor + "33", borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 }}>
+          <Text style={{ fontSize: 8, fontWeight: "900", color: getContrastingColor(accentColor, isDark), textTransform: "uppercase", letterSpacing: 0.5 }}>Active</Text>
         </View>
       )}
       <View className="flex-row items-center justify-between mb-4">

@@ -4,6 +4,7 @@ import {
   FLOW_WEBSITE_URL,
 } from "@/constants/ExternalLinks";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAppTheme } from "@/context/ThemeContext";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { Globe, Users } from "lucide-react-native";
@@ -15,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function AboutScreen() {
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const version =
     Constants.expoConfig?.version ??
@@ -49,7 +51,7 @@ export default function AboutScreen() {
         </Text>
         <Text
           className="text-base font-bold mb-1"
-          style={{ color: "#FBBF24" }}
+          style={{ color: accentColor }}
         >
           {t("tagline_companion" as any)}
         </Text>
@@ -82,10 +84,11 @@ export default function AboutScreen() {
 
         <Pressable
           onPress={() => open(FLOW_FACEBOOK_COMMUNITY_URL)}
-          className="flex-row items-center justify-center py-4 rounded-2xl mb-8 border-2 border-amber-400/50 bg-amber-400/10"
+          className="flex-row items-center justify-center py-4 rounded-2xl mb-8 border-2"
+          style={{ backgroundColor: accentColor + "1A", borderColor: accentColor + "80" }}
         >
-          <Users size={18} color="#FBBF24" />
-          <Text className="ml-2 text-base font-black text-amber-400 uppercase tracking-wide">
+          <Users size={18} color={accentColor} />
+          <Text style={{ color: accentColor }} className="ml-2 text-base font-black uppercase tracking-wide">
             {t("facebook_community" as any)}
           </Text>
         </Pressable>

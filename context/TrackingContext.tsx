@@ -386,6 +386,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   };
 
   // Sync widget data whenever activities change (Android only)
+  /*
   useEffect(() => {
     if (Platform.OS !== "android") return;
     const sync = async () => {
@@ -436,6 +437,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     };
     sync();
   }, [activities]);
+  */
 
   const getTotalFocusTimeToday = () => {
     const startOfToday = new Date().setHours(0, 0, 0, 0);

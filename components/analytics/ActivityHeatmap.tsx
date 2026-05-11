@@ -1,4 +1,5 @@
 import { Activity } from "@/context/TrackingContext";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
@@ -14,7 +15,6 @@ interface Props {
 }
 
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const BRAND = "#FBBF24";
 const SLIDE_DISTANCE = 40;
 
 function toYMD(date: Date): string {
@@ -45,9 +45,10 @@ interface GridProps {
   selectedDay: string | null;
   onSelectDay: (day: string | null) => void;
   isDark: boolean;
+  accentColor: string;
 }
 
-function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark }: GridProps) {
+function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark, accentColor }: GridProps) {
   const { year, monthIndex, rows } = useMemo(() => buildGrid(month), [month]);
 
   const minutesByDay = useMemo(() => {
@@ -76,7 +77,8 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark }: Gr
     if (minutes === 0) return isDark ? "#27272a" : "#f3f4f6";
     const ratio = Math.min(minutes / maxMinutes, 1);
     const opacity = 0.18 + ratio * 0.82;
-    return `rgba(251, 191, 36, ${opacity.toFixed(2)})`;
+    const baseColor = getContrastingColor(accentColor, isDark);
+    return `${baseColor}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`;
   }
 
   return (
@@ -105,7 +107,7 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark }: Gr
                   alignItems: "center",
                   justifyContent: "center",
                   borderWidth: isSelected ? 2 : isToday ? 1.5 : 0,
-                  borderColor: isSelected ? BRAND : isToday ? `${BRAND}80` : "transparent",
+                  borderColor: isSelected ? getContrastingColor(accentColor, isDark) : isToday ? `${getContrastingColor(accentColor, isDark)}80` : "transparent",
                 }}
               >
                 <Text
@@ -114,9 +116,7 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark }: Gr
                     fontWeight: isToday ? "900" : "600",
                     color:
                       mins > 0
-                        ? isSelected
-                          ? "#92400e"
-                          : "#78350f"
+                        ? (accentColor === "#18181b" && isDark ? "#18181b" : "#FFFFFF")
                         : isDark
                         ? "#52525b"
                         : "#d1d5db",
@@ -142,6 +142,7 @@ export default function ActivityHeatmap({
   onNextMonth,
 }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   // Track previous month to know slide direction
@@ -294,6 +295,7 @@ export default function ActivityHeatmap({
           selectedDay={selectedDay}
           onSelectDay={onSelectDay}
           isDark={isDark}
+          accentColor={accentColor}
         />
       </Animated.View>
 
@@ -317,22 +319,25 @@ export default function ActivityHeatmap({
         >
           Less
         </Text>
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-          <View
-            key={ratio}
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: 3,
-              backgroundColor:
-                ratio === 0
-                  ? isDark
-                    ? "#27272a"
-                    : "#f3f4f6"
-                  : `rgba(251, 191, 36, ${(0.18 + ratio * 0.82).toFixed(2)})`,
-            }}
-          />
-        ))}
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+          const opacity = 0.18 + ratio * 0.82;
+          return (
+            <View
+              key={ratio}
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 3,
+                backgroundColor:
+                  ratio === 0
+                    ? isDark
+                      ? "#27272a"
+                      : "#f3f4f6"
+                    : `${getContrastingColor(accentColor, isDark)}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+              }}
+            />
+          );
+        })}
         <Text
           style={{
             fontSize: 9,

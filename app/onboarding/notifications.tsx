@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { Bell, CheckCircle2, ChevronLeft } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useState } from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ProgressIndicator from "./ProgressIndicator";
@@ -16,6 +17,7 @@ import TypewriterText from "./TypewriterText";
 
 export default function NotificationsScreen() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { completeOnboarding } = useOnboarding();
   const { t } = useLanguage();
@@ -118,7 +120,8 @@ export default function NotificationsScreen() {
               <Pressable
                 onPress={handleEnableNotifications}
                 disabled={isLoading}
-                className="w-full py-4 px-6 rounded-[20px] items-center justify-center bg-amber-400 flex-row"
+                style={{ backgroundColor: accentColor }}
+                className="w-full py-4 px-6 rounded-[20px] items-center justify-center flex-row"
               >
                 <Bell size={20} color="white" />
                 <Text className="ml-2 text-base font-black text-white uppercase tracking-wider">
@@ -129,9 +132,10 @@ export default function NotificationsScreen() {
 
             <Pressable
               onPress={handleFinish}
+              style={{ backgroundColor: notificationsEnabled ? accentColor : undefined }}
               className={`w-full py-4 px-6 rounded-[20px] items-center justify-center ${
                 notificationsEnabled
-                  ? "bg-amber-400"
+                  ? ""
                   : "bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700"
               }`}
             >

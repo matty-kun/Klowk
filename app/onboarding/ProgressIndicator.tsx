@@ -1,5 +1,6 @@
 import React from "react";
 import { View } from "react-native";
+import { useAppTheme } from "@/context/ThemeContext";
 
 interface ProgressIndicatorProps {
   currentStep: number; // 1, 2, or 3
@@ -10,6 +11,7 @@ export default function ProgressIndicator({
   currentStep,
   totalSteps = 3,
 }: ProgressIndicatorProps) {
+  const { accentColor } = useAppTheme();
   const dotsArray = Array.from({ length: totalSteps }, (_, i) => i + 1);
 
   return (
@@ -23,19 +25,21 @@ export default function ProgressIndicator({
             {/* Dot */}
             <View
               className={`w-3 h-3 rounded-full transition-colors ${
-                isActive || isCompleted
-                  ? "bg-amber-400"
-                  : "bg-gray-200 dark:bg-zinc-700"
+                !(isActive || isCompleted) ? "bg-gray-200 dark:bg-zinc-700" : ""
               }`}
+              style={(isActive || isCompleted) ? { backgroundColor: accentColor } : undefined}
             />
 
             {/* Connecting Line */}
             {idx < dotsArray.length - 1 && (
               <View
                 className={`flex-1 h-1 rounded-full transition-colors ${
-                  isCompleted ? "bg-amber-400" : "bg-gray-200 dark:bg-zinc-700"
+                  !isCompleted ? "bg-gray-200 dark:bg-zinc-700" : ""
                 }`}
-                style={{ maxWidth: 40 }}
+                style={[
+                  { maxWidth: 40 },
+                  isCompleted ? { backgroundColor: accentColor } : undefined
+                ]}
               />
             )}
           </React.Fragment>

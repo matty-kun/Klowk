@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import Animated, { AnimatedProps } from "react-native-reanimated";
 import { Dimensions, Platform, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, CircleProps } from "react-native-svg";
+import { useAppTheme } from "@/context/ThemeContext";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -37,6 +38,7 @@ export default function TimerRing({
   currentCategory,
   animatedProps,
 }: Props) {
+  const { accentColor } = useAppTheme();
   return (
     <View style={styles.wrapper}>
       <View style={styles.mascotContainer}>
@@ -180,7 +182,6 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FBBF24",
     marginTop: 12,
     textTransform: "uppercase",
     letterSpacing: 1.5,

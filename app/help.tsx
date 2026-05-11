@@ -15,8 +15,7 @@ import { useColorScheme } from "nativewind";
 import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const AMBER = "#f59e0b";
+import { useAppTheme } from "@/context/ThemeContext";
 
 const sections = [
   {
@@ -73,6 +72,7 @@ function SectionCard({
   isLast: boolean;
 }) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   return (
@@ -90,7 +90,7 @@ function SectionCard({
           width: 38,
           height: 38,
           borderRadius: 12,
-          backgroundColor: isDark ? "rgba(245,158,11,0.12)" : "rgba(245,158,11,0.10)",
+          backgroundColor: isDark ? accentColor + "1E" : accentColor + "1A",
           alignItems: "center",
           justifyContent: "center",
           marginRight: 14,
@@ -98,7 +98,7 @@ function SectionCard({
           flexShrink: 0,
         }}
       >
-        <Icon size={18} color={AMBER} strokeWidth={2} />
+        <Icon size={18} color={accentColor} strokeWidth={2} />
       </View>
       <View style={{ flex: 1 }}>
         <Text
@@ -128,6 +128,7 @@ function SectionCard({
 
 export default function HelpGuideScreen() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const bg = isDark ? "#0A0A0A" : "#f8f8f8";
   const cardBg = isDark ? "#18181A" : "#ffffff";
@@ -149,7 +150,7 @@ export default function HelpGuideScreen() {
           onPress={() => router.back()}
           style={{ padding: 4, marginRight: 4 }}
         >
-          <ChevronLeft size={28} color={AMBER} />
+          <ChevronLeft size={28} color={accentColor} />
         </Pressable>
         <Text
           style={{
@@ -219,16 +220,16 @@ export default function HelpGuideScreen() {
                 style={{
                   marginTop: 10,
                   alignSelf: "flex-start",
-                  backgroundColor: "rgba(245,158,11,0.12)",
+                  backgroundColor: accentColor + "1E",
                   borderRadius: 20,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                   borderWidth: 1,
-                  borderColor: "rgba(245,158,11,0.3)",
+                  borderColor: accentColor + "4D",
                 }}
               >
                 <Text
-                  style={{ fontSize: 9, fontWeight: "700", color: AMBER, letterSpacing: 0.5 }}
+                  style={{ fontSize: 9, fontWeight: "700", color: accentColor, letterSpacing: 0.5 }}
                 >
                   8 SECTIONS BELOW
                 </Text>
@@ -243,7 +244,7 @@ export default function HelpGuideScreen() {
             style={{
               fontSize: 11,
               fontWeight: "700",
-              color: AMBER,
+              color: accentColor,
               letterSpacing: 1.5,
               textTransform: "uppercase",
               marginLeft: 4,
@@ -265,7 +266,7 @@ export default function HelpGuideScreen() {
             }}
           >
             {[
-              "1. Set up your first session — tap the big amber + button.",
+              "1. Set up your first session — tap the big + button.",
               "2. Track your time with the live timer, or log past sessions manually.",
               "3. Open Reports to see your weekly patterns and streaks.",
             ].map((step, i) => (
@@ -282,7 +283,7 @@ export default function HelpGuideScreen() {
                     width: 22,
                     height: 22,
                     borderRadius: 11,
-                    backgroundColor: "rgba(245,158,11,0.12)",
+                    backgroundColor: accentColor + "1E",
                     alignItems: "center",
                     justifyContent: "center",
                     marginRight: 10,
@@ -290,7 +291,7 @@ export default function HelpGuideScreen() {
                     flexShrink: 0,
                   }}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: "800", color: AMBER }}>
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: accentColor }}>
                     {i + 1}
                   </Text>
                 </View>
@@ -316,7 +317,7 @@ export default function HelpGuideScreen() {
             style={{
               fontSize: 11,
               fontWeight: "700",
-              color: AMBER,
+              color: accentColor,
               letterSpacing: 1.5,
               textTransform: "uppercase",
               marginLeft: 4,

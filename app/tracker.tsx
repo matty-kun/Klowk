@@ -28,6 +28,7 @@ import { formatLogDuration } from "@/utils/time";
 import { Minimize2, Settings, Share2 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { AppState, Platform, Pressable, StyleSheet, Vibration, View } from "react-native";
 import Animated, {
   cancelAnimation,
@@ -527,6 +528,7 @@ export default function TrackerPage() {
   // ── Derived display values ─────────────────────────────────────────────────
 
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   const targetSecs = currentActivity
@@ -536,8 +538,8 @@ export default function TrackerPage() {
   const currentCategory = categories.find((c) => c.id === activity?.category);
   const displayTitle = isPomodoroMode ? pBaseTitle : (activity?.title ?? "");
   const ringColor = isPomodoroMode
-    ? phaseDisplay === "break" ? "#14b8a6" : "#FBBF24"
-    : isOvertime ? "#ef4444" : "#60a5fa";
+    ? phaseDisplay === "break" ? "#14b8a6" : getContrastingColor(accentColor, isDark)
+    : isOvertime ? "#ef4444" : getContrastingColor(accentColor, isDark);
 
   let displayTime = "";
   if (isCountdown) {

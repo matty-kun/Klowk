@@ -1,6 +1,7 @@
 import { impact } from "@/utils/haptics";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import React from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import { Pressable, Text, View } from "react-native";
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function EmptyState({ icon, iconBg, title, description, action }: Props) {
+  const { accentColor } = useAppTheme();
   return (
     <View className="flex-1 items-center justify-center px-10 pb-20">
       <View
@@ -38,7 +40,8 @@ export default function EmptyState({ icon, iconBg, title, description, action }:
             impact(ImpactFeedbackStyle.Medium);
             action.onPress();
           }}
-          className="w-full bg-[#FBBF24] py-4 rounded-[20px] items-center justify-center shadow-lg shadow-[#FBBF24]/30"
+          className="w-full py-4 rounded-[20px] items-center justify-center shadow-lg"
+          style={{ backgroundColor: accentColor, shadowColor: accentColor }}
         >
           <Text className="text-white font-black text-[15px] tracking-wider uppercase">
             {action.label}

@@ -14,9 +14,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Switch, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useOnboarding } from "@/context/OnboardingContext";
+import { useAppTheme } from "@/context/ThemeContext";
 
 export default function SettingsScreen() {
   const { userName, setUserName } = useOnboarding();
+  const { accentColor } = useAppTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(userName || "");
@@ -59,9 +61,9 @@ export default function SettingsScreen() {
 
         {/* Premium Profile Card */}
         <View className="bg-white rounded-[32px] p-6 mb-8 flex-row items-center border border-gray-100 shadow-sm relative overflow-hidden">
-          <View className="absolute top-0 right-0 w-24 h-24 bg-amber-400/5 rounded-full -mr-8 -mt-8" />
+          <View style={{ backgroundColor: accentColor + "0D" }} className="absolute top-0 right-0 w-24 h-24 rounded-full -mr-8 -mt-8" />
           <View className="w-16 h-16 bg-klowk-black rounded-2xl items-center justify-center mr-4 shadow-md">
-            <User size={30} color="#FBBF24" />
+            <User size={30} color={accentColor} />
           </View>
           <View className="flex-1">
             {editingName ? (
@@ -86,11 +88,12 @@ export default function SettingsScreen() {
           </View>
           <Pressable
             onPress={editingName ? handleSaveName : () => { setNameInput(userName || ""); setEditingName(true); }}
-            className="bg-amber-400/10 p-2 rounded-full"
+            style={{ backgroundColor: accentColor + "1A" }}
+            className="p-2 rounded-full"
           >
             {editingName
-              ? <Check size={16} color="#FBBF24" strokeWidth={3} />
-              : <Pencil size={16} color="#FBBF24" strokeWidth={2} />
+              ? <Check size={16} color={accentColor} strokeWidth={3} />
+              : <Pencil size={16} color={accentColor} strokeWidth={2} />
             }
           </Pressable>
         </View>
@@ -109,7 +112,7 @@ export default function SettingsScreen() {
             <Switch
               value={notificationsEnabled}
               onValueChange={handleNotificationToggle}
-              trackColor={{ false: "#e5e7eb", true: "#FBBF24" }}
+              trackColor={{ false: "#e5e7eb", true: accentColor }}
               thumbColor="#fff"
             />
           </View>

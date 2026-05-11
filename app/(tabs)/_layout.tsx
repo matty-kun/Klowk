@@ -2,6 +2,7 @@ import ActionWidget from "@/components/home/ActionWidget";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
 import { useSummaryVisible } from "@/context/SummaryVisibleContext";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import { impact } from "@/utils/haptics";
@@ -32,6 +33,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
   const { currentActivity } = useTracking();
+  const { accentColor } = useAppTheme();
   const [showSheet, setShowSheet] = useState(false);
   const router = useRouter();
 
@@ -144,7 +146,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         {state.routes.map((route: any, index: number) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
-          const color = isFocused ? "#FBBF24" : isDark ? "#4b5563" : "#d1d5db";
+          const color = isFocused ? getContrastingColor(accentColor, isDark) : isDark ? "#4b5563" : "#d1d5db";
 
           const onPress = () => {
             const event = navigation.emit({
@@ -182,7 +184,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 <View style={{
                   width: 26, height: 26, borderRadius: 13,
                   borderWidth: 2,
-                  borderColor: isFocused ? "#FBBF24" : "transparent",
+                  borderColor: isFocused ? accentColor : "transparent",
                   overflow: "hidden",
                 }}>
                   <Image
@@ -245,11 +247,11 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
               width: 68,
               height: 68,
               borderRadius: 34,
-              backgroundColor: "#FBBF24",
+              backgroundColor: getContrastingColor(accentColor, isDark),
               elevation: 10,
               alignItems: "center",
               justifyContent: "center",
-              shadowColor: "#FBBF24",
+              shadowColor: getContrastingColor(accentColor, isDark),
               shadowOffset: { width: 0, height: 8 },
               shadowOpacity: 0.35,
               shadowRadius: 16,
@@ -262,7 +264,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 transform: [{ rotate: sheetRotate }],
               }}
             >
-              <Plus size={32} color="#fff" strokeWidth={3} />
+              <Plus size={32} color={accentColor === "#18181b" && isDark ? "#121212" : "#fff"} strokeWidth={3} />
             </Animated.View>
           </Animated.View>
         </Pressable>

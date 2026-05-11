@@ -10,6 +10,7 @@ import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
 import React, { useRef, useState } from "react";
 import { Text, View } from "react-native";
+import { useAppTheme } from "@/context/ThemeContext";
 
 interface Props {
   recentLogs: DisplayActivity[];
@@ -22,6 +23,7 @@ interface Props {
 export default function RecentLogs({ recentLogs, categories, customGoals, deleteActivity, duplicateActivity }: Props) {
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [selectedPomodoroIds, setSelectedPomodoroIds] = useState<number[] | null>(null);
@@ -36,7 +38,7 @@ export default function RecentLogs({ recentLogs, categories, customGoals, delete
         transition={{ type: "timing", delay: 800 }}
         style={{ paddingHorizontal: 24, marginBottom: 16 }}
       >
-        <Text style={{ fontSize: 10, fontWeight: "900", color: "#FBBF24", textTransform: "uppercase", letterSpacing: 2 }}>
+        <Text style={{ fontSize: 10, fontWeight: "900", color: accentColor, textTransform: "uppercase", letterSpacing: 2 }}>
           {t("logs")}
         </Text>
       </MotiView>

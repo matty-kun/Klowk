@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 export type StreakMode = "off" | "logging";
 
@@ -92,6 +93,9 @@ export default function StreakModal({ visible, streak, onClose, onSaved }: Props
   const cancelText = dark ? "#ffffff" : "#09090b";
   const inactiveBg = dark ? "#27272a" : "#f4f4f5";
 
+  const { accentColor } = useAppTheme();
+  const themeBase = getContrastingColor(accentColor, dark);
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleCancel}>
       <View className="flex-1 justify-end">
@@ -122,8 +126,8 @@ export default function StreakModal({ visible, streak, onClose, onSaved }: Props
 
               {/* Streak count card */}
               <View style={{ backgroundColor: cardBg }} className="rounded-2xl px-4 py-4 flex-row items-center gap-4 mb-6">
-                <View className="w-11 h-11 rounded-xl bg-amber-400/20 items-center justify-center">
-                  <Flame size={22} color="#f59e0b" fill="#f59e0b" />
+                <View style={{ backgroundColor: themeBase + "20" }} className="w-11 h-11 rounded-xl items-center justify-center">
+                  <Flame size={22} color={themeBase} fill={themeBase} />
                 </View>
                 <View>
                   <Text style={{ color: textPrimary }} className="text-xl font-black">
@@ -142,13 +146,13 @@ export default function StreakModal({ visible, streak, onClose, onSaved }: Props
                       key={mode}
                       onPress={() => { impact(ImpactFeedbackStyle.Light); setSelected(mode); }}
                       style={{
-                        backgroundColor: active ? "rgba(251,191,36,0.1)" : inactiveBg,
-                        borderColor: active ? "#f59e0b" : "transparent",
+                        backgroundColor: active ? themeBase + "15" : inactiveBg,
+                        borderColor: active ? themeBase : "transparent",
                       }}
                       className="flex-1 py-3 rounded-2xl items-center border"
                     >
                       <Text
-                        style={{ color: active ? "#f59e0b" : textSecondary }}
+                        style={{ color: active ? themeBase : textSecondary }}
                         className="font-bold text-sm capitalize"
                       >
                         {mode === "off" ? "Off" : "Logging"}
@@ -171,9 +175,10 @@ export default function StreakModal({ visible, streak, onClose, onSaved }: Props
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleSave}
-                  className="flex-1 py-4 rounded-2xl bg-amber-400 items-center"
+                  style={{ backgroundColor: themeBase }}
+                  className="flex-1 py-4 rounded-2xl items-center"
                 >
-                  <Text className="text-white font-black">Save</Text>
+                  <Text style={{ color: accentColor === "#18181b" && dark ? "#121212" : "#fff" }} className="font-black">Save</Text>
                 </TouchableOpacity>
               </View>
             </View>

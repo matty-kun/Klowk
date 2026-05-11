@@ -1,7 +1,9 @@
+import { useLanguage } from "@/context/LanguageContext";
+import { useAppTheme } from "@/context/ThemeContext";
 import { router } from "expo-router";
 import {
-    ArrowLeft,
     Brain,
+    ChevronLeft,
     Database,
     MessageCircle,
     Shield,
@@ -22,6 +24,8 @@ const examples = [
 ];
 
 export default function ChatHelpScreen() {
+  const { t } = useLanguage();
+  const { accentColor } = useAppTheme();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -35,7 +39,7 @@ export default function ChatHelpScreen() {
           onPress={() => router.back()}
           className="w-10 h-10 items-center justify-center rounded-full bg-gray-50 dark:bg-zinc-900"
         >
-          <ArrowLeft size={20} color={isDark ? "#fff" : "#121212"} />
+          <ChevronLeft size={20} color={isDark ? "#fff" : "#121212"} />
         </Pressable>
         <Text className="text-lg font-black text-klowk-black dark:text-white">
           Chat Guide

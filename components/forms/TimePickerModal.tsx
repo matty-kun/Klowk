@@ -1,6 +1,7 @@
 import WheelPicker from "@/components/forms/WheelPicker";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useState } from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import { Modal, Pressable, Text, View } from "react-native";
 
 type Props = {
@@ -24,6 +25,7 @@ function to24h(h12: number, isPm: boolean) {
 
 export default function TimePickerModal({ visible, hour, minute, onConfirm, onClose }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   const [localH12, setLocalH12] = useState(1);
@@ -58,7 +60,7 @@ export default function TimePickerModal({ visible, hour, minute, onConfirm, onCl
           <Text style={{ fontSize: 18, fontWeight: "900", color: isDark ? "#fff" : "#121212", marginBottom: 4 }}>
             Time Started
           </Text>
-          <Text style={{ fontSize: 28, fontWeight: "900", color: "#FBBF24", marginBottom: 28, letterSpacing: -1 }}>
+          <Text style={{ fontSize: 28, fontWeight: "900", color: accentColor, marginBottom: 28, letterSpacing: -1 }}>
             {formatted}
           </Text>
 
@@ -105,7 +107,7 @@ export default function TimePickerModal({ visible, hour, minute, onConfirm, onCl
                         paddingHorizontal: 16,
                         paddingVertical: 10,
                         borderRadius: 12,
-                        backgroundColor: active ? "#FBBF24" : isDark ? "#27272a" : "#f3f4f6",
+                        backgroundColor: active ? accentColor : isDark ? "#27272a" : "#f3f4f6",
                       }}
                     >
                       <Text style={{ fontSize: 13, fontWeight: "900", color: active ? "#121212" : isDark ? "#9ca3af" : "#6b7280" }}>
@@ -120,7 +122,7 @@ export default function TimePickerModal({ visible, hour, minute, onConfirm, onCl
 
           <Pressable
             onPress={() => { onConfirm(to24h(localH12, isPm), localMinute); onClose(); }}
-            style={{ backgroundColor: "#FBBF24", borderRadius: 18, paddingVertical: 16, alignItems: "center" }}
+            style={{ backgroundColor: accentColor, borderRadius: 18, paddingVertical: 16, alignItems: "center" }}
           >
             <Text style={{ fontSize: 14, fontWeight: "900", color: "#121212", textTransform: "uppercase", letterSpacing: 1 }}>
               Set Time

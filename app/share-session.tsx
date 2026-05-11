@@ -10,6 +10,7 @@ import { ImpactFeedbackStyle } from "expo-haptics";
 import { ArrowLeft, Camera, Download, ImagePlus, Share2, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useCallback, useRef, useState } from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import {
   ActivityIndicator,
   Animated,
@@ -23,6 +24,7 @@ import ViewShot from "react-native-view-shot";
 
 export default function ShareSessionScreen() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   const params = useLocalSearchParams<{
@@ -310,7 +312,7 @@ export default function ShareSessionScreen() {
               gap: 10,
               height: 56,
               borderRadius: 16,
-              backgroundColor: "#FBBF24",
+              backgroundColor: accentColor,
               opacity: isSharing ? 0.7 : 1,
               overflow: "hidden",
             }}
@@ -319,12 +321,12 @@ export default function ShareSessionScreen() {
               <ActivityIndicator color="#121212" />
             ) : (
               <>
-                <Share2 size={20} color="#121212" />
+                <Share2 size={20} color={isDark ? "#fff" : "#121212"} />
                 <Text
                   style={{
                     fontSize: 15,
                     fontWeight: "900",
-                    color: "#121212",
+                    color: isDark ? "#fff" : "#121212",
                     textTransform: "uppercase",
                     letterSpacing: 1,
                   }}

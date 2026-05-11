@@ -1,3 +1,4 @@
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { impact } from "@/utils/haptics";
 import { ImpactFeedbackStyle } from "expo-haptics";
@@ -17,6 +18,8 @@ type Props = {
 export default function ToggleBar({ value, onChange, style }: Props) {
   const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
+  const { accentColor } = useAppTheme();
+  const isDark = colorScheme === "dark";
   const [toggleWidth, setToggleWidth] = useState(0);
 
   return (
@@ -25,8 +28,8 @@ export default function ToggleBar({ value, onChange, style }: Props) {
         const w = e.nativeEvent.layout.width;
         if (w > 0) setToggleWidth(w);
       }}
-      style={[{ width: 160 }, style]}
-      className="flex-row bg-gray-50 dark:bg-zinc-800 p-1 rounded-[16px] relative overflow-hidden"
+      style={[{ width: 160, backgroundColor: isDark ? accentColor + "10" : accentColor + "08" }, style]}
+      className="flex-row p-1 rounded-[16px] relative overflow-hidden"
     >
       <MotiView
         animate={{
@@ -41,7 +44,7 @@ export default function ToggleBar({ value, onChange, style }: Props) {
           bottom: 4,
           left: 4,
           width: (toggleWidth - 8) / 3 || "31.5%",
-          backgroundColor: colorScheme === "dark" ? "#3f3f46" : "#fff",
+          backgroundColor: isDark ? "#3f3f46" : "#fff",
           borderRadius: 12,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
@@ -60,7 +63,8 @@ export default function ToggleBar({ value, onChange, style }: Props) {
           className="flex-1 items-center py-2 z-10"
         >
           <Text
-            className={`text-[8px] font-black uppercase tracking-wide ${value === r ? "text-amber-400" : "text-gray-400 dark:text-zinc-500"}`}
+            style={value === r ? { color: getContrastingColor(accentColor, isDark) } : undefined}
+            className={`text-[8px] font-black uppercase tracking-wide ${value === r ? "" : "text-gray-400 dark:text-zinc-500"}`}
           >
             {t(r === "week" ? "this_week" : r === "month" ? "this_month" : "today")}
           </Text>

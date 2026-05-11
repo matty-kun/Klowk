@@ -7,8 +7,10 @@ import { X, Circle, Check } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import { ActivityIndicator, Image, Platform, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAppTheme } from "@/context/ThemeContext";
 
 export default function CameraPickerScreen() {
+  const { accentColor } = useAppTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const [preview, setPreview] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -55,7 +57,7 @@ export default function CameraPickerScreen() {
         </Text>
         <Pressable
           onPress={requestPermission}
-          style={{ backgroundColor: "#FBBF24", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+          style={{ backgroundColor: accentColor, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
         >
           <Text style={{ color: "#121212", fontWeight: "700", fontSize: 15 }}>Grant Permission</Text>
         </Pressable>
@@ -104,7 +106,7 @@ export default function CameraPickerScreen() {
                 width: 60,
                 height: 60,
                 borderRadius: 30,
-                backgroundColor: "#FBBF24",
+                backgroundColor: accentColor,
                 alignItems: "center",
                 justifyContent: "center",
               }}

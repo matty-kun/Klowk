@@ -5,6 +5,7 @@ import { ClipboardEdit, MessageCircle, Timer } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Modal, Pressable, Text, View } from "react-native";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 type ActionWidgetProps = {
   visible: boolean;
@@ -22,6 +23,7 @@ export default function ActionWidget({
   onStartLiveSession,
 }: ActionWidgetProps) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -81,8 +83,8 @@ export default function ActionWidget({
             <Pressable onPress={handleStartLive} style={{ borderRadius: 16, overflow: "hidden" }}>
               {({ pressed }) => (
                 <View className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-orange-50 dark:bg-orange-950/20" : ""}`}>
-                  <View className="w-9 h-9 bg-orange-100 dark:bg-orange-500/20 rounded-xl items-center justify-center mr-4">
-                    <Timer size={20} color="#FBBF24" strokeWidth={2.5} />
+                  <View style={{ backgroundColor: accentColor + "33" }} className="w-9 h-9 rounded-xl items-center justify-center mr-4">
+                    <Timer size={20} color={getContrastingColor(accentColor, isDark)} strokeWidth={2.5} />
                   </View>
                   <Text className="text-base font-black text-klowk-black dark:text-white">
                     {t("start_live_session")}

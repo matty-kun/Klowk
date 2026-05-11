@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { ArrowLeft, Copy, Edit2, MoreHorizontal, Trash2 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import {
   Animated,
   Dimensions,
@@ -41,6 +42,7 @@ export default function CategoryDetailSheet({
   onDuplicateActivity,
 }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
   const slideAnim = useRef(new Animated.Value(width)).current;
@@ -174,7 +176,7 @@ export default function CategoryDetailSheet({
                 <CategoryIcon
                   name={catData?.iconName || "tag"}
                   size={36}
-                  color={catData?.color || "#FBBF24"}
+                  color={catData?.color || accentColor}
                   customImageUri={catData?.customImageUri}
                 />
               </View>
@@ -276,7 +278,7 @@ export default function CategoryDetailSheet({
                         {log.isPomodoro && (
                           <View
                             style={{
-                              backgroundColor: "#FBBF2420",
+                              backgroundColor: accentColor + "33",
                               borderRadius: 20,
                               paddingHorizontal: 7,
                               paddingVertical: 2,
@@ -287,7 +289,7 @@ export default function CategoryDetailSheet({
                             <Text style={{ fontSize: 9 }}>🍅</Text>
                             <Text
                               style={{
-                                color: "#FBBF24",
+                                color: accentColor,
                                 fontSize: 9,
                                 fontWeight: "900",
                                 marginLeft: 3,

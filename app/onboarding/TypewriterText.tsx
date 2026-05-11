@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Text } from "react-native";
+import { useAppTheme } from "@/context/ThemeContext";
 
 interface TypewriterTextProps {
   text: string;
@@ -14,6 +15,7 @@ export default function TypewriterText({
   className,
   onDone,
 }: TypewriterTextProps) {
+  const { accentColor } = useAppTheme();
   const [displayed, setDisplayed] = useState("");
   const indexRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,7 +45,7 @@ export default function TypewriterText({
     <Text className={className}>
       {displayed}
       {displayed.length < text.length && (
-        <Text className="text-amber-400">▍</Text>
+        <Text style={{ color: accentColor }}>▍</Text>
       )}
     </Text>
   );

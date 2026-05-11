@@ -2,6 +2,7 @@ import CategoryCardPicker from "@/components/category/CategoryCardPicker";
 import DatePickerModal from "@/components/forms/DatePickerModal";
 import WheelPicker from "@/components/forms/WheelPicker";
 import { useLanguage } from "@/context/LanguageContext";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { useTracking } from "@/context/TrackingContext";
 import { impact, notification } from "@/utils/haptics";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
@@ -10,8 +11,8 @@ import { useColorScheme } from "nativewind";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Dimensions,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -19,9 +20,9 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 
-const { height } = Dimensions.get("window");
 
 type Props = {
   visible: boolean;
@@ -29,10 +30,12 @@ type Props = {
 };
 
 export default function AddGoalModal({ visible, onClose }: Props) {
+  const { height } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { categories, addCustomGoal, activities } = useTracking();
   const { t } = useLanguage();
+  const { accentColor } = useAppTheme();
 
   const [goalName, setGoalName] = useState("");
   const [targetHours, setTargetHours] = useState(0);
@@ -51,9 +54,19 @@ export default function AddGoalModal({ visible, onClose }: Props) {
 
   const sheetSlide = useRef(new Animated.Value(800)).current;
   const sheetBackdrop = useRef(new Animated.Value(0)).current;
-  const keyboardOffset = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
   const [sheetScrollEnabled, setSheetScrollEnabled] = useState(true);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCatId) {
@@ -61,17 +74,6 @@ export default function AddGoalModal({ visible, onClose }: Props) {
     }
   }, [categories]);
 
-  useEffect(() => {
-    const show = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      (e) => Animated.timing(keyboardOffset, { toValue: e.endCoordinates.height, duration: Platform.OS === "ios" ? e.duration : 200, useNativeDriver: false }).start()
-    );
-    const hide = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      (e) => Animated.timing(keyboardOffset, { toValue: 0, duration: Platform.OS === "ios" ? e.duration : 200, useNativeDriver: false }).start()
-    );
-    return () => { show.remove(); hide.remove(); };
-  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -117,8 +119,8 @@ export default function AddGoalModal({ visible, onClose }: Props) {
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
         <Animated.View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)", opacity: sheetBackdrop }}>
-          <Pressable style={{ flex: 1 }} onPress={onClose} />
-          <Animated.View style={{ marginBottom: keyboardOffset }}>
+          <Pressable style={{ flex: 1 }} onPress={() => { Keyboard.dismiss(); onClose(); }} />
+          <Animated.View>
             <Animated.View style={{ transform: [{ translateY: sheetSlide }] }}>
               <Pressable
                 onPress={(e) => e.stopPropagation()}
@@ -126,44 +128,38 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                   backgroundColor: isDark ? "#1C1C1E" : "#fff",
                   borderTopLeftRadius: 40,
                   borderTopRightRadius: 40,
-                  height: height * 0.9,
+                  flex: 1,
+                  maxHeight: height * 0.9,
                 }}
               >
+                {/* Fixed header */}
+                <View style={{ paddingHorizontal: 32, paddingTop: 32, paddingBottom: 16 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={{ fontSize: 24, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>
+                      {t("new_goal")}
+                    </Text>
+                    <Pressable
+                      onPress={onClose}
+                      hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                      style={{ zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <X size={18} color={isDark ? "#fff" : "#121212"} />
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Scrollable content — category, target, dates */}
                 <ScrollView
                   ref={scrollRef}
                   style={{ flex: 1 }}
-                  contentContainerStyle={{ padding: 32, paddingBottom: 120 }}
+                  contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 16 }}
                   showsVerticalScrollIndicator={false}
                   bounces={false}
                   scrollEnabled={sheetScrollEnabled}
                   keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
+                  keyboardDismissMode="none"
                   nestedScrollEnabled
                 >
-                  {/* Header */}
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-                    <Text style={{ fontSize: 24, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>
-                      {t("new_goal")}
-                    </Text>
-                    <Pressable onPress={onClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", alignItems: "center", justifyContent: "center" }}>
-                      <X size={18} color={isDark ? "#fff" : "#121212"} />
-                    </Pressable>
-                  </View>
-
-                  {/* Goal Name */}
-                  <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
-                    {t("goal_name")}
-                  </Text>
-                  <View style={{ backgroundColor: isDark ? "#2c2c2e" : "#f9fafb", borderRadius: 20, borderWidth: 1, borderColor: isDark ? "#3a3a3c" : "#f3f4f6", marginBottom: 24 }}>
-                    <TextInput
-                      value={goalName}
-                      onChangeText={setGoalName}
-                      placeholder="e.g. Feed Flow"
-                      placeholderTextColor={isDark ? "#52525b" : "#d1d5db"}
-                      style={{ padding: 18, fontSize: 16, fontWeight: "700", color: isDark ? "#fff" : "#121212" }}
-                    />
-                  </View>
-
                   {/* Category */}
                   <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
                     {t("category_label")}
@@ -221,7 +217,7 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                   </View>
 
                   {/* Date Range */}
-                  <View style={{ flexDirection: "row", gap: 16, marginBottom: 32 }}>
+                  <View style={{ flexDirection: "row", gap: 16, marginBottom: 16 }}>
                     {(["start", "end"] as const).map((type) => (
                       <View key={type} style={{ flex: 1 }}>
                         <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
@@ -241,46 +237,61 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                   </View>
                 </ScrollView>
 
-                {/* Floating Save — sits above sheet bottom, no full-width footer bar */}
+                {/* Bottom bar — name input + save, sits above keyboard */}
                 <View
-                  pointerEvents="box-none"
                   style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 20,
+                    paddingHorizontal: 20,
+                    paddingTop: 12,
+                    paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : 20,
+                    borderTopWidth: 1,
+                    borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+                    backgroundColor: isDark ? "#1C1C1E" : "#fff",
+                    flexDirection: "row",
                     alignItems: "center",
-                    paddingHorizontal: 28,
+                    gap: 10,
                   }}
                 >
+                  <View style={{
+                    flex: 1,
+                    backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6",
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: isDark ? "#3a3a3c" : "#e5e7eb",
+                  }}>
+                    <TextInput
+                      value={goalName}
+                      onChangeText={setGoalName}
+                      placeholder="Goal name…"
+                      placeholderTextColor={isDark ? "#52525b" : "#d1d5db"}
+                      style={{ paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontWeight: "600", color: isDark ? "#fff" : "#121212" }}
+                      returnKeyType="done"
+                      onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+                  </View>
                   <Pressable
                     onPress={handleSave}
                     disabled={!isFormValid}
                     style={{
-                      width: "100%",
-                      maxWidth: 340,
-                      paddingVertical: 16,
-                      borderRadius: 24,
+                      paddingHorizontal: 20,
+                      paddingVertical: 14,
+                      borderRadius: 18,
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: !isFormValid ? (isDark ? "rgba(251,191,36,0.15)" : "#f3f4f6") : "#FBBF24",
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 8 },
-                      shadowOpacity: isDark ? 0.45 : 0.18,
-                      shadowRadius: 16,
-                      elevation: 10,
+                      backgroundColor: !isFormValid 
+                        ? (isDark ? getContrastingColor(accentColor, isDark) + "26" : "#f3f4f6") 
+                        : getContrastingColor(accentColor, isDark),
                     }}
                   >
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        fontWeight: "900",
-                        color: !isFormValid ? (isDark ? "rgba(251,191,36,0.4)" : "#9ca3af") : "#fff",
-                        textTransform: "uppercase",
-                        letterSpacing: 1,
-                      }}
-                    >
-                      Save Goal
+                    <Text style={{
+                      fontSize: 14,
+                      fontWeight: "900",
+                      color: !isFormValid 
+                        ? (isDark ? getContrastingColor(accentColor, isDark) + "66" : "#9ca3af") 
+                        : (accentColor === "#18181b" && isDark ? "#121212" : "#fff"),
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                    }}>
+                      Save
                     </Text>
                   </Pressable>
                 </View>

@@ -8,12 +8,17 @@ import { useColorScheme } from "nativewind";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 export default function QuickActions() {
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const navigation = useNavigation<any>();
   const isDark = colorScheme === "dark";
+
+  const displayColor = getContrastingColor(accentColor, isDark);
+  const foregroundColor = (accentColor === "#18181b" && isDark) ? "#121212" : "#fff";
 
   return (
     <MotiView
@@ -24,16 +29,16 @@ export default function QuickActions() {
     >
       <Pressable
         onPress={() => { impact(ImpactFeedbackStyle.Medium); router.push("/live"); }}
-        style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FBBF24", borderRadius: 28, padding: 20, marginBottom: 12, shadowColor: "#FBBF24", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
+        style={{ flexDirection: "row", alignItems: "center", backgroundColor: displayColor, borderRadius: 28, padding: 20, marginBottom: 12, shadowColor: displayColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
       >
         <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-          <Timer size={22} color="#fff" />
+          <Timer size={22} color={foregroundColor} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: "#fff" }}>{t("start_live_session")}</Text>
-          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>Track your focus in real time</Text>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: foregroundColor }}>{t("start_live_session")}</Text>
+          <Text style={{ fontSize: 11, color: (accentColor === "#18181b" && isDark) ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.7)", marginTop: 2 }}>Track your focus in real time</Text>
         </View>
-        <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
+        <ChevronRight size={20} color={(accentColor === "#18181b" && isDark) ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.6)"} />
       </Pressable>
 
       <Pressable
@@ -52,10 +57,10 @@ export default function QuickActions() {
 
       <Pressable
         onPress={() => { impact(ImpactFeedbackStyle.Light); router.push("/chat"); }}
-        style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#0f1a2e" : "#eff6ff", borderRadius: 28, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: isDark ? "#1e3a5f" : "#dbeafe" }}
+        style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? displayColor + "10" : displayColor + "08", borderRadius: 28, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: displayColor + "30" }}
       >
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isDark ? "#1e3a5f" : "#dbeafe", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-          <MessageCircle size={22} color="#3b82f6" />
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: displayColor + "20", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+          <MessageCircle size={22} color={displayColor} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 16, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>Chat with Flow</Text>
@@ -66,10 +71,10 @@ export default function QuickActions() {
 
       <Pressable
         onPress={() => { impact(ImpactFeedbackStyle.Light); navigation.navigate("goals"); }}
-        style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? "#0f2e2b" : "#f0fdfa", borderRadius: 28, padding: 20, borderWidth: 1, borderColor: isDark ? "#134e4a" : "#ccfbf1" }}
+        style={{ flexDirection: "row", alignItems: "center", backgroundColor: isDark ? displayColor + "10" : displayColor + "08", borderRadius: 28, padding: 20, borderWidth: 1, borderColor: displayColor + "30" }}
       >
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isDark ? "#134e4a" : "#ccfbf1", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-          <Target size={22} color="#14b8a6" />
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: displayColor + "20", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+          <Target size={22} color={displayColor} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 16, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>{t("goals")}</Text>

@@ -7,7 +7,9 @@ import { Target } from "lucide-react-native";
 import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
 import React from "react";
+import { Image } from "expo-image";
 import { Pressable, Text, View } from "react-native";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 interface CategoryStat {
   id: string;
@@ -16,6 +18,7 @@ interface CategoryStat {
   iconName: string;
   totalMins: number;
   sessionCount: number;
+  customImageUri?: string;
 }
 
 interface Props {
@@ -28,11 +31,15 @@ interface Props {
 export default function BentoCards({ categoryStats, activeGoalsCount, customGoals, activities }: Props) {
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   if (categoryStats.length === 0) return null;
 
-  const cardBg = isDark ? "#1e1208" : "#FFF3EC";
+  const themeBase = getContrastingColor(accentColor, isDark);
+  const cardBg = isDark ? themeBase + "15" : accentColor + "12"; 
+  const goalsBg = isDark ? themeBase + "25" : accentColor + "20"; 
+  const displayColor = isDark ? themeBase : accentColor;
 
   return (
     <MotiView
@@ -48,12 +55,12 @@ export default function BentoCards({ categoryStats, activeGoalsCount, customGoal
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-            <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: isDark ? "#2d1f0e" : "#FFE4D0", alignItems: "center", justifyContent: "center" }}>
-              <CategoryIcon name="layers" size={13} color="#FBBF24" />
+            <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: displayColor + "1A", alignItems: "center", justifyContent: "center" }}>
+              <CategoryIcon name="layers" size={13} color={displayColor} />
             </View>
             <Text style={{ fontSize: 13, fontWeight: "800", color: isDark ? "#fff" : "#1a1a1a" }}>{t("categories")}</Text>
           </View>
-          <Text style={{ fontSize: 14, color: "#FBBF24", fontWeight: "700" }}>›</Text>
+          <Text style={{ fontSize: 14, color: displayColor, fontWeight: "700" }}>›</Text>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "baseline", marginBottom: 14 }}>
@@ -68,7 +75,7 @@ export default function BentoCards({ categoryStats, activeGoalsCount, customGoal
           const mins = Math.floor((stat.totalMins % 3600) / 60);
           const timeStr = hrs > 0 ? `${hrs}h ${mins > 0 ? mins + "m" : ""}`.trim() : `${mins}m`;
           return (
-            <View key={stat.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 7, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: isDark ? "#2d2008" : "#FFE4D0" }}>
+            <View key={stat.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 7, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: isDark ? displayColor + "20" : displayColor + "30" }}>
               <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: `${stat.color}22`, alignItems: "center", justifyContent: "center", marginRight: 8 }}>
                 <CategoryIcon name={stat.iconName} size={11} color={stat.color} customImageUri={stat.customImageUri} />
               </View>
@@ -81,19 +88,18 @@ export default function BentoCards({ categoryStats, activeGoalsCount, customGoal
         })}
       </Pressable>
 
-      {/* Goals Card */}
       <Pressable
         onPress={() => router.push("/goals")}
-        style={{ width: "48.5%", backgroundColor: isDark ? "#0f2e2b" : "#f0fdfa", borderRadius: 32, padding: 20 }}
+        style={{ width: "48.5%", backgroundColor: goalsBg, borderRadius: 32, padding: 20 }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-            <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: isDark ? "#134e4a" : "#ccfbf1", alignItems: "center", justifyContent: "center" }}>
-              <Target size={13} color="#14b8a6" />
+            <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: displayColor + "1A", alignItems: "center", justifyContent: "center" }}>
+              <Target size={13} color={displayColor} />
             </View>
             <Text style={{ fontSize: 13, fontWeight: "800", color: isDark ? "#fff" : "#1a1a1a" }}>{t("goals")}</Text>
           </View>
-          <Text style={{ fontSize: 14, color: "#14b8a6", fontWeight: "700" }}>›</Text>
+          <Text style={{ fontSize: 14, color: displayColor, fontWeight: "700" }}>›</Text>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "baseline", marginBottom: 14 }}>
@@ -122,19 +128,19 @@ export default function BentoCards({ categoryStats, activeGoalsCount, customGoal
               mins >= 60 ? `${(mins / 60).toFixed(1).replace(".0", "")}h` : `${mins}m`;
 
             return (
-              <View key={goal.id} style={{ paddingVertical: 7, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: isDark ? "#134e4a" : "#ccfbf1" }}>
+              <View key={goal.id} style={{ paddingVertical: 7, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: isDark ? accentColor + "20" : accentColor + "30" }}>
                 <Text style={{ fontSize: 11, fontWeight: "800", color: isDark ? "#fff" : "#1a1a1a", marginBottom: 4 }} numberOfLines={1}>
                   {goal.name}
                 </Text>
                 <ProgressBar
                   progress={progress}
-                  color={isComplete ? "#22c55e" : "#14b8a6"}
-                  trackColor={isDark ? "#134e4a" : "#ccfbf1"}
+                  color={isComplete ? "#22c55e" : displayColor}
+                  trackColor={isDark ? displayColor + "20" : displayColor + "30"}
                   height={4}
                   className="mb-1"
                 />
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={{ fontSize: 9, fontWeight: "700", color: isComplete ? "#22c55e" : isDark ? "#a1a1aa" : "#14b8a6" }}>
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: isComplete ? "#22c55e" : isDark ? "#a1a1aa" : displayColor }}>
                     {isComplete ? "Complete!" : `${fmtTime(loggedMins)} of ${fmtTime(goal.targetMins)}`}
                   </Text>
                   {!isComplete && (

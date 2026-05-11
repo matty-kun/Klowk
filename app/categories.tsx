@@ -4,6 +4,7 @@ import CategoryDetailSheet from "@/components/sheets/CategoryDetailSheet";
 import EditCategorySheet from "@/components/sheets/EditCategorySheet";
 import NewCategorySheet from "@/components/sheets/NewCategorySheet";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { useAppTheme } from "@/context/ThemeContext";
 import { impact } from "@/utils/haptics";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import { router } from "expo-router";
@@ -20,6 +21,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CategoriesScreen() {
+  const { accentColor } = useAppTheme();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const {
@@ -105,7 +107,7 @@ export default function CategoriesScreen() {
             justifyContent: "center",
           }}
         >
-          <Plus size={20} color="#FBBF24" strokeWidth={2.5} />
+          <Plus size={20} color={accentColor} strokeWidth={2.5} />
         </Pressable>
       </View>
 

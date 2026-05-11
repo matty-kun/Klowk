@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
+import { useAppTheme } from "@/context/ThemeContext";
 
 type Props = {
   visible: boolean;
@@ -12,6 +13,7 @@ type Props = {
 
 export default function DatePickerModal({ visible, selected, onSelect, onClose }: Props) {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const [viewedMonth, setViewedMonth] = useState(new Date(selected));
 
@@ -54,7 +56,7 @@ export default function DatePickerModal({ visible, selected, onSelect, onClose }
               onPress={() => changeMonth(-1)}
               style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", borderRadius: 12 }}
             >
-              <ChevronLeft size={18} color="#FBBF24" />
+              <ChevronLeft size={18} color={accentColor} />
             </Pressable>
             <View style={{ flex: 1, alignItems: "center" }}>
               <Text style={{ fontWeight: "900", fontSize: 18, color: isDark ? "#fff" : "#121212" }}>
@@ -68,7 +70,7 @@ export default function DatePickerModal({ visible, selected, onSelect, onClose }
               onPress={() => changeMonth(1)}
               style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", borderRadius: 12 }}
             >
-              <ChevronRight size={18} color="#FBBF24" />
+              <ChevronRight size={18} color={accentColor} />
             </Pressable>
           </View>
 
@@ -89,9 +91,9 @@ export default function DatePickerModal({ visible, selected, onSelect, onClose }
                 <Pressable
                   key={i}
                   onPress={() => { if (d) { onSelect(d); onClose(); } }}
-                  style={{ width: "14.2%", aspectRatio: 1, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 4, backgroundColor: isSelected ? "#FBBF24" : "transparent" }}
+                  style={{ width: "14.2%", aspectRatio: 1, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 4, backgroundColor: isSelected ? accentColor : "transparent" }}
                 >
-                  <Text style={{ fontWeight: "900", color: isSelected ? "#fff" : isToday ? "#FBBF24" : isDark ? "#a1a1aa" : "#121212" }}>
+                  <Text style={{ fontWeight: "900", color: isSelected ? "#fff" : isToday ? accentColor : isDark ? "#a1a1aa" : "#121212" }}>
                     {d ? d.getDate() : ""}
                   </Text>
                 </Pressable>

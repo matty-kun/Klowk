@@ -52,6 +52,7 @@ import FloatingTimer from "@/components/log/FloatingTimer";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { OnboardingProvider, useOnboarding } from "@/context/OnboardingContext";
 import { SummaryVisibleProvider } from "@/context/SummaryVisibleContext";
+import { AppThemeProvider } from "@/context/ThemeContext";
 import { TrackingProvider, useTracking } from "@/context/TrackingContext";
 import { loadHapticsPreference } from "@/utils/haptics";
 import {
@@ -145,11 +146,13 @@ export default function RootLayout() {
       <SQLiteProvider databaseName="klowk.db" onInit={migrateDbIfNeeded}>
         <LanguageProvider>
           <TrackingProvider>
-            <OnboardingProvider>
-              <SummaryVisibleProvider>
-                <RootLayoutNav />
-              </SummaryVisibleProvider>
-            </OnboardingProvider>
+            <AppThemeProvider>
+              <OnboardingProvider>
+                <SummaryVisibleProvider>
+                  <RootLayoutNav />
+                </SummaryVisibleProvider>
+              </OnboardingProvider>
+            </AppThemeProvider>
           </TrackingProvider>
         </LanguageProvider>
       </SQLiteProvider>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useState } from "react";
+import { useAppTheme } from "@/context/ThemeContext";
 import {
     ActivityIndicator,
     Keyboard,
@@ -32,6 +33,7 @@ import TypewriterText from "./TypewriterText";
 
 export default function TestLogScreen() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -295,10 +297,9 @@ export default function TestLogScreen() {
             {result?.type !== "manual" && <Pressable
               onPress={handleParseInput}
               disabled={!input.trim() || isLoading}
+              style={{ backgroundColor: input.trim() && !isLoading ? accentColor : undefined }}
               className={`w-full py-3 px-6 rounded-[16px] items-center justify-center flex-row ${
-                input.trim() && !isLoading
-                  ? "bg-amber-400"
-                  : "bg-gray-200 dark:bg-zinc-800"
+                !(input.trim() && !isLoading) && "bg-gray-200 dark:bg-zinc-800"
               } mb-6`}
             >
               {isLoading ? (
@@ -322,7 +323,8 @@ export default function TestLogScreen() {
             {/* Next Button - always available */}
             <Pressable
               onPress={handleContinue}
-              className={`mt-2 py-4 px-6 rounded-[20px] w-full items-center justify-center ${result?.type === "manual" ? "bg-amber-400" : "bg-transparent border border-gray-200 dark:border-zinc-700"}`}
+              style={{ backgroundColor: result?.type === "manual" ? accentColor : undefined }}
+              className={`mt-2 py-4 px-6 rounded-[20px] w-full items-center justify-center ${result?.type === "manual" ? "" : "bg-transparent border border-gray-200 dark:border-zinc-700"}`}
             >
               <Text
                 className={`text-sm font-black tracking-wider ${result?.type === "manual" ? "text-white" : "text-gray-400 dark:text-zinc-500"}`}

@@ -4,6 +4,7 @@ import ActivityHeatmap from "@/components/analytics/ActivityHeatmap";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { DisplayActivity, pomodoroBaseTitle } from "@/utils/pomodoroMerge";
+import { useAppTheme } from "@/context/ThemeContext";
 import { impact } from "@/utils/haptics";
 import { formatLogDuration, formatTimestamp } from "@/utils/time";
 import { ImpactFeedbackStyle } from "expo-haptics";
@@ -39,6 +40,7 @@ export default React.memo(function LogsScreen() {
     useTracking();
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
 
   const [search, setSearch] = useState("");
@@ -217,7 +219,7 @@ export default React.memo(function LogsScreen() {
               borderRadius: 22,
               backgroundColor:
                 activeFilterCount > 0
-                  ? "#FBBF24"
+                  ? accentColor
                   : isDark
                     ? "#27272a"
                     : "#f3f4f6",
@@ -244,11 +246,11 @@ export default React.memo(function LogsScreen() {
                   alignItems: "center",
                   justifyContent: "center",
                   borderWidth: 1.5,
-                  borderColor: "#FBBF24",
+                  borderColor: accentColor,
                 }}
               >
                 <Text
-                  style={{ fontSize: 8, fontWeight: "900", color: "#FBBF24" }}
+                  style={{ fontSize: 8, fontWeight: "900", color: accentColor }}
                 >
                   {activeFilterCount}
                 </Text>
@@ -379,9 +381,9 @@ export default React.memo(function LogsScreen() {
                         {category?.label || t("personal")}
                       </Text>
                       {isPomodoro && log.pomodoroRounds != null && (
-                        <View style={{ backgroundColor: "#FBBF2420", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, flexDirection: "row", alignItems: "center" }}>
+                        <View style={{ backgroundColor: accentColor + "33", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, flexDirection: "row", alignItems: "center" }}>
                           <Text style={{ fontSize: 9 }}>🍅</Text>
-                          <Text style={{ color: "#FBBF24", fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }}>
+                          <Text style={{ color: accentColor, fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }}>
                             {log.pomodoroRounds} {log.pomodoroRounds === 1 ? "round" : "rounds"}
                           </Text>
                         </View>
@@ -493,7 +495,7 @@ export default React.memo(function LogsScreen() {
                     style={{
                       fontSize: 13,
                       fontWeight: "700",
-                      color: "#FBBF24",
+                      color: accentColor,
                     }}
                   >
                     Clear all

@@ -5,6 +5,7 @@ import { useColorScheme } from "nativewind";
 import React from "react";
 import { Text, View } from "react-native";
 import { ArrowDown, ArrowUp } from "lucide-react-native";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 interface DayData {
   mins: number;
@@ -35,6 +36,8 @@ export default function AnalyticsRow({
 }: Props) {
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
+  const isDark = colorScheme === "dark";
 
   return (
     <View className="px-6 flex-row justify-between mb-8">
@@ -43,7 +46,12 @@ export default function AnalyticsRow({
         from={{ opacity: 0, translateX: -20 }}
         animate={{ opacity: 1, translateX: 0 }}
         transition={{ type: "spring", delay: 400 }}
-        className="w-[48.5%] bg-white dark:bg-zinc-900 rounded-[32px] p-5 border border-gray-50 dark:border-zinc-800 shadow-sm"
+        className="w-[48.5%] rounded-[32px] p-5 shadow-sm"
+        style={{ 
+          backgroundColor: isDark ? accentColor + "15" : accentColor + "10",
+          borderWidth: 1,
+          borderColor: isDark ? accentColor + "20" : accentColor + "15"
+        }}
       >
         <Text className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-5">
           {t("intensity")}
@@ -62,13 +70,16 @@ export default function AnalyticsRow({
                     width: 10,
                     borderRadius: 5,
                     backgroundColor: item.isToday
-                      ? "#FBBF24"
+                      ? accentColor
                       : intensity > 0.05
-                        ? `rgba(255, 90, 0, ${0.15 + intensity * 0.7})`
+                        ? `${accentColor}${Math.round((0.15 + intensity * 0.7) * 255).toString(16).padStart(2, '0')}`
                         : colorScheme === "dark" ? "#27272a" : "#f3f4f6",
                   }}
                 />
-                <Text className={`mt-2 text-[7px] font-black uppercase ${item.isToday ? "text-amber-400" : "text-gray-400 dark:text-zinc-600"}`}>
+                <Text 
+                  style={item.isToday ? { color: getContrastingColor(accentColor, isDark) } : undefined}
+                  className={`mt-2 text-[7px] font-black uppercase ${item.isToday ? "" : "text-gray-400 dark:text-zinc-600"}`}
+                >
                   {item.label}
                 </Text>
               </View>
@@ -82,7 +93,12 @@ export default function AnalyticsRow({
         from={{ opacity: 0, translateX: 20 }}
         animate={{ opacity: 1, translateX: 0 }}
         transition={{ type: "spring", delay: 400 }}
-        className="w-[48.5%] bg-white dark:bg-zinc-900 rounded-[32px] p-5 border border-gray-50 dark:border-zinc-800 shadow-sm justify-between"
+        className="w-[48.5%] rounded-[32px] p-5 shadow-sm justify-between"
+        style={{ 
+          backgroundColor: isDark ? accentColor + "10" : accentColor + "08",
+          borderWidth: 1,
+          borderColor: isDark ? accentColor + "20" : accentColor + "15"
+        }}
       >
         <View>
           <View className="flex-row items-center justify-between mb-2">

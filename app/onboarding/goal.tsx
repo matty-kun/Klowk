@@ -1,6 +1,7 @@
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { useTracking } from "@/context/TrackingContext";
+import { useAppTheme } from "@/context/ThemeContext";
 import Slider from "@react-native-community/slider";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
@@ -22,6 +23,7 @@ import TypewriterText from "./TypewriterText";
 
 export default function GoalScreen() {
   const { colorScheme } = useColorScheme();
+  const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { userName, setDailyGoalHours } = useOnboarding();
   const { addCustomGoal } = useTracking();
@@ -75,7 +77,7 @@ export default function GoalScreen() {
 
           {/* Goal Display */}
           <View className="mb-8 items-center">
-            <Text className="text-5xl font-black text-amber-400 mb-2">
+            <Text style={{ color: accentColor }} className="text-5xl font-black mb-2">
               {goalHours.toFixed(1)}h
             </Text>
             <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400">
@@ -95,9 +97,9 @@ export default function GoalScreen() {
                 impact(ImpactFeedbackStyle.Light);
                 setGoalHours(val);
               }}
-              minimumTrackTintColor="#F59E0B"
+              minimumTrackTintColor={accentColor}
               maximumTrackTintColor={isDark ? "#3f3f46" : "#e5e7eb"}
-              thumbTintColor="#F59E0B"
+              thumbTintColor={accentColor}
             />
           </View>
 
@@ -111,7 +113,8 @@ export default function GoalScreen() {
           {/* Next Button */}
           <Pressable
             onPress={handleNext}
-            className="w-full py-4 px-6 rounded-[20px] items-center justify-center bg-amber-400"
+            style={{ backgroundColor: accentColor }}
+            className="w-full py-4 px-6 rounded-[20px] items-center justify-center"
           >
             <Text className="text-base font-black text-white uppercase tracking-wider">
               Next → Let's Test

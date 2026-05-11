@@ -80,7 +80,7 @@ export default function BentoCards({ categoryStats, activeGoalsCount, customGoal
                 <CategoryIcon name={stat.iconName} size={11} color={stat.color} customImageUri={stat.customImageUri} />
               </View>
               <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: isDark ? "#d4d4d8" : "#374151" }} numberOfLines={1}>
-                {t(stat.id as any) || stat.label}
+                {t(stat.id as any) || (stat.label.charAt(0).toUpperCase() + stat.label.slice(1))}
               </Text>
               <Text style={{ fontSize: 10, fontWeight: "800", color: isDark ? "#fff" : "#1a1a1a" }}>{timeStr}</Text>
             </View>
